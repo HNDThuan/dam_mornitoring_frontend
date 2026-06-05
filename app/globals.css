@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html, body {
+    @apply bg-bg text-tx font-sans;
+    scrollbar-width: thin;
+    scrollbar-color: #1a2a3a #060b14;
+  }
+
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: #060b14; }
+  ::-webkit-scrollbar-thumb  { background: #1a2a3a; border-radius: 3px; }
+
+  select option { background: #111827; }
+}
+
+@layer utilities {
+  /* Status badge backgrounds */
+  .bg-danger-soft  { background: rgba(244, 63,  94,  0.12); }
+  .bg-warning-soft { background: rgba(251, 146, 60,  0.12); }
+  .bg-safe-soft    { background: rgba(52,  211, 153, 0.12); }
+  .bg-info-soft    { background: rgba(56,  189, 248, 0.12); }
+  .bg-accent-soft  { background: rgba(129, 140, 248, 0.15); }
+
+  /* Status borders */
+  .border-danger-soft  { border-color: rgba(244, 63,  94,  0.4); }
+  .border-warning-soft { border-color: rgba(251, 146, 60,  0.4); }
+  .border-safe-soft    { border-color: rgba(52,  211, 153, 0.4); }
+  .border-info-soft    { border-color: rgba(56,  189, 248, 0.4); }
+  .border-accent-soft  { border-color: rgba(129, 140, 248, 0.4); }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.35; }
+  }
+  .animate-pulse-dot { animation: pulse-dot 2s infinite; }
+}
