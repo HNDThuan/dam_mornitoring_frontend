@@ -1,28 +1,26 @@
 'use client'
-
 import Link from 'next/link'
-import { DAMS, STATIONS, ALERTS_DATA } from '@/lib/mockData'
-import { getStatus } from '@/lib/statusConfig'
+import { DAMS, STATIONS } from '@/lib/mockData'
+import { getStatus, getStatusBySeverity } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
-
+import { useAlarmData } from '@/hooks/useAlarmData'
+import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
 export default function DashboardPage() {
+  const { alarms, unresolvedCount } = useAlarmData()
   const counts = {
-    danger:  STATIONS.filter(s => s.status === 'danger').length,
+    danger: STATIONS.filter(s => s.status === 'danger').length,
     warning: STATIONS.filter(s => s.status === 'warning').length,
-    safe:    STATIONS.filter(s => s.status === 'safe').length,
+    safe: STATIONS.filter(s => s.status === 'safe').length,
   }
-
   return (
     <div className="grid gap-3.5 p-4 min-h-[calc(100vh-48px)]"
       style={{ gridTemplateColumns: '245px 1fr 265px' }}>
-
       {/* ── LEFT ── */}
       <div>
         <Label>
           Danh sách đập
           <span className="float-right font-normal">{DAMS.length} đập</span>
         </Label>
-
         <div className="flex flex-col gap-2 mb-3.5">
           {DAMS.map(d => {
             const s = getStatus(d.status)
@@ -54,7 +52,6 @@ export default function DashboardPage() {
             )
           })}
         </div>
-
         {/* Summary */}
         <div className="bg-card border border-border rounded-md p-3">
           <Label className="mb-2.5">Tổng quan trạm</Label>
@@ -74,7 +71,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
       {/* ── CENTER ── */}
       <div>
         {/* Map placeholder */}
@@ -95,7 +91,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-
         {/* Station cards grid */}
         <div className="grid grid-cols-2 gap-2.5">
           {STATIONS.slice(0, 6).map(st => {
@@ -121,7 +116,6 @@ export default function DashboardPage() {
             )
           })}
         </div>
-
         <div className="text-center mt-3">
           <Link href="/stations"
             className="inline-block border border-border rounded text-accent text-[11px] font-semibold px-4 py-1.5 no-underline hover:bg-white/5 transition-colors">
@@ -129,7 +123,6 @@ export default function DashboardPage() {
           </Link>
         </div>
       </div>
-
       {/* ── RIGHT ── */}
       <div>
         {/* Featured station */}
@@ -153,27 +146,50 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Alerts */}
+        {/* Alerts — Real alarm data từ backend */}
         <div>
           <div className="flex justify-between items-center mb-2">
             <Label className="mb-0">Cảnh báo mới nhất</Label>
-            <Mono className="text-[9px] text-danger bg-danger-soft px-1.5 py-0.5 rounded-sm">5 MỚI</Mono>
+
+            <Mono className="text-[9px] text-danger bg-danger-soft px-1.5 py-0.5 rounded-sm">
+              {unresolvedCount} CHƯA XỬ LÝ
+            </Mono>
           </div>
           <div className="flex flex-col gap-2">
-            {ALERTS_DATA.slice(0, 4).map(al => {
-              const s = getStatus(al.level)
-              return (
-                <div key={al.id}
-                  className={`bg-card border border-border border-l-[3px] ${s.leftBorder} rounded px-2.5 py-2`}>
-                  <div className="flex justify-between mb-1">
-                    <span className={`font-mono text-[8px] uppercase ${s.text}`}>{s.label}</span>
-                    <span className="font-mono text-[8px] text-muted">{al.time}</span>
+            {
+              alarms.slice(0, 4).map(al => {
+                const s = getStatusBySeverity(al.severity)
+                const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
+                const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
+                return (
+                  <div key={al.id}
+
+                    className={`bg-card border border-border border-l-[3px] ${s.leftBorder} rounded px-2.5 py-2
+                    ${al.resolvedAt ? 'opacity-60' : ''}`}>
+                    <div className="flex justify-between mb-1">
+
+                      <span className={`font-mono text-[8px] uppercase ${s.text}`}>
+                        {sevInfo.icon} {sevInfo.label}
+                      </span>
+                      <span className="font-mono text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</span>
+                    </div>
+                    <div className="text-[11px] font-semibold text-tx mb-1">{al.title}</div>
+                    <div className="text-[9px] text-muted">📍 {al.location}</div>
+                    <div className="text-[11px] font-semibold text-tx mb-1">
+                      {typeLb}: {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
+                    </div>
+                    <div className="text-[9px] text-muted">🆔 {al.sensorId}</div>
                   </div>
-                  <div className="text-[11px] font-semibold text-tx mb-1">{al.title}</div>
-                  <div className="text-[9px] text-muted">📍 {al.location}</div>
+                )
+              })
+            }
+            {
+              alarms.length === 0 && (
+                <div className="bg-card border border-border rounded px-2.5 py-4 text-center text-[10px] text-muted">
+                  ✅ Không có cảnh báo — Hệ thống ổn định
                 </div>
               )
-            })}
+            }
           </div>
           <div className="text-center mt-2.5">
             <Link href="/alerts" className="text-[10px] text-accent font-semibold no-underline hover:underline">

@@ -1,19 +1,18 @@
 'use client'
-
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const NAV = [
-  { href: '/',         label: 'Trang Chủ',         icon: '🏠', badge: 0 },
-  { href: '/stations', label: 'Danh Sách Trạm',     icon: '📋', badge: 0 },
-  { href: '/forecast', label: 'Dự Báo & Mô Phỏng', icon: '📊', badge: 0 },
-  { href: '/alerts',   label: 'Cảnh Báo',           icon: '🚨', badge: 5 },
-  { href: '/history',  label: 'Lịch Sử',            icon: '📅', badge: 0 },
-]
+import { useAlarmData } from '@/hooks/useAlarmData'
 
 export default function NavBar() {
   const pathname = usePathname()
-
+  const { unresolvedCount } = useAlarmData()
+  const NAV = [
+    { href: '/', label: 'Trang Chủ', icon: '🏠', badge: 0 },
+    { href: '/stations', label: 'Danh Sách Trạm', icon: '📋', badge: 0 },
+    { href: '/forecast', label: 'Dự Báo & Mô Phỏng', icon: '📊', badge: 0 },
+    { href: '/alerts', label: 'Cảnh Báo', icon: '🚨', badge: unresolvedCount },
+    { href: '/history', label: 'Lịch Sử', icon: '📅', badge: 0 },
+  ]
   return (
     <nav className="sticky top-0 z-50 bg-card border-b border-border flex items-center gap-1 px-4 h-12">
       {/* Logo */}
@@ -25,7 +24,6 @@ export default function NavBar() {
           DykeSafe Monitor
         </span>
       </div>
-
       {/* Nav links */}
       <div className="flex gap-0.5 flex-1 overflow-x-auto">
         {NAV.map(({ href, label, icon, badge }) => {
@@ -47,7 +45,8 @@ export default function NavBar() {
               <span className="text-[11px]">{icon}</span>
               {label}
               {badge > 0 && (
-                <span className="bg-danger text-white rounded-full text-[8px] px-1 py-0 font-bold leading-4">
+
+                <span className="bg-danger text-white rounded-full text-[8px] px-1 py-0 font-bold leading-4 animate-pulse-dot">
                   {badge}
                 </span>
               )}
@@ -55,7 +54,6 @@ export default function NavBar() {
           )
         })}
       </div>
-
       {/* Admin */}
       <div className="flex items-center gap-1.5 px-2 py-1 bg-card2 rounded cursor-pointer shrink-0">
         <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-[8px] text-white font-bold">
