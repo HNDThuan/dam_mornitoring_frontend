@@ -166,6 +166,7 @@ function MetricCard({
               strokeWidth={1.8}
               fill={`url(#g${label.replace(/\s/g, "")})`}
               dot={false}
+              isAnimationActive={false}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -260,8 +261,11 @@ export default function StationDetailPage() {
   const humidSt = getMoistureStatus(moisture, thresholds?.humidity)
   const vibSt = getVibrationStatus(amp, thresholds?.vibration)
   // Threshold values từ backend cho MetricCard
+  const waterThreshold = thresholds?.water_level?.alertHigh ?? st.bd3
   const humThreshold = thresholds?.humidity?.alertHigh ?? 85
   const vibThreshold = thresholds?.vibration?.alertHigh ?? 15
+
+  console.log("water threshold: ", waterThreshold)
 
   const mainColor = STATUS_HEX[waterSt.level] || "#fb923c";
 
@@ -329,7 +333,7 @@ export default function StationDetailPage() {
           statusCl={STATUS_CL[waterSt.level]}
           color={mainColor}
           data={waterChartData}
-          threshold={st.bd3}
+          threshold={waterThreshold}
           stats={[
             { lb: "Trung bình", val: `${waterStats.avg}m`, cl: "text-tx" },
             {
@@ -337,7 +341,7 @@ export default function StationDetailPage() {
               val: `${waterStats.max}m`,
               cl: `text-${waterSt.level === "danger" ? "danger" : "warning"}`,
             },
-            { lb: "BĐ3", val: `${st.bd3}m`, cl: "text-danger" },
+            { lb: "BĐ3", val: `${waterThreshold}m`, cl: "text-danger" },
           ]}
         />
 

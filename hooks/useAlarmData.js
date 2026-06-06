@@ -61,7 +61,12 @@ export function useAlarmData(damId = 'dam_1') {
         const onAlarm = (alarm) => {
             if (!mountedRef.current) return
             setAlarms(prev => {
-                // Thêm alarm mới vào đầu danh sách, giới hạn 100
+                // Nếu alarm đã tồn tại trong danh sách (được cập nhật kết quả AI), cập nhật phần tử đó
+                const exists = prev.some(a => a.id === alarm.id)
+                if (exists) {
+                    return prev.map(a => a.id === alarm.id ? alarm : a)
+                }
+                // Ngược lại, thêm alarm mới vào đầu danh sách, giới hạn 100
                 const next = [alarm, ...prev]
                 if (next.length > 100) next.pop()
                 return next
