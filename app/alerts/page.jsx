@@ -13,6 +13,7 @@ export default function AlertsPage() {
   const [modes, setModes] = useState({ sms: true, zalo: true, email: false })
   const [msg, setMsg] = useState('')
   const [sent, setSent] = useState(false)
+  const [fullImg, setFullImg] = useState(false)
 
   // Tự chọn alarm đầu tiên nếu chưa chọn
   const sel = useMemo(() => {
@@ -75,6 +76,7 @@ export default function AlertsPage() {
   )
 
   return (
+    <>
     <div className="grid gap-3 p-4 h-[calc(100vh-48px)] overflow-hidden"
       style={{ gridTemplateColumns: '260px 1fr 285px' }}>
 
@@ -199,7 +201,7 @@ export default function AlertsPage() {
                     {sel.cameraActivated ? '● ACTIVE' : '○ STANDBY'}
                   </Mono>
                 </div>
-                <div className={`bg-card2 rounded ${sel.imageUrl ? 'h-32' : 'h-20'} overflow-hidden flex items-center justify-center relative mb-2`}>
+                <div className={`bg-card2 rounded ${sel.imageUrl ? 'h-48' : 'h-20'} overflow-hidden flex items-center justify-center relative mb-2`}>
                   {sel.imageUrl ? (
                     <img src={sel.imageUrl} alt="AI Camera Capture" className="w-full h-full object-cover" />
                   ) : (
@@ -219,6 +221,13 @@ export default function AlertsPage() {
                   <Mono className="absolute bottom-1 left-1.5 text-[7px] text-muted bg-black/60 px-1 rounded-sm">
                     {triggeredDate?.toLocaleTimeString('vi-VN')} | {sel.damId}
                   </Mono>
+                  {sel.imageUrl && (
+                    <button onClick={() => setFullImg(true)}
+                      className="absolute bottom-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-black/60 hover:bg-black/80 border border-white/20 text-white text-[10px] cursor-pointer transition-all hover:scale-110"
+                      title="Xem ảnh đầy đủ">
+                      ⛶
+                    </button>
+                  )}
                 </div>
                 <p className="text-[9px] text-tx leading-relaxed">{sel.notes}</p>
               </div>
@@ -392,5 +401,19 @@ export default function AlertsPage() {
         </div>
       </div>
     </div>
+
+    {/* Fullscreen image modal */}
+    {fullImg && sel?.imageUrl && (
+      <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+        onClick={() => setFullImg(false)}>
+        <button onClick={() => setFullImg(false)}
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[14px] cursor-pointer transition-colors z-10">
+          ✕
+        </button>
+        <img src={sel.imageUrl} alt="AI Camera Capture — Full" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+          onClick={e => e.stopPropagation()} />
+      </div>
+    )}
+  </>
   )
 }
