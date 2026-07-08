@@ -1,4 +1,5 @@
 import { Mono } from '@/components/ui'
+import { Wrench, Check, Loader2, Circle } from 'lucide-react'
 
 const FEATURES = ['Mô phỏng vỡ đê', 'Mô phỏng xả lũ', 'Dự báo mực nước 72h', 'Risk Level Index', 'HEC-HMS v4.2', 'Bản đồ ngập lụt']
 
@@ -14,8 +15,8 @@ export default function ForecastPage() {
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-48px)] p-8 gap-7 text-center">
 
       {/* Icon */}
-      <div className="w-20 h-20 rounded-2xl border border-border bg-accent/10 flex items-center justify-center text-4xl">
-        🔧
+      <div className="w-20 h-20 rounded-2xl border border-border bg-accent/10 flex items-center justify-center">
+        <Wrench className="w-10 h-10 text-accent" />
       </div>
 
       {/* Title */}
@@ -47,7 +48,13 @@ export default function ForecastPage() {
               <div key={phase} className="flex items-center gap-3">
                 <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 text-[13px] transition-colors
                   ${isDone ? 'bg-safe-soft border-safe text-safe' : isActive ? 'bg-accent-soft border-accent text-accent' : 'bg-transparent border-border text-muted'}`}>
-                  {isDone ? '✓' : isActive ? '⚙' : '○'}
+                  {isDone ? (
+                    <Check className="w-3.5 h-3.5 text-safe" />
+                  ) : isActive ? (
+                    <Loader2 className="w-3.5 h-3.5 text-accent animate-spin" />
+                  ) : (
+                    <Circle className="w-3.5 h-3.5 text-muted/30" />
+                  )}
                 </div>
                 <div className="flex-1 text-left">
                   <span className="text-[12px] font-semibold text-tx">{phase} — {desc}</span>

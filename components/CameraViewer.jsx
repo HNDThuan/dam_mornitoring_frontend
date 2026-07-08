@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Mono } from '@/components/ui'
+import { Video, VideoOff, Camera, Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 const CAMERAS = [
   { id: 1, label: 'Thân đê — Thượng lưu', code: 'CAM-01', status: 'safe'    },
@@ -27,8 +28,8 @@ export default function CameraViewer() {
       style={{ aspectRatio: '16/7' }}>
       <div className="absolute inset-0 flex items-center justify-center">
         {cam.status === 'offline'
-          ? <span className={`${large ? 'text-6xl' : 'text-4xl'} opacity-15`}>📵</span>
-          : <span className={`${large ? 'text-7xl' : 'text-5xl'} opacity-5`}>🎥</span>}
+          ? <VideoOff className={`${large ? 'w-16 h-16' : 'w-10 h-10'} text-tx opacity-15`} />
+          : <Video className={`${large ? 'w-20 h-20' : 'w-12 h-12'} text-tx opacity-5`} />}
       </div>
 
       {/* Top-left info */}
@@ -50,20 +51,18 @@ export default function CameraViewer() {
         <button onClick={() => setExpanded(true)}
           className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 border border-white/20 rounded flex items-center justify-center cursor-pointer transition-all"
           title="Phóng to">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" strokeWidth="2.5">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-          </svg>
+          <Maximize2 className="w-3.5 h-3.5 text-white/70" />
         </button>
       )}
 
       {/* Nav arrows */}
       <button onClick={prev}
-        className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/75 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white cursor-pointer transition-all text-base select-none">
-        ‹
+        className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/75 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white cursor-pointer transition-all select-none">
+        <ChevronLeft className="w-4 h-4" />
       </button>
       <button onClick={next}
-        className={`absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/75 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white cursor-pointer transition-all text-base select-none ${large ? 'right-3' : 'right-11'}`}>
-        ›
+        className={`absolute top-1/2 -translate-y-1/2 w-7 h-7 bg-black/50 hover:bg-black/75 border border-white/10 rounded-full flex items-center justify-center text-white/60 hover:text-white cursor-pointer transition-all select-none ${large ? 'right-3' : 'right-11'}`}>
+        <ChevronRight className="w-4 h-4" />
       </button>
     </div>
   )
@@ -79,9 +78,13 @@ export default function CameraViewer() {
               aspectRatio: '16/9', background: '#0a1220',
               outline: i === active ? '2px solid #818cf8' : '1px solid #1a2a3a',
             }}>
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] opacity-10">🎥</div>
+            <div className="absolute inset-0 flex items-center justify-center opacity-10">
+              <Video className="w-4 h-4 text-tx" />
+            </div>
             {c.status === 'offline' && (
-              <div className="absolute inset-0 flex items-center justify-center text-[9px] opacity-25">📵</div>
+              <div className="absolute inset-0 flex items-center justify-center opacity-25">
+                <VideoOff className="w-4 h-4 text-tx" />
+              </div>
             )}
             <div className="absolute top-1 left-1">
               <div className="w-1 h-1 rounded-full" style={{ background: tcl }} />
@@ -101,7 +104,7 @@ export default function CameraViewer() {
         {/* Header */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
-            <span className="text-[13px]">📷</span>
+            <Camera className="w-4 h-4 text-accent shrink-0" />
             <span className="text-[12px] font-semibold text-tx">Camera AI — Giám Sát</span>
           </div>
           <Mono className="text-[8px] text-safe">● TRỰC TIẾP</Mono>
@@ -154,7 +157,9 @@ export default function CameraViewer() {
               <div className="flex items-center gap-3">
                 <Mono className="text-[9px] text-safe">● TRỰC TIẾP</Mono>
                 <button onClick={() => setExpanded(false)}
-                  className="text-muted hover:text-tx cursor-pointer text-lg bg-transparent border-none">✕</button>
+                  className="text-muted hover:text-tx cursor-pointer bg-transparent border-none flex items-center justify-center p-1">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             </div>
             <CamFeed large />

@@ -30,6 +30,7 @@ import {
 } from "@/lib/sensorHelpers";
 import CameraViewer from "@/components/CameraViewer";
 import { useAlarmData } from "@/hooks/useAlarmData";
+import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2 } from "lucide-react";
 
 const CHART_STYLE = {
   background: "#0d1520",
@@ -63,7 +64,7 @@ function ConnectionBanner({ connected, error }) {
   if (error)
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded-lg mb-3">
-        <span className="text-[10px]">⚠️</span>
+        <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
         <span className="text-[10px] text-warning font-semibold">
           {error} — Hiển thị dữ liệu mẫu
         </span>
@@ -111,9 +112,16 @@ function MetricCard({
             <span className="text-[11px] text-muted">{unit}</span>
             {delta !== null && (
               <span
-                className={`text-[10px] font-semibold ${deltaUp === true ? "text-danger" : deltaUp === false ? "text-safe" : "text-muted"}`}
+                className={`text-[10px] font-semibold ${deltaUp === true ? "text-danger" : deltaUp === false ? "text-safe" : "text-muted"} inline-flex items-center gap-0.5`}
               >
-                {deltaUp === true ? "↑" : deltaUp === false ? "↓" : "—"} {delta}
+                {deltaUp === true ? (
+                  <ChevronUp className="w-2.5 h-2.5 shrink-0" />
+                ) : deltaUp === false ? (
+                  <ChevronDown className="w-2.5 h-2.5 shrink-0" />
+                ) : (
+                  <Minus className="w-2.5 h-2.5 shrink-0" />
+                )}{" "}
+                {delta}
               </span>
             )}
           </div>
@@ -276,14 +284,14 @@ export default function StationDetailPage() {
         <Link href="/" className="text-muted no-underline hover:text-tx">
           Trang chủ
         </Link>
-        <span className="text-muted">›</span>
+        <ChevronRight className="w-3 h-3 text-muted shrink-0" />
         <Link
           href="/stations"
           className="text-muted no-underline hover:text-tx"
         >
           Danh sách trạm
         </Link>
-        <span className="text-muted">›</span>
+        <ChevronRight className="w-3 h-3 text-muted shrink-0" />
         <span className="text-tx">Giám sát chi tiết</span>
       </div>
 
@@ -316,7 +324,8 @@ export default function StationDetailPage() {
           </div>
         </div>
         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-500">
-          ⬇ Xuất báo cáo
+          <Download className="w-3.5 h-3.5 shrink-0" />
+          <span>Xuất báo cáo</span>
         </button>
       </div>
 
@@ -497,8 +506,9 @@ export default function StationDetailPage() {
               <Link href="/alerts" className="text-[10px] text-accent cursor-pointer font-semibold hover:underline no-underline">Xem tất cả</Link>
             </div>
             {alarms.length === 0 && (
-              <div className="text-center py-4 text-[10px] text-muted">
-                ✅ Không có cảnh báo nào — Hệ thống ổn định
+              <div className="text-center py-4 text-[10px] text-muted flex items-center justify-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-safe shrink-0" />
+                <span>Không có cảnh báo nào — Hệ thống ổn định</span>
               </div>
             )}
             {alarms.slice(0, 5).map((al, i) => {
@@ -508,7 +518,7 @@ export default function StationDetailPage() {
               return (
                 <div key={al.id || i} className="flex gap-2.5 mb-3 last:mb-0">
                   <div className={`w-7 h-7 rounded-full ${bgCl} flex items-center justify-center shrink-0 mt-0.5 text-sm`}>
-                    {sevInfo.icon}
+                    {sevInfo.icon && <sevInfo.icon className="w-4 h-4 text-current" />}
                   </div>
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">

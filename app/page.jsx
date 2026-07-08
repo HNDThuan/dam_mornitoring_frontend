@@ -5,6 +5,7 @@ import { getStatus, getStatusBySeverity } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
+import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle } from 'lucide-react'
 export default function DashboardPage() {
   const { alarms, unresolvedCount } = useAlarmData()
   const counts = {
@@ -78,7 +79,9 @@ export default function DashboardPage() {
           style={{ background: 'linear-gradient(135deg,#0a1628,#0d2040,#091220)' }}>
           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 40% 50%,rgba(56,189,248,.06) 0%,transparent 60%)' }} />
           <div className="relative text-center">
-            <div className="text-3xl mb-1.5">🗺️</div>
+            <div className="flex justify-center mb-1.5">
+              <Map className="w-8 h-8 text-accent opacity-60" />
+            </div>
             <div className="text-[13px] font-bold text-tx tracking-widest">BẢN ĐỒ ĐIỂM NÓNG</div>
             <div className="text-[10px] text-muted mt-1">Tích hợp bản đồ GIS đang phát triển</div>
             <div className="flex gap-3.5 mt-2.5 justify-center">
@@ -106,11 +109,15 @@ export default function DashboardPage() {
                 <div className="flex items-baseline gap-1 mb-1">
                   <Mono className={`text-xl font-bold ${s.text}`}>{st.waterLevel}</Mono>
                   <span className="text-[9px] text-muted">m</span>
-                  <span className={`text-[9px] ${st.change > 0 ? 'text-danger' : st.change < 0 ? 'text-safe' : 'text-muted'}`}>
-                    {st.change > 0 ? '↑' : st.change < 0 ? '↓' : '—'}{Math.abs(st.change)}m
+                  <span className={`text-[9px] ${st.change > 0 ? 'text-danger' : st.change < 0 ? 'text-safe' : 'text-muted'} inline-flex items-center gap-0.5`}>
+                    {st.change > 0 ? <ChevronUp className="w-2.5 h-2.5 shrink-0" /> : st.change < 0 ? <ChevronDown className="w-2.5 h-2.5 shrink-0" /> : <Minus className="w-2.5 h-2.5 shrink-0" />}
+                    <span>{Math.abs(st.change)}m</span>
                   </span>
                 </div>
-                <div className="text-[9px] text-muted mb-1.5">📍 {st.location}</div>
+                <div className="text-[9px] text-muted mb-1.5 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-muted shrink-0" />
+                  <span>{st.location}</span>
+                </div>
                 <span className={`text-[8px] font-mono ${s.text} ${s.bg} px-1.5 py-0.5 rounded`}>{st.alerts[0]}</span>
               </Link>
             )
@@ -135,7 +142,10 @@ export default function DashboardPage() {
           <Mono className="text-[40px] font-bold text-warning leading-none block">
             6.12<span className="text-sm text-muted font-sans"> m</span>
           </Mono>
-          <p className="text-[10px] text-danger mt-1 mb-3">↑ Tăng nhanh (+0.05m/h)</p>
+          <p className="text-[10px] text-danger mt-1 mb-3 flex items-center gap-1">
+            <ArrowUp className="w-3 h-3 shrink-0" />
+            <span>Tăng nhanh (+0.05m/h)</span>
+          </p>
           <div className="grid grid-cols-2 gap-2">
             {[['Áp lực', '1.2 atm'], ['Lưu lượng', '2,450 m³/s']].map(([lb, val]) => (
               <div key={lb} className="bg-card2 rounded px-2.5 py-2">
@@ -168,8 +178,9 @@ export default function DashboardPage() {
                     ${al.resolvedAt ? 'opacity-60' : ''}`}>
                     <div className="flex justify-between mb-1">
 
-                      <span className={`font-mono text-[8px] uppercase ${s.text}`}>
-                        {sevInfo.icon} {sevInfo.label}
+                      <span className={`font-mono text-[8px] uppercase ${s.text} flex items-center gap-1`}>
+                        {sevInfo.icon && <sevInfo.icon className="w-2.5 h-2.5 shrink-0" />}
+                        <span>{sevInfo.label}</span>
                       </span>
                       <span className="font-mono text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</span>
                     </div>
@@ -185,8 +196,9 @@ export default function DashboardPage() {
             }
             {
               alarms.length === 0 && (
-                <div className="bg-card border border-border rounded px-2.5 py-4 text-center text-[10px] text-muted">
-                  ✅ Không có cảnh báo — Hệ thống ổn định
+                <div className="bg-card border border-border rounded px-2.5 py-4 text-center text-[10px] text-muted flex items-center justify-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5 text-safe shrink-0" />
+                  <span>Không có cảnh báo — Hệ thống ổn định</span>
                 </div>
               )
             }

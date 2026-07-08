@@ -2,6 +2,7 @@
 
 import { useSensorData } from '@/hooks/useSensorData'
 import { Mono } from '@/components/ui'
+import { Droplet, CloudRain, Activity, TrendingUp } from 'lucide-react'
 
 export default function LiveStatusBar() {
   const { latest, connected, error } = useSensorData()
@@ -23,22 +24,22 @@ export default function LiveStatusBar() {
       {latest && (
         <>
           <div className="flex items-center gap-1 text-muted">
-            <span>💧</span>
+            <Droplet className="w-3.5 h-3.5 text-sky-400 shrink-0" />
             <span>Mực nước:</span>
             <Mono className="text-info font-semibold">{latest.waterLevel.toFixed(2)} m</Mono>
           </div>
           <div className="flex items-center gap-1 text-muted">
-            <span>🌫️</span>
+            <CloudRain className="w-3.5 h-3.5 text-blue-400 shrink-0" />
             <span>Độ ẩm:</span>
             <Mono className="text-info font-semibold">{latest.moisture.toFixed(1)}%</Mono>
           </div>
           <div className="flex items-center gap-1 text-muted">
-            <span>📳</span>
+            <Activity className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
             <span>Tần số rung:</span>
             <Mono className="text-info font-semibold">{latest.freq.toFixed(2)} Hz</Mono>
           </div>
           <div className="flex items-center gap-1 text-muted">
-            <span>📊</span>
+            <TrendingUp className="w-3.5 h-3.5 text-orange-400 shrink-0" />
             <span>Biên độ:</span>
             <Mono className="text-info font-semibold">{latest.amp.toFixed(2)} mm</Mono>
           </div>

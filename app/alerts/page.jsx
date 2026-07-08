@@ -5,6 +5,7 @@ import { useAlarmData } from '@/hooks/useAlarmData'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint } from 'lucide-react'
 
 export default function AlertsPage() {
   const { alarms, thresholds, loading, error, resolveAlarm, unresolvedCount } = useAlarmData()
@@ -108,8 +109,9 @@ export default function AlertsPage() {
 
         {/* Error banner */}
         {error && (
-          <div className="bg-warning/10 border border-warning/30 rounded px-2.5 py-2 mb-2.5 text-[10px] text-warning">
-            ⚠️ {error}
+          <div className="bg-warning/10 border border-warning/30 rounded px-2.5 py-2 mb-2.5 text-[10px] text-warning flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -132,8 +134,9 @@ export default function AlertsPage() {
                   ${isSel ? `${s.bg} ${s.border} border` : 'bg-card border border-border'}
                   ${al.resolvedAt ? 'opacity-60' : ''}`}>
                 <div className="flex justify-between mb-1">
-                  <Mono className={`text-[8px] uppercase ${s.text}`}>
-                    {sevInfo.icon} {sevInfo.label}
+                  <Mono className={`text-[8px] uppercase ${s.text} flex items-center gap-1`}>
+                    {sevInfo.icon && <sevInfo.icon className="w-2.5 h-2.5 shrink-0" />}
+                    <span>{sevInfo.label}</span>
                   </Mono>
                   <Mono className="text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</Mono>
                 </div>
@@ -142,7 +145,10 @@ export default function AlertsPage() {
                 </div>
                 <div className="text-[9px] text-muted line-clamp-2">{al.notes}</div>
                 {al.resolvedAt && (
-                  <Mono className="text-[8px] text-safe mt-1">✅ Đã xử lý</Mono>
+                  <Mono className="text-[8px] text-safe mt-1 flex items-center gap-1">
+                    <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                    <span>Đã xử lý</span>
+                  </Mono>
                 )}
               </div>
             )
@@ -165,28 +171,34 @@ export default function AlertsPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
                   <h2 className="text-lg font-bold text-tx m-0">{typeLb} vượt ngưỡng</h2>
-                  <span className={`font-mono text-[9px] font-bold ${s.text} ${s.bg} ${s.border} border px-2 py-0.5 rounded-sm`}>
-                    {sevInfo.icon} {sevInfo.label}
+                  <span className={`font-mono text-[9px] font-bold ${s.text} ${s.bg} ${s.border} border px-2 py-0.5 rounded-sm flex items-center gap-1`}>
+                    {sevInfo.icon && <sevInfo.icon className="w-2.5 h-2.5 shrink-0" />}
+                    <span>{sevInfo.label}</span>
                   </span>
                   {sel.resolvedAt && (
-                    <span className="font-mono text-[9px] font-bold text-safe bg-safe-soft border border-safe-soft px-2 py-0.5 rounded-sm">
-                      ✅ ĐÃ XỬ LÝ
+                    <span className="font-mono text-[9px] font-bold text-safe bg-safe-soft border border-safe-soft px-2 py-0.5 rounded-sm flex items-center gap-1">
+                      <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                      <span>ĐÃ XỬ LÝ</span>
                     </span>
                   )}
                 </div>
-                <Mono className="text-[9px] text-muted">
-                  📅 {triggeredDate?.toLocaleDateString('vi-VN')}  ⏰ {triggeredDate?.toLocaleTimeString('vi-VN')}  🆔 {sel.sensorId}
+                <Mono className="text-[9px] text-muted flex items-center gap-3">
+                  <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-muted shrink-0" /> {triggeredDate?.toLocaleDateString('vi-VN')}</span>
+                  <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-muted shrink-0" /> {triggeredDate?.toLocaleTimeString('vi-VN')}</span>
+                  <span className="flex items-center gap-1"><Fingerprint className="w-3.5 h-3.5 text-muted shrink-0" /> {sel.sensorId}</span>
                 </Mono>
               </div>
               <div className="flex gap-1.5">
                 {!sel.resolvedAt && (
                   <button onClick={() => resolveAlarm(sel.id)}
-                    className="px-2.5 py-1 border border-safe/40 rounded bg-safe/10 text-safe text-[10px] font-bold cursor-pointer hover:bg-safe/20 transition-colors">
-                    ✅ Đánh dấu đã xử lý
+                    className="px-2.5 py-1 border border-safe/40 rounded bg-safe/10 text-safe text-[10px] font-bold cursor-pointer hover:bg-safe/20 transition-colors flex items-center gap-1">
+                    <Check className="w-3 h-3 shrink-0" />
+                    <span>Đánh dấu đã xử lý</span>
                   </button>
                 )}
-                <button className="px-2.5 py-1 border border-border rounded bg-transparent text-tx text-[10px] cursor-pointer hover:bg-white/5">
-                  🖨 PDF
+                <button className="px-2.5 py-1 border border-border rounded bg-transparent text-tx text-[10px] cursor-pointer hover:bg-white/5 flex items-center gap-1">
+                  <Printer className="w-3 h-3 text-muted shrink-0" />
+                  <span>PDF</span>
                 </button>
               </div>
             </div>
@@ -205,7 +217,7 @@ export default function AlertsPage() {
                   {sel.imageUrl ? (
                     <img src={sel.imageUrl} alt="AI Camera Capture" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl">📷</span>
+                    <Camera className="w-8 h-8 text-muted opacity-30 shrink-0" />
                   )}
                   {sel.cameraActivated && (
                     <div className="absolute top-1.5 left-1.5 font-mono text-[7px] text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded">
@@ -223,9 +235,9 @@ export default function AlertsPage() {
                   </Mono>
                   {sel.imageUrl && (
                     <button onClick={() => setFullImg(true)}
-                      className="absolute bottom-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-black/60 hover:bg-black/80 border border-white/20 text-white text-[10px] cursor-pointer transition-all hover:scale-110"
+                      className="absolute bottom-1.5 right-1.5 w-6 h-6 flex items-center justify-center rounded bg-black/60 hover:bg-black/80 border border-white/20 text-white cursor-pointer transition-all hover:scale-110"
                       title="Xem ảnh đầy đủ">
-                      ⛶
+                      <Maximize2 className="w-3 h-3 text-white" />
                     </button>
                   )}
                 </div>
@@ -254,10 +266,16 @@ export default function AlertsPage() {
                 </p>
                 <div className="mt-2 flex gap-1.5">
                   {sel.cameraActivated && (
-                    <span className="text-[7px] font-mono text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded">📸 CAM</span>
+                    <span className="text-[7px] font-mono text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <Camera className="w-2.5 h-2.5" />
+                      <span>CAM</span>
+                    </span>
                   )}
                   {sel.crackDetected && (
-                    <span className="text-[7px] font-mono text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded">⚠️ NỨT</span>
+                    <span className="text-[7px] font-mono text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <AlertTriangle className="w-2.5 h-2.5" />
+                      <span>NỨT</span>
+                    </span>
                   )}
                 </div>
               </div>
@@ -287,8 +305,9 @@ export default function AlertsPage() {
                         <td className="px-3 py-2"><Mono className={`text-[13px] font-bold ${rs.text}`}>{r.val} {r.unit}</Mono></td>
                         <td className="px-3 py-2"><Mono className="text-[12px] text-tx">{r.threshold} {r.unit}</Mono></td>
                         <td className="px-3 py-2">
-                          <span className={`inline-block font-mono text-[9px] font-bold tracking-widest border rounded-[3px] px-1.5 py-0.5 ${rs.text} ${rs.bg} ${rs.border}`}>
-                            {ri.label}
+                          <span className={`inline-flex items-center gap-1 font-mono text-[9px] font-bold tracking-widest border rounded-[3px] px-1.5 py-0.5 ${rs.text} ${rs.bg} ${rs.border}`}>
+                            {ri.icon && <ri.icon className="w-2.5 h-2.5 shrink-0" />}
+                            <span>{ri.label}</span>
                           </span>
                         </td>
                       </tr>
@@ -307,8 +326,8 @@ export default function AlertsPage() {
       {/* No selection placeholder */}
       {!sel && (
         <div className="flex items-center justify-center">
-          <div className="text-center text-muted">
-            <div className="text-3xl mb-2">🔔</div>
+          <div className="text-center text-muted flex flex-col items-center">
+            <Bell className="w-8 h-8 mb-2 opacity-30 text-muted shrink-0" />
             <div className="text-[12px]">Chưa có cảnh báo nào</div>
             <div className="text-[10px] mt-1">Hệ thống sẽ tự động hiển thị khi phát hiện bất thường</div>
           </div>
@@ -320,11 +339,13 @@ export default function AlertsPage() {
         <div className="bg-card border border-border rounded-lg p-3 mb-2.5">
           <Mono className="text-[8px] text-muted tracking-widest block mb-1">ĐIỀU PHỐI</Mono>
           <div className="text-[13px] font-bold text-tx mb-3">TRUNG TÂM CHỈ HUY KHẨN CẤP</div>
-          <button className="w-full py-2 mb-2 rounded-md text-white text-[11px] font-bold tracking-wide border-none cursor-pointer bg-gradient-to-r from-red-600 to-red-500">
-            🔔 KÍCH HOẠT CÒI BÁO ĐỘNG
+          <button className="w-full py-2 mb-2 rounded-md text-white text-[11px] font-bold tracking-wide border-none cursor-pointer bg-gradient-to-r from-red-600 to-red-500 flex items-center justify-center gap-1.5">
+            <Bell className="w-3.5 h-3.5 animate-bounce shrink-0" />
+            <span>KÍCH HOẠT CÒI BÁO ĐỘNG</span>
           </button>
-          <button className="w-full py-2 rounded border border-border bg-transparent text-tx text-[11px] font-bold tracking-wide cursor-pointer hover:bg-white/5">
-            🛡 PHÊ DUYỆT SOP — P-03
+          <button className="w-full py-2 rounded border border-border bg-transparent text-tx text-[11px] font-bold tracking-wide cursor-pointer hover:bg-white/5 flex items-center justify-center gap-1.5">
+            <Shield className="w-3.5 h-3.5 text-muted shrink-0" />
+            <span>PHÊ DUYỆT SOP — P-03</span>
           </button>
         </div>
 
@@ -367,9 +388,19 @@ export default function AlertsPage() {
           </div>
 
           <button onClick={handleSend}
-            className={`w-full py-2 rounded-md border-none text-white text-[11px] font-bold tracking-wide cursor-pointer transition-all
+            className={`w-full py-2 rounded-md border-none text-white text-[11px] font-bold tracking-wide cursor-pointer transition-all flex items-center justify-center gap-1.5
               ${sent ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' : 'bg-gradient-to-r from-red-600 to-red-500'}`}>
-            {sent ? '✅ ĐÃ GỬI THÀNH CÔNG' : '📤 GỬI THÔNG BÁO KHẨN CẤP'}
+            {sent ? (
+              <>
+                <Check className="w-3.5 h-3.5 shrink-0" />
+                <span>ĐÃ GỬI THÀNH CÔNG</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5 shrink-0" />
+                <span>GỬI THÔNG BÁO KHẨN CẤP</span>
+              </>
+            )}
           </button>
 
           <Divider />
@@ -384,9 +415,16 @@ export default function AlertsPage() {
               <div key={al.id || i} className="flex gap-2 mb-2.5">
                 <div className={`w-1.5 h-1.5 rounded-full ${dotCl} mt-1.5 shrink-0`} />
                 <div>
-                  <div className="text-[10px] text-tx">
-                    {al.resolvedAt ? '✅ Đã xử lý: ' : `${sevInfo.icon} `}
-                    {typeLb} — {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
+                  <div className="text-[10px] text-tx flex items-center gap-1">
+                    {al.resolvedAt ? (
+                      <CheckCircle2 className="w-3 h-3 text-safe shrink-0" />
+                    ) : (
+                      sevInfo.icon && <sevInfo.icon className="w-3 h-3 shrink-0 text-current" />
+                    )}
+                    <span>
+                      {al.resolvedAt ? 'Đã xử lý: ' : ''}
+                      {typeLb} — {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
+                    </span>
                   </div>
                   <Mono className="text-[8px] text-muted">
                     {timeAgo(al.triggeredAt)} TRƯỚC — {al.resolvedAt ? 'Admin' : 'Hệ thống'}
@@ -407,8 +445,8 @@ export default function AlertsPage() {
       <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
         onClick={() => setFullImg(false)}>
         <button onClick={() => setFullImg(false)}
-          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[14px] cursor-pointer transition-colors z-10">
-          ✕
+          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white cursor-pointer transition-colors z-10">
+          <X className="w-4 h-4" />
         </button>
         <img src={sel.imageUrl} alt="AI Camera Capture — Full" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
           onClick={e => e.stopPropagation()} />

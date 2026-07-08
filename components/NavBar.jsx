@@ -2,23 +2,24 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAlarmData } from '@/hooks/useAlarmData'
+import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets } from 'lucide-react'
 
 export default function NavBar() {
   const pathname = usePathname()
   const { unresolvedCount } = useAlarmData()
   const NAV = [
-    { href: '/', label: 'Trang Chủ', icon: '🏠', badge: 0 },
-    { href: '/stations', label: 'Danh Sách Trạm', icon: '📋', badge: 0 },
-    { href: '/forecast', label: 'Dự Báo & Mô Phỏng', icon: '📊', badge: 0 },
-    { href: '/alerts', label: 'Cảnh Báo', icon: '🚨', badge: unresolvedCount },
-    { href: '/history', label: 'Lịch Sử', icon: '📅', badge: 0 },
+    { href: '/', label: 'Trang Chủ', icon: Home, badge: 0 },
+    { href: '/stations', label: 'Danh Sách Trạm', icon: ClipboardList, badge: 0 },
+    { href: '/forecast', label: 'Dự Báo & Mô Phỏng', icon: TrendingUp, badge: 0 },
+    { href: '/alerts', label: 'Cảnh Báo', icon: AlertTriangle, badge: unresolvedCount },
+    { href: '/history', label: 'Lịch Sử', icon: Calendar, badge: 0 },
   ]
   return (
     <nav className="sticky top-0 z-50 bg-card border-b border-border flex items-center gap-1 px-4 h-12">
       {/* Logo */}
       <div className="flex items-center gap-2 mr-4 shrink-0">
-        <div className="w-6 h-6 rounded-md bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-sm">
-          💧
+        <div className="w-6 h-6 rounded-md bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-white">
+          <Droplets className="w-3.5 h-3.5" />
         </div>
         <span className="font-bold text-sm text-tx tracking-wide whitespace-nowrap">
           DykeSafe Monitor
@@ -26,7 +27,7 @@ export default function NavBar() {
       </div>
       {/* Nav links */}
       <div className="flex gap-0.5 flex-1 overflow-x-auto">
-        {NAV.map(({ href, label, icon, badge }) => {
+        {NAV.map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
             <Link
@@ -42,7 +43,7 @@ export default function NavBar() {
                 }
               `}
             >
-              <span className="text-[11px]">{icon}</span>
+              {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
               {label}
               {badge > 0 && (
 

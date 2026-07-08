@@ -5,12 +5,42 @@ import Link from 'next/link'
 import { STATIONS } from '@/lib/mockData'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { useSensorData } from '@/hooks/useSensorData'
+import { useAlarmData } from '@/hooks/useAlarmData'
+import { getWaterStatus, calcDelta } from '@/lib/sensorHelpers'
+import { Search, Check, Droplet, Cpu, Video, RefreshCw, MapPin, ChevronUp, ChevronDown, Minus } from 'lucide-react'
 
 export default function StationsPage() {
   const [filter, setFilter] = useState({ danger: true, warning: true, safe: true })
   const [q, setQ] = useState('')
 
-  const shown = STATIONS.filter(s =>
+  const { latest, history } = useSensorData()
+  const { thresholds } = useAlarmData()
+
+  // Cập nhật dữ liệu động cho Trạm Hà Nội (ID 5)
+  const dynamicStations = STATIONS.map(st => {
+    if (st.id === 5 && latest) {
+      const waterSt = getWaterStatus(latest.waterLevel, st.bd3, st.bd2, st.bd1, thresholds?.water_level)
+      const waterDelta = calcDelta(history?.waterLevel)
+      const changeVal = waterDelta.delta ? (waterDelta.up ? +waterDelta.delta : -waterDelta.delta) : 0
+
+      const activeAlerts = [
+        waterSt.label !== 'AN TOÀN' ? waterSt.label : null,
+        latest.moisture >= (thresholds?.humidity?.alertHigh ?? 85) ? 'Độ ẩm cao' : null
+      ].filter(Boolean)
+
+      return {
+        ...st,
+        waterLevel: latest.waterLevel,
+        status: waterSt.level, // 'danger' | 'warning' | 'safe'
+        change: changeVal,
+        alerts: activeAlerts.length > 0 ? activeAlerts : ['Hệ thống ổn định']
+      }
+    }
+    return st
+  })
+
+  const shown = dynamicStations.filter(s =>
     filter[s.status] &&
     (!q || s.name.toLowerCase().includes(q.toLowerCase()) || s.location.toLowerCase().includes(q.toLowerCase()))
   )
@@ -26,7 +56,7 @@ export default function StationsPage() {
         <div className="mb-3">
           <Label className="mb-1.5">Tên trạm</Label>
           <div className="flex items-center gap-1.5 bg-card2 border border-border rounded px-2 py-1.5">
-            <span className="text-[11px]">🔍</span>
+            <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Nhập tên trạm..."
               className="bg-transparent border-none outline-none text-tx text-[11px] w-full placeholder:text-muted" />
           </div>
@@ -40,7 +70,7 @@ export default function StationsPage() {
               className="flex items-center gap-2 mb-2 cursor-pointer">
               <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all
                 ${filter[k] ? `${dotCl} border-transparent` : 'bg-transparent border-border'}`}>
-                {filter[k] && <span className="text-[9px] text-white leading-none">✓</span>}
+                {filter[k] && <Check className="w-2.5 h-2.5 text-white shrink-0" />}
               </div>
               <div className="flex items-center gap-1.5">
                 <div className={`w-1.5 h-1.5 rounded-full ${dotCl}`} />
@@ -66,9 +96,14 @@ export default function StationsPage() {
         {/* Type */}
         <div className="mb-3">
           <Label className="mb-2">Loại trạm</Label>
-          {[['💧', 'Mực nước'], ['📡', 'Cảm biến đê'], ['📷', 'Camera giám sát']].map(([ic, lb]) => (
+          {[
+            { icon: Droplet, lb: 'Mực nước', iconCl: 'text-sky-400' },
+            { icon: Cpu, lb: 'Cảm biến đê', iconCl: 'text-indigo-400' },
+            { icon: Video, lb: 'Camera giám sát', iconCl: 'text-emerald-400' }
+          ].map(({ icon: Icon, lb, iconCl }) => (
             <div key={lb} className="flex items-center gap-2 bg-card2 border border-border rounded px-2.5 py-2 mb-1.5 text-[11px] text-tx cursor-pointer hover:bg-borderHi/30 transition-colors">
-              {ic} {lb}
+              {Icon && <Icon className={`w-3.5 h-3.5 ${iconCl} shrink-0`} />}
+              <span>{lb}</span>
             </div>
           ))}
         </div>
@@ -88,7 +123,8 @@ export default function StationsPage() {
             </p>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded text-muted text-[11px] font-medium bg-transparent hover:bg-white/5 transition-colors cursor-pointer">
-            🔄 Làm mới
+            <RefreshCw className="w-3 h-3 shrink-0" />
+            <span>Làm mới</span>
           </button>
         </div>
 
@@ -101,15 +137,25 @@ export default function StationsPage() {
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <div className="text-[12px] font-semibold text-tx">{st.name}</div>
-                    <div className="text-[9px] text-muted mt-0.5">📍 {st.location}</div>
+                    <div className="text-[9px] text-muted mt-0.5 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                      <span>{st.location}</span>
+                    </div>
                   </div>
                   <Badge status={st.status} sm />
                 </div>
                 <div className="flex items-baseline gap-1.5 mb-2">
-                  <Mono className={`text-2xl font-bold ${s.text}`}>{st.waterLevel}</Mono>
+                  <Mono className={`text-2xl font-bold ${s.text}`}>{typeof st.waterLevel === 'number' ? st.waterLevel.toFixed(2) : st.waterLevel}</Mono>
                   <span className="text-[10px] text-muted">m</span>
-                  <span className={`text-[9px] ${st.change > 0 ? 'text-danger' : st.change < 0 ? 'text-safe' : 'text-muted'}`}>
-                    {st.change > 0 ? '▲' : st.change < 0 ? '▼' : '●'} {Math.abs(st.change)}m
+                  <span className={`text-[9px] ${st.change > 0 ? 'text-danger' : st.change < 0 ? 'text-safe' : 'text-muted'} inline-flex items-center gap-0.5`}>
+                    {st.change > 0 ? (
+                      <ChevronUp className="w-3 h-3 shrink-0 text-danger" />
+                    ) : st.change < 0 ? (
+                      <ChevronDown className="w-3 h-3 shrink-0 text-safe" />
+                    ) : (
+                      <Minus className="w-3 h-3 shrink-0 text-muted" />
+                    )}
+                    <span>{Math.abs(st.change).toFixed(2)}m</span>
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 mb-2.5">

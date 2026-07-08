@@ -5,6 +5,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { HISTORY_RECORDS, genHistoryLine, genHistoryBar } from '@/lib/mockData'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { Download, AlertTriangle, Droplet, Clock, Search, Check } from 'lucide-react'
 
 const lineData = genHistoryLine()
 const barData  = genHistoryBar()
@@ -39,7 +40,7 @@ export default function HistoryPage() {
             <div key={lb} className="flex items-center gap-2 mb-2 cursor-pointer">
               <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all
                 ${on ? `${cl} border-transparent` : 'bg-transparent border-border'}`}>
-                {on && <span className="text-[9px] text-white leading-none">✓</span>}
+                {on && <Check className="w-2.5 h-2.5 text-white shrink-0" />}
               </div>
               <span className="text-[11px] text-tx">{lb}</span>
             </div>
@@ -60,8 +61,11 @@ export default function HistoryPage() {
             <Mono className="text-[9px] text-muted">Dữ liệu cập nhật lần cuối: 15:30, 24/08/2023</Mono>
           </div>
           <div className="flex gap-2">
-            {['⬇ Xuất Excel', '⬇ Xuất PDF'].map(lb => (
-              <button key={lb} className="flex items-center gap-1 px-2.5 py-1.5 border border-border rounded bg-transparent text-tx text-[10px] font-semibold cursor-pointer hover:bg-white/5">{lb}</button>
+            {['Xuất Excel', 'Xuất PDF'].map(lb => (
+              <button key={lb} className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border rounded bg-transparent text-tx text-[10px] font-semibold cursor-pointer hover:bg-white/5">
+                <Download className="w-3 h-3 text-muted shrink-0" />
+                <span>{lb}</span>
+              </button>
             ))}
           </div>
         </div>
@@ -69,13 +73,13 @@ export default function HistoryPage() {
         {/* KPI cards */}
         <div className="grid grid-cols-3 gap-3 mb-3.5">
           {[
-            { icon: '⚠️', val: '12',      lb: 'Tổng số cảnh báo trong kỳ', badge: '+12% vs kỳ trước',  cl: 'text-warning' },
-            { icon: '💧', val: '7.45m',   lb: 'Mực nước đỉnh (Hưng Yên)',  badge: 'Cao hơn BĐ 2',      cl: 'text-danger'  },
-            { icon: '⏱️', val: '18 phút', lb: 'Thời gian phản ứng TB',     badge: '-2 phút cải thiện', cl: 'text-safe'    },
-          ].map(({ icon, val, lb, badge, cl }) => (
+            { icon: AlertTriangle, val: '12',      lb: 'Tổng số cảnh báo trong kỳ', badge: '+12% vs kỳ trước',  cl: 'text-warning', iconCl: 'text-warning' },
+            { icon: Droplet,       val: '7.45m',   lb: 'Mực nước đỉnh (Hưng Yên)',  badge: 'Cao hơn BĐ 2',      cl: 'text-danger',  iconCl: 'text-danger' },
+            { icon: Clock,         val: '18 phút', lb: 'Thời gian phản ứng TB',     badge: '-2 phút cải thiện', cl: 'text-safe',    iconCl: 'text-safe' },
+          ].map(({ icon: Icon, val, lb, badge, cl, iconCl }) => (
             <div key={lb} className="bg-card border border-border rounded-lg p-3.5">
               <div className="flex justify-between items-start mb-2">
-                <span className="text-lg">{icon}</span>
+                {Icon && <Icon className={`w-4 h-4 ${iconCl}`} />}
                 <Mono className={`text-[8px] ${cl} bg-card2 px-1.5 py-0.5 rounded-sm`}>{badge}</Mono>
               </div>
               <Mono className={`text-2xl font-bold block ${cl}`}>{val}</Mono>
@@ -137,7 +141,7 @@ export default function HistoryPage() {
           <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border">
             <span className="text-[12px] font-semibold text-tx">Chi tiết bản ghi dữ liệu</span>
             <div className="flex items-center gap-1.5 bg-card2 border border-border rounded px-2 py-1">
-              <span className="text-[10px]">🔍</span>
+              <Search className="w-3.5 h-3.5 text-muted shrink-0" />
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm trạm, sự kiện..."
                 className="bg-transparent border-none outline-none text-tx text-[10px] w-36 placeholder:text-muted" />
             </div>
