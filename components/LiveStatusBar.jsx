@@ -10,7 +10,7 @@ export default function LiveStatusBar() {
   if (!connected && !latest) return null
 
   return (
-    <div className={`flex items-center gap-4 px-4 py-2 border-b border-border text-[10px]
+    <div className={`flex items-center gap-4 px-8 py-4 border-b border-border text-[14px]
       ${connected ? 'bg-safe/5' : 'bg-warning/5'}`}>
       {/* Connection dot */}
       <div className="flex items-center gap-1.5">
