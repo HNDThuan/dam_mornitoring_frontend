@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAlarmData } from '@/hooks/useAlarmData'
+import { sendEmailAlert } from '@/lib/api'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
@@ -117,18 +118,12 @@ export default function AlertsPage() {
     setStatusMsg('')
     try {
       const recipientsToSend = emailList.length > 0 ? emailList : ['ruka13312002@gmail.com']
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
-      const res = await fetch(`${apiUrl}/sensor/send-email-alert`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          toEmail: recipientsToSend,
-          message: msg || defaultMsg,
-          alarmId: sel?.id,
-        }),
+      const data = await sendEmailAlert({
+        toEmail: recipientsToSend,
+        message: msg || defaultMsg,
+        alarmId: sel?.id,
       })
-      const data = await res.json()
-      if (res.ok && data.success) {
+      if (data.success) {
         setSent(true)
         setStatusMsg(data.message || 'Đã gửi Email cảnh báo thành công!')
         setTimeout(() => {

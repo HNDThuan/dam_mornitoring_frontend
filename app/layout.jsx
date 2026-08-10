@@ -3,7 +3,7 @@ import NavBar from '@/components/NavBar'
 import LiveStatusBar from '@/components/LiveStatusBar'
 
 export const metadata = {
-  title: 'DykeSafe Monitor',
+  title: 'Dam Monitoring System',
   description: 'Hệ thống giám sát đê điều thời gian thực',
 }
 
