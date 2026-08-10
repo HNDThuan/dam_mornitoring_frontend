@@ -26,7 +26,7 @@ export default function AlertsPage() {
         try {
           const parsed = JSON.parse(saved)
           if (Array.isArray(parsed) && parsed.length > 0) return parsed
-        } catch (e) {}
+        } catch (e) { }
       }
     }
     return ['ruka13312002@gmail.com']
@@ -327,9 +327,9 @@ export default function AlertsPage() {
 
                 {/* Giá trị đo */}
                 <div className="bg-card border border-border rounded-lg p-3.5 flex flex-col justify-center">
-                  <div className="text-[8px] text-muted uppercase tracking-wider mb-2">Giá trị đo</div>
+                  <div className="text-[15px] text-white uppercase tracking-wider mb-2">Giá trị đo</div>
                   <Mono className={`text-2xl font-bold ${s.text}`}>{sel.measuredVal} {unit}</Mono>
-                  <p className={`text-[8px] ${s.text} mt-1.5`}>Ngưỡng: {sel.thresholdVal} {unit}</p>
+                  <p className={`text-[12px] ${s.text} mt-1.5`}>Ngưỡng: {sel.thresholdVal} {unit}</p>
                   <div className="h-1 bg-border rounded-full mt-2">
                     <div className={`h-full rounded-full ${sel.severity === 'CRITICAL' ? 'bg-danger' : 'bg-warning'} opacity-70`}
                       style={{ width: `${Math.min((sel.measuredVal / (sel.thresholdVal * 1.5)) * 100, 100)}%` }} />
@@ -338,23 +338,23 @@ export default function AlertsPage() {
 
                 {/* Duration / Thông tin thêm */}
                 <div className="bg-card border border-border rounded-lg p-3.5 flex flex-col justify-center">
-                  <div className="text-[8px] text-muted uppercase tracking-wider mb-2">Thời gian vượt ngưỡng</div>
+                  <div className="text-[15px] text-white uppercase tracking-wider mb-2">Thời gian vượt ngưỡng</div>
                   <Mono className={`text-2xl font-bold ${s.text}`}>
                     {sel.durationS > 0 ? `${sel.durationS}s` : 'Tức thì'}
                   </Mono>
-                  <p className="text-[8px] text-muted mt-1.5">
+                  <p className="text-[12px] text-white font-bold mt-1.5">
                     Loại: {typeLb}
                   </p>
                   <div className="mt-2 flex gap-1.5">
                     {sel.cameraActivated && (
-                      <span className="text-[7px] font-mono text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                        <Camera className="w-2.5 h-2.5" />
+                      <span className="text-[12px] font-mono text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                        <Camera className="w-3 h-3" />
                         <span>CAM</span>
                       </span>
                     )}
                     {sel.crackDetected && (
-                      <span className="text-[7px] font-mono text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                        <AlertTriangle className="w-2.5 h-2.5" />
+                      <span className="text-[12px] font-mono text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                        <AlertTriangle className="w-3 h-3" />
                         <span>NỨT</span>
                       </span>
                     )}
@@ -366,13 +366,13 @@ export default function AlertsPage() {
               <div className="bg-card border border-border rounded-lg overflow-hidden">
                 <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border">
                   <span className="text-[12px] font-semibold text-tx">Lịch sử cảnh báo — {typeLb}</span>
-                  <Mono className="text-[9px] text-muted">{sensorRows.length} bản ghi</Mono>
+                  <Mono className="text-[12px] text-white">{sensorRows.length} bản ghi</Mono>
                 </div>
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-card2">
                       {['THỜI GIAN', 'GIÁ TRỊ ĐO', 'NGƯỠNG', 'MỨC CẢNH BÁO'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-[8px] text-muted font-bold uppercase tracking-widest">{h}</th>
+                        <th key={h} className="px-3 py-2 text-left text-[12px] text-white font-bold uppercase tracking-widest">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -382,7 +382,7 @@ export default function AlertsPage() {
                       const ri = SEVERITY_MAP[r.severity] || SEVERITY_MAP.WARNING
                       return (
                         <tr key={i} className="border-t border-border">
-                          <td className="px-3 py-2"><Mono className="text-[9px] text-muted">{r.t}</Mono></td>
+                          <td className="px-3 py-2"><Mono className="text-[12px] text-white">{r.t}</Mono></td>
                           <td className="px-3 py-2"><Mono className={`text-[13px] font-bold ${rs.text}`}>{r.val} {r.unit}</Mono></td>
                           <td className="px-3 py-2"><Mono className="text-[12px] text-tx">{r.threshold} {r.unit}</Mono></td>
                           <td className="px-3 py-2">

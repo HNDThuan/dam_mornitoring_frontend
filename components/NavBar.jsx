@@ -22,7 +22,7 @@ export default function NavBar() {
           <Droplets className="w-3.5 h-3.5" />
         </div>
         <span className="font-bold text-sm text-tx tracking-wide whitespace-nowrap">
-          DykeSafe Monitor
+          Dam Monitoring System
         </span>
       </div>
       {/* Nav links */}
