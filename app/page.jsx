@@ -1,17 +1,20 @@
 'use client'
 import Link from 'next/link'
-import { DAMS, STATIONS } from '@/lib/mockData'
 import { getStatus, getStatusBySeverity } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { useAlarmData } from '@/hooks/useAlarmData'
+import { useDamData } from '@/hooks/useDamData'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
 import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle } from 'lucide-react'
+
 export default function DashboardPage() {
   const { alarms, unresolvedCount } = useAlarmData()
+  const { dams, stations, loading, error } = useDamData()
+
   const counts = {
-    danger: STATIONS.filter(s => s.status === 'danger').length,
-    warning: STATIONS.filter(s => s.status === 'warning').length,
-    safe: STATIONS.filter(s => s.status === 'safe').length,
+    danger: stations.filter(s => s.status === 'danger').length,
+    warning: stations.filter(s => s.status === 'warning').length,
+    safe: stations.filter(s => s.status === 'safe').length,
   }
   return (
     <div className="grid gap-3.5 p-4 min-h-[calc(100vh-48px)]"
@@ -20,10 +23,10 @@ export default function DashboardPage() {
       <div>
         <Label>
           Danh sách đập
-          <span className="float-right font-normal">{DAMS.length} đập</span>
+          <span className="float-right font-normal">{dams.length} đập</span>
         </Label>
         <div className="flex flex-col gap-2 mb-3.5">
-          {DAMS.map(d => {
+          {dams.map(d => {
             const s = getStatus(d.status)
             return (
               <div key={d.id}
@@ -39,7 +42,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <div className="text-[8px] text-muted uppercase tracking-wide">Lưu lượng</div>
-                    <Mono className="text-[12px] text-tx">{d.flow.toLocaleString()} m³/s</Mono>
+                    <Mono className="text-[12px] text-tx">{d.flow ? d.flow.toLocaleString() : 0} m³/s</Mono>
                   </div>
                 </div>
                 <div className="flex justify-between mb-1">
@@ -68,7 +71,7 @@ export default function DashboardPage() {
           <Divider />
           <div className="flex justify-between">
             <span className="text-[11px] text-muted">Tổng hoạt động</span>
-            <Mono className="text-[13px] text-tx">{STATIONS.length} trạm</Mono>
+            <Mono className="text-[13px] text-tx">{stations.length} trạm</Mono>
           </div>
         </div>
       </div>
@@ -85,7 +88,7 @@ export default function DashboardPage() {
             <div className="text-[13px] font-bold text-tx tracking-widest">BẢN ĐỒ ĐIỂM NÓNG</div>
             <div className="text-[10px] text-muted mt-1">Tích hợp bản đồ GIS đang phát triển</div>
             <div className="flex gap-3.5 mt-2.5 justify-center">
-              {[['bg-danger', '2 Nguy hiểm'], ['bg-warning', '4 Cảnh báo'], ['bg-safe', '2 An toàn']].map(([cl, lb]) => (
+              {[['bg-danger', `${counts.danger} Nguy hiểm`], ['bg-warning', `${counts.warning} Cảnh báo`], ['bg-safe', `${counts.safe} An toàn`]].map(([cl, lb]) => (
                 <div key={lb} className="flex items-center gap-1">
                   <div className={`w-1.5 h-1.5 rounded-full ${cl}`} />
                   <span className="text-[9px] text-muted">{lb}</span>
@@ -96,7 +99,7 @@ export default function DashboardPage() {
         </div>
         {/* Station cards grid */}
         <div className="grid grid-cols-2 gap-2.5">
-          {STATIONS.slice(0, 6).map(st => {
+          {stations.slice(0, 6).map(st => {
             const s = getStatus(st.status)
             return (
               <Link key={st.id} href={`/stations/${st.id}`}
@@ -118,7 +121,6 @@ export default function DashboardPage() {
                   <MapPin className="w-3 h-3 text-muted shrink-0" />
                   <span>{st.location}</span>
                 </div>
-                <span className={`text-[8px] font-mono ${s.text} ${s.bg} px-1.5 py-0.5 rounded`}>{st.alerts[0]}</span>
               </Link>
             )
           })}
@@ -126,7 +128,7 @@ export default function DashboardPage() {
         <div className="text-center mt-3">
           <Link href="/stations"
             className="inline-block border border-border rounded text-accent text-[11px] font-semibold px-4 py-1.5 no-underline hover:bg-white/5 transition-colors">
-            Xem tất cả {STATIONS.length} trạm →
+            Xem tất cả {stations.length} trạm →
           </Link>
         </div>
       </div>

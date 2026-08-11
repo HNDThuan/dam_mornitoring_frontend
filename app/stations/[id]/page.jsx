@@ -12,10 +12,10 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from "recharts";
-import { STATIONS } from "@/lib/mockData";
 import { getStatus, getStatusBySeverity } from "@/lib/statusConfig";
 import { Mono, Badge } from "@/components/ui";
 import { useSensorData } from "@/hooks/useSensorData";
+import { useDamData } from "@/hooks/useDamData";
 import {
   historyToChartData,
   calcDelta,
@@ -201,19 +201,21 @@ function MetricCard({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function StationDetailPage() {
   const { id } = useParams();
-  const st = STATIONS.find((s) => s.id === Number(id)) || STATIONS[0];
+  const { stations } = useDamData();
+  const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
+  const st = stations.find((s) => s.id === Number(id)) || defaultSt;
   const stStatus = getStatus(st.status);
 
   // ── Real-time data from backend ──
   const { latest, history, connected, error } = useSensorData();
   const { alarms, thresholds } = useAlarmData()
 
-  // Dùng real data nếu có, fallback về mock data
+  // Dùng real data nếu có, fallback về station data
   const waterLevel = latest?.waterLevel ?? st.waterLevel;
   const moisture = latest?.moisture ?? st.humidity;
   const freq = latest?.freq ?? 3.2;
   const amp = latest?.amp ?? 1.8;
-  const percent = latest?.percent ?? st.fillPct;
+  const percent = latest?.percent ?? (st.fillPct || 78);
 
   // Build chart data từ history backend hoặc fallback mock
   const waterChartData = useMemo(() => {

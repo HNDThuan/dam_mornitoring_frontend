@@ -2,7 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAlarmData } from '@/hooks/useAlarmData'
-import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets } from 'lucide-react'
+import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets, Database } from 'lucide-react'
 
 export default function NavBar() {
   const pathname = usePathname()
@@ -10,6 +10,7 @@ export default function NavBar() {
   const NAV = [
     { href: '/', label: 'Trang Chủ', icon: Home, badge: 0 },
     { href: '/stations', label: 'Danh Sách Trạm', icon: ClipboardList, badge: 0 },
+    { href: '/admin/dams', label: 'Quản Lý Đập & Trạm', icon: Database, badge: 0 },
     { href: '/forecast', label: 'Dự Báo & Mô Phỏng', icon: TrendingUp, badge: 0 },
     { href: '/alerts', label: 'Cảnh Báo', icon: AlertTriangle, badge: unresolvedCount },
     { href: '/history', label: 'Lịch Sử', icon: Calendar, badge: 0 },

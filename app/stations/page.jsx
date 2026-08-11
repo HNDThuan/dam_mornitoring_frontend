@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { STATIONS } from '@/lib/mockData'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { useSensorData } from '@/hooks/useSensorData'
 import { useAlarmData } from '@/hooks/useAlarmData'
+import { useDamData } from '@/hooks/useDamData'
 import { getWaterStatus, calcDelta } from '@/lib/sensorHelpers'
 import { Search, Check, Droplet, Cpu, Video, RefreshCw, MapPin, ChevronUp, ChevronDown, Minus } from 'lucide-react'
 
@@ -16,9 +16,10 @@ export default function StationsPage() {
 
   const { latest, history } = useSensorData()
   const { thresholds } = useAlarmData()
+  const { stations, refetch } = useDamData()
 
   // Cập nhật dữ liệu động cho Trạm Hà Nội (ID 5)
-  const dynamicStations = STATIONS.map(st => {
+  const dynamicStations = stations.map(st => {
     if (st.id === 5 && latest) {
       const waterSt = getWaterStatus(latest.waterLevel, st.bd3, st.bd2, st.bd1, thresholds?.water_level)
       const waterDelta = calcDelta(history?.waterLevel)
@@ -37,7 +38,10 @@ export default function StationsPage() {
         alerts: activeAlerts.length > 0 ? activeAlerts : ['Hệ thống ổn định']
       }
     }
-    return st
+    return {
+      ...st,
+      alerts: st.alerts || ['Hệ thống ổn định']
+    }
   })
 
   const shown = dynamicStations.filter(s =>
@@ -119,10 +123,10 @@ export default function StationsPage() {
           <div>
             <h1 className="text-xl font-bold text-tx tracking-wide">DANH SÁCH TRẠM QUAN TRẮC</h1>
             <p className="text-[10px] text-muted mt-0.5">
-              Thời gian thực — <Mono className="text-safe">{shown.length}</Mono> / {STATIONS.length} trạm hiển thị
+              Thời gian thực — <Mono className="text-safe">{shown.length}</Mono> / {stations.length} trạm hiển thị
             </p>
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded text-muted text-[11px] font-medium bg-transparent hover:bg-white/5 transition-colors cursor-pointer">
+          <button onClick={() => refetch()} className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded text-muted text-[11px] font-medium bg-transparent hover:bg-white/5 transition-colors cursor-pointer">
             <RefreshCw className="w-3 h-3 shrink-0" />
             <span>Làm mới</span>
           </button>
@@ -159,7 +163,7 @@ export default function StationsPage() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-1 mb-2.5">
-                  {st.alerts.map((a, i) => (
+                  {(st.alerts || ['Hệ thống ổn định']).map((a, i) => (
                     <span key={i} className={`font-mono text-[8px] ${s.text} ${s.bg} px-1.5 py-0.5 rounded-sm`}>{a}</span>
                   ))}
                 </div>
@@ -174,7 +178,7 @@ export default function StationsPage() {
 
         {/* Pagination */}
         <div className="flex justify-between items-center mt-3.5">
-          <Mono className="text-[10px] text-muted">Hiển thị 1–{shown.length} trong số {STATIONS.length} trạm</Mono>
+          <Mono className="text-[10px] text-muted">Hiển thị 1–{shown.length} trong số {stations.length} trạm</Mono>
           <div className="flex gap-1">
             {[1, 2, 3].map(n => (
               <button key={n} className={`w-6 h-6 rounded text-[11px] border cursor-pointer

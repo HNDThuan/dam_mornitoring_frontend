@@ -2,18 +2,57 @@
 
 import { useState } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { HISTORY_RECORDS, genHistoryLine, genHistoryBar } from '@/lib/mockData'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { Download, AlertTriangle, Droplet, Clock, Search, Check } from 'lucide-react'
+import { useAlarmData } from '@/hooks/useAlarmData'
+import { useDamData } from '@/hooks/useDamData'
+import { timeAgo, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS } from '@/lib/sensorHelpers'
 
-const lineData = genHistoryLine()
-const barData  = genHistoryBar()
-const TOOLTIP  = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadius: 4, fontSize: 9 }
+const lineData = [
+  { d: '01/08', c: 5.2, l71: 8.1, l96: 7.4 },
+  { d: '05/08', c: 5.8, l71: 8.1, l96: 7.4 },
+  { d: '10/08', c: 6.5, l71: 8.1, l96: 7.4 },
+  { d: '15/08', c: 6.1, l71: 8.1, l96: 7.4 },
+  { d: '18/08', c: 6.9, l71: 8.1, l96: 7.4 },
+  { d: '20/08', c: 7.2, l71: 8.1, l96: 7.4 },
+  { d: '24/08', c: 7.45, l71: 8.1, l96: 7.4 },
+]
+const barData = [
+  { d: '01/08', cb: 2, kc: 0 }, { d: '05/08', cb: 3, kc: 1 },
+  { d: '10/08', cb: 5, kc: 2 }, { d: '15/08', cb: 4, kc: 1 },
+  { d: '18/08', cb: 6, kc: 3 }, { d: '20/08', cb: 8, kc: 4 },
+  { d: '24/08', cb: 7, kc: 3 },
+]
+const TOOLTIP = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadius: 4, fontSize: 9 }
 
 export default function HistoryPage() {
   const [search, setSearch] = useState('')
-  const filtered = HISTORY_RECORDS.filter(r =>
+  const { alarms } = useAlarmData()
+  const { stations } = useDamData()
+
+  // Dynamic history records built from real alarms or stations
+  const historyRecords = alarms.length > 0
+    ? alarms.map(a => ({
+        time: new Date(a.triggeredAt).toLocaleString('vi-VN'),
+        code: a.sensorId,
+        location: `Đập ${a.damId}`,
+        level: `${a.measuredVal} ${SENSOR_TYPE_UNITS[a.sensorType] || ''}`,
+        alertLv: a.severity === 'CRITICAL' ? 'danger' : a.severity === 'ALERT' ? 'warning' : 'info',
+        statusLv: a.resolvedAt ? 'safe' : 'warning',
+        statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'ĐANG XỬ LÝ',
+      }))
+    : stations.map(s => ({
+        time: new Date().toLocaleTimeString('vi-VN'),
+        code: `TR-${s.id}`,
+        location: s.location || s.name,
+        level: `${s.waterLevel}m`,
+        alertLv: s.status,
+        statusLv: s.status === 'safe' ? 'safe' : 'warning',
+        statusLbl: s.status === 'safe' ? 'BÌNH THƯỜNG' : 'ĐANG GIÁM SÁT',
+      }))
+
+  const filtered = historyRecords.filter(r =>
     !search || r.code.toLowerCase().includes(search.toLowerCase()) || r.location.toLowerCase().includes(search.toLowerCase())
   )
 
