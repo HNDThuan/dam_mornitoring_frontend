@@ -25,13 +25,13 @@ export default function NavBar() {
         <div className="w-6 h-6 rounded-md bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-white">
           <Droplets className="w-3.5 h-3.5" />
         </div>
-        <span className="font-bold text-sm text-tx tracking-wide whitespace-nowrap">
+        <span className="font-bold text-base text-tx tracking-wide whitespace-nowrap">
           {t('appName')}
         </span>
       </div>
 
       {/* Nav links */}
-      <div className="flex gap-0.5 flex-1 overflow-x-auto">
+      <div className="flex gap-1 flex-1 overflow-x-auto">
         {NAV.map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
@@ -39,7 +39,7 @@ export default function NavBar() {
               key={href}
               href={href}
               className={`
-                flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-semibold
+                flex items-center gap-2 px-3 py-1.5 text-[13px] font-bold
                 tracking-wide rounded-t whitespace-nowrap shrink-0 transition-all duration-150
                 border-b-2 no-underline
                 ${active
@@ -48,10 +48,10 @@ export default function NavBar() {
                 }
               `}
             >
-              {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
+              {Icon && <Icon className="w-4 h-4 shrink-0" />}
               {label}
               {badge > 0 && (
-                <span className="bg-danger text-white rounded-full text-[8px] px-1 py-0 font-bold leading-4 animate-pulse-dot">
+                <span className="bg-danger text-white rounded-full text-[9px] px-1.5 py-0 font-bold leading-4 animate-pulse-dot">
                   {badge}
                 </span>
               )}
@@ -63,19 +63,19 @@ export default function NavBar() {
       {/* Language Switcher */}
       <button
         onClick={toggleLanguage}
-        className="flex items-center gap-1.5 px-2.5 py-1 bg-card2 border border-border rounded-lg text-[10px] font-bold text-tx cursor-pointer hover:border-accent hover:text-accent transition-all shrink-0"
+        className="flex items-center gap-1.5 px-3 py-1.5 bg-card2 border border-border rounded-lg text-[11px] font-bold text-tx cursor-pointer hover:border-accent hover:text-accent transition-all shrink-0 shadow-sm"
         title="Chuyển đổi ngôn ngữ / Switch Language"
       >
-        <Globe className="w-3.5 h-3.5 text-accent" />
+        <Globe className="w-4 h-4 text-accent" />
         <span>{locale === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}</span>
       </button>
 
       {/* Admin */}
-      <div className="flex items-center gap-1.5 px-2 py-1 bg-card2 rounded cursor-pointer shrink-0">
-        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-[8px] text-white font-bold">
+      <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-card2 border border-border rounded-lg cursor-pointer shrink-0">
+        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-[9px] text-white font-bold">
           AD
         </div>
-        <span className="text-[11px] text-tx font-semibold">Admin</span>
+        <span className="text-[12px] text-tx font-bold">Admin</span>
       </div>
     </nav>
   )

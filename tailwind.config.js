@@ -16,11 +16,11 @@ module.exports = {
         bg:      '#060b14',
         card:    '#0d1520',
         card2:   '#111d2b',
-        border:  '#1a2a3a',
-        borderHi:'#243447',
+        border:  '#293b52',
+        borderHi:'#3b526d',
         // Text
-        tx:      '#dde6f0',
-        muted:   '#4a6070',
+        tx:      '#f8fafc',
+        muted:   '#94a3b8',
         // Status
         danger:  '#f43f5e',
         warning: '#fb923c',

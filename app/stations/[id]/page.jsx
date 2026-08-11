@@ -16,6 +16,7 @@ import { getStatus, getStatusBySeverity } from "@/lib/statusConfig";
 import { Mono, Badge } from "@/components/ui";
 import { useSensorData } from "@/hooks/useSensorData";
 import { useDamData } from "@/hooks/useDamData";
+import { useLanguage } from "@/context/LanguageContext";
 import {
   historyToChartData,
   calcDelta,
