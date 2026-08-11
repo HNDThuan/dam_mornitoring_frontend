@@ -2,30 +2,35 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAlarmData } from '@/hooks/useAlarmData'
-import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets, Database } from 'lucide-react'
+import { useLanguage } from '@/context/LanguageContext'
+import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets, Database, Globe } from 'lucide-react'
 
 export default function NavBar() {
   const pathname = usePathname()
   const { unresolvedCount } = useAlarmData()
+  const { locale, toggleLanguage, t } = useLanguage()
+
   const NAV = [
-    { href: '/', label: 'Trang Chủ', icon: Home, badge: 0 },
-    { href: '/stations', label: 'Danh Sách Trạm', icon: ClipboardList, badge: 0 },
-    { href: '/admin/dams', label: 'Quản Lý Đập & Trạm', icon: Database, badge: 0 },
-    { href: '/forecast', label: 'Dự Báo & Mô Phỏng', icon: TrendingUp, badge: 0 },
-    { href: '/alerts', label: 'Cảnh Báo', icon: AlertTriangle, badge: unresolvedCount },
-    { href: '/history', label: 'Lịch Sử', icon: Calendar, badge: 0 },
+    { href: '/', label: t('nav.home'), icon: Home, badge: 0 },
+    { href: '/stations', label: t('nav.stations'), icon: ClipboardList, badge: 0 },
+    { href: '/admin/dams', label: t('nav.adminDams'), icon: Database, badge: 0 },
+    { href: '/forecast', label: t('nav.forecast'), icon: TrendingUp, badge: 0 },
+    { href: '/alerts', label: t('nav.alerts'), icon: AlertTriangle, badge: unresolvedCount },
+    { href: '/history', label: t('nav.history'), icon: Calendar, badge: 0 },
   ]
+
   return (
-    <nav className="sticky top-0 z-50 bg-card border-b border-border flex items-center gap-1 px-4 h-12">
+    <nav className="sticky top-0 z-50 bg-card border-b border-border flex items-center gap-2 px-4 h-12">
       {/* Logo */}
-      <div className="flex items-center gap-2 mr-4 shrink-0">
+      <div className="flex items-center gap-2 mr-3 shrink-0">
         <div className="w-6 h-6 rounded-md bg-gradient-to-br from-sky-500 to-indigo-500 flex items-center justify-center text-white">
           <Droplets className="w-3.5 h-3.5" />
         </div>
         <span className="font-bold text-sm text-tx tracking-wide whitespace-nowrap">
-          Dam Monitoring System
+          {t('appName')}
         </span>
       </div>
+
       {/* Nav links */}
       <div className="flex gap-0.5 flex-1 overflow-x-auto">
         {NAV.map(({ href, label, icon: Icon, badge }) => {
@@ -47,7 +52,6 @@ export default function NavBar() {
               {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
               {label}
               {badge > 0 && (
-
                 <span className="bg-danger text-white rounded-full text-[8px] px-1 py-0 font-bold leading-4 animate-pulse-dot">
                   {badge}
                 </span>
@@ -56,6 +60,17 @@ export default function NavBar() {
           )
         })}
       </div>
+
+      {/* Language Switcher */}
+      <button
+        onClick={toggleLanguage}
+        className="flex items-center gap-1.5 px-2.5 py-1 bg-card2 border border-border rounded-lg text-[10px] font-bold text-tx cursor-pointer hover:border-accent hover:text-accent transition-all shrink-0"
+        title="Chuyển đổi ngôn ngữ / Switch Language"
+      >
+        <Globe className="w-3.5 h-3.5 text-accent" />
+        <span>{locale === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}</span>
+      </button>
+
       {/* Admin */}
       <div className="flex items-center gap-1.5 px-2 py-1 bg-card2 rounded cursor-pointer shrink-0">
         <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-sky-500 flex items-center justify-center text-[8px] text-white font-bold">

@@ -2,23 +2,25 @@
 
 import { useState } from 'react'
 import { Mono } from '@/components/ui'
+import { useLanguage } from '@/context/LanguageContext'
 import { Video, VideoOff, Camera, Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 const CAMERAS = [
-  { id: 1, label: 'Thân đê — Thượng lưu', code: 'CAM-01', status: 'safe'    },
-  { id: 2, label: 'Mặt đê — Km 45',       code: 'CAM-02', status: 'safe'    },
-  { id: 3, label: 'Chân đê — Hạ lưu',     code: 'CAM-03', status: 'warning' },
-  { id: 4, label: 'Cửa xả — Trạm bơm',    code: 'CAM-04', status: 'offline' },
+  { id: 1, label: 'Thân đê — Thượng lưu', code: 'CAM-01', status: 'safe' },
+  { id: 2, label: 'Mặt đê — Km 45', code: 'CAM-02', status: 'safe' },
+  { id: 3, label: 'Chân đê — Hạ lưu', code: 'CAM-03', status: 'warning' },
+  { id: 4, label: 'Cửa xả — Trạm bơm', code: 'CAM-04', status: 'offline' },
 ]
 
 const CAM_DOT = { safe: '#34d399', warning: '#fb923c', offline: '#4a6070' }
 
 export default function CameraViewer() {
-  const [active, setActive]     = useState(0)
+  const [active, setActive] = useState(0)
   const [expanded, setExpanded] = useState(false)
+  const { t, locale } = useLanguage()
 
   const cam = CAMERAS[active]
-  const cl  = CAM_DOT[cam.status]
+  const cl = CAM_DOT[cam.status]
 
   const prev = () => setActive(i => (i - 1 + CAMERAS.length) % CAMERAS.length)
   const next = () => setActive(i => (i + 1) % CAMERAS.length)
@@ -38,19 +40,19 @@ export default function CameraViewer() {
         <Mono className="text-[9px]" style={{ color: cl }}>{cam.code}</Mono>
         {cam.status === 'warning' && (
           <span className="font-mono text-[8px] text-warning bg-black/50 border border-warning/40 px-1.5 py-0.5 rounded">
-            TRÀN NƯỚC (98%)
+            {t('camera.overflow')}
           </span>
         )}
       </div>
       <Mono className="absolute bottom-2 left-3 text-[8px] text-white/30">
-        {new Date().toLocaleTimeString('vi-VN')} | FPS: 30
+        {new Date().toLocaleTimeString(locale === 'vi' ? 'vi-VN' : 'en-US')} | FPS: 30
       </Mono>
 
       {/* Expand btn */}
       {!large && (
         <button onClick={() => setExpanded(true)}
           className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 border border-white/20 rounded flex items-center justify-center cursor-pointer transition-all"
-          title="Phóng to">
+          title={t('camera.zoomIn')}>
           <Maximize2 className="w-3.5 h-3.5 text-white/70" />
         </button>
       )}
@@ -105,9 +107,9 @@ export default function CameraViewer() {
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center gap-2">
             <Camera className="w-4 h-4 text-accent shrink-0" />
-            <span className="text-[12px] font-semibold text-tx">Camera AI — Giám Sát</span>
+            <span className="text-[12px] font-semibold text-tx">{t('camera.title')}</span>
           </div>
-          <Mono className="text-[8px] text-safe">● TRỰC TIẾP</Mono>
+          <Mono className="text-[8px] text-safe">● {t('camera.live')}</Mono>
         </div>
 
         <CamFeed />
@@ -132,7 +134,7 @@ export default function CameraViewer() {
 
         {/* AI stats */}
         <div className="grid grid-cols-4 gap-1.5 mt-3">
-          {[['Người', '0', 'text-safe'], ['Phương tiện', '2', 'text-tx'], ['Vết nứt', 'Không', 'text-safe'], ['Độ tin cậy', '98.5%', 'text-info']].map(([lb, val, cl]) => (
+          {[[t('camera.people'), '0', 'text-safe'], [t('camera.vehicles'), '2', 'text-tx'], [t('camera.cracks'), t('camera.none'), 'text-safe'], [t('camera.confidence'), '98.5%', 'text-info']].map(([lb, val, cl]) => (
             <div key={lb} className="bg-card2 rounded px-2 py-1.5 text-center">
               <div className="text-[7px] text-muted uppercase tracking-wide mb-1">{lb}</div>
               <Mono className={`text-[11px] font-bold ${cl}`}>{val}</Mono>

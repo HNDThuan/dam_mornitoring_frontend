@@ -1,6 +1,7 @@
 import './globals.css'
 import NavBar from '@/components/NavBar'
 import LiveStatusBar from '@/components/LiveStatusBar'
+import { LanguageProvider } from '@/context/LanguageContext'
 
 export const metadata = {
   title: 'Dam Monitoring System',
@@ -11,9 +12,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="vi">
       <body className="min-h-screen bg-bg text-tx font-sans">
-        <NavBar />
-        <LiveStatusBar />
-        <main>{children}</main>
+        <LanguageProvider>
+          <NavBar />
+          <LiveStatusBar />
+          <main>{children}</main>
+        </LanguageProvider>
       </body>
     </html>
   )

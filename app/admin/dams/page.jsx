@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useDamData } from '@/hooks/useDamData'
+import { useLanguage } from '@/context/LanguageContext'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import {
@@ -34,6 +35,7 @@ export default function AdminDamsPage() {
     updateStation,
     deleteStation,
   } = useDamData()
+  const { t } = useLanguage()
 
   const [activeTab, setActiveTab] = useState('dams') // 'dams' | 'stations'
   const [search, setSearch] = useState('')
@@ -248,9 +250,9 @@ export default function AdminDamsPage() {
             <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
               <Database className="w-4 h-4" />
             </div>
-            <h1 className="text-xl font-bold text-tx tracking-wide m-0">QUẢN LÝ ĐẬP THỦY ĐIỆN & TRẠM QUAN TRẮC</h1>
+            <h1 className="text-xl font-bold text-tx tracking-wide m-0">{t('admin.title')}</h1>
           </div>
-          <p className="text-[10px] text-muted m-0">Thao tác CRUD trực tiếp trên Database PostgreSQL / TimescaleDB</p>
+          <p className="text-[10px] text-muted m-0">{t('admin.subtitle')}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -259,7 +261,7 @@ export default function AdminDamsPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded text-muted text-[11px] font-medium bg-card hover:bg-white/5 transition-colors cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Làm mới</span>
+            <span>{t('stationsPage.refresh')}</span>
           </button>
 
           {activeTab === 'dams' ? (
@@ -268,7 +270,7 @@ export default function AdminDamsPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
             >
               <Plus className="w-4 h-4" />
-              <span>Thêm Đập Mới</span>
+              <span>{t('admin.addDam')}</span>
             </button>
           ) : (
             <button
@@ -276,7 +278,7 @@ export default function AdminDamsPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
             >
               <Plus className="w-4 h-4" />
-              <span>Thêm Trạm Mới</span>
+              <span>{t('admin.addStation')}</span>
             </button>
           )}
         </div>
@@ -291,7 +293,7 @@ export default function AdminDamsPage() {
               ${activeTab === 'dams' ? 'bg-accent/20 text-accent border border-accent/40 shadow-sm' : 'bg-transparent text-muted hover:text-tx'}`}
           >
             <Database className="w-3.5 h-3.5" />
-            <span>Danh sách Đập Thủy Điện ({dams.length})</span>
+            <span>{t('admin.tabDams')} ({dams.length})</span>
           </button>
 
           <button
@@ -300,7 +302,7 @@ export default function AdminDamsPage() {
               ${activeTab === 'stations' ? 'bg-accent/20 text-accent border border-accent/40 shadow-sm' : 'bg-transparent text-muted hover:text-tx'}`}
           >
             <Radio className="w-3.5 h-3.5" />
-            <span>Danh sách Trạm Quan Trắc ({stations.length})</span>
+            <span>{t('admin.tabStations')} ({stations.length})</span>
           </button>
         </div>
 
@@ -312,7 +314,7 @@ export default function AdminDamsPage() {
               onChange={e => setDamFilter(e.target.value)}
               className="bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none"
             >
-              <option value="all">Tất cả các đập</option>
+              <option value="all">{t('admin.allDams')}</option>
               {dams.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}

@@ -4,12 +4,14 @@ import { getStatus, getStatusBySeverity } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
+import { useLanguage } from '@/context/LanguageContext'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
 import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle } from 'lucide-react'
 
 export default function DashboardPage() {
   const { alarms, unresolvedCount } = useAlarmData()
   const { dams, stations, loading, error } = useDamData()
+  const { t } = useLanguage()
 
   const counts = {
     danger: stations.filter(s => s.status === 'danger').length,
@@ -22,8 +24,8 @@ export default function DashboardPage() {
       {/* ── LEFT ── */}
       <div>
         <Label>
-          Danh sách đập
-          <span className="float-right font-normal">{dams.length} đập</span>
+          {t('dashboard.damList')}
+          <span className="float-right font-normal">{dams.length} {t('dashboard.damCount')}</span>
         </Label>
         <div className="flex flex-col gap-2 mb-3.5">
           {dams.map(d => {
@@ -37,16 +39,16 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex gap-3 mb-2">
                   <div>
-                    <div className="text-[8px] text-muted uppercase tracking-wide">Mực nước</div>
+                    <div className="text-[8px] text-muted uppercase tracking-wide">{t('dashboard.waterLevel')}</div>
                     <Mono className={`text-[13px] ${s.text}`}>{d.waterLevel}m</Mono>
                   </div>
                   <div>
-                    <div className="text-[8px] text-muted uppercase tracking-wide">Lưu lượng</div>
+                    <div className="text-[8px] text-muted uppercase tracking-wide">{t('dashboard.flow')}</div>
                     <Mono className="text-[12px] text-tx">{d.flow ? d.flow.toLocaleString() : 0} m³/s</Mono>
                   </div>
                 </div>
                 <div className="flex justify-between mb-1">
-                  <span className="text-[8px] text-muted">Mức chứa</span>
+                  <span className="text-[8px] text-muted">{t('dashboard.fillPct')}</span>
                   <Mono className="text-[8px] text-tx">{d.fillPct}%</Mono>
                 </div>
                 <div className="h-1 bg-border rounded-sm">
@@ -58,11 +60,11 @@ export default function DashboardPage() {
         </div>
         {/* Summary */}
         <div className="bg-card border border-border rounded-md p-3">
-          <Label className="mb-2.5">Tổng quan trạm</Label>
-          {[['Nguy hiểm', counts.danger, 'text-danger'], ['Cảnh báo', counts.warning, 'text-warning'], ['An toàn', counts.safe, 'text-safe']].map(([lb, ct, cl]) => (
+          <Label className="mb-2.5">{t('dashboard.stationOverview')}</Label>
+          {[[t('status.danger'), counts.danger, 'text-danger'], [t('status.warning'), counts.warning, 'text-warning'], [t('status.safe'), counts.safe, 'text-safe']].map(([lb, ct, cl]) => (
             <div key={lb} className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${lb === 'Nguy hiểm' ? 'bg-danger' : lb === 'Cảnh báo' ? 'bg-warning' : 'bg-safe'}`} />
+                <div className={`w-1.5 h-1.5 rounded-full ${lb === t('status.danger') ? 'bg-danger' : lb === t('status.warning') ? 'bg-warning' : 'bg-safe'}`} />
                 <span className="text-[12px] text-tx">{lb}</span>
               </div>
               <Mono className={`text-base font-bold ${cl}`}>{ct}</Mono>
@@ -70,7 +72,7 @@ export default function DashboardPage() {
           ))}
           <Divider />
           <div className="flex justify-between">
-            <span className="text-[11px] text-muted">Tổng hoạt động</span>
+            <span className="text-[11px] text-muted">{t('dashboard.totalActive')}</span>
             <Mono className="text-[13px] text-tx">{stations.length} trạm</Mono>
           </div>
         </div>

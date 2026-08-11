@@ -202,6 +202,7 @@ function MetricCard({
 export default function StationDetailPage() {
   const { id } = useParams();
   const { stations } = useDamData();
+  const { t, locale } = useLanguage();
   const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
   const st = stations.find((s) => s.id === Number(id)) || defaultSt;
   const stStatus = getStatus(st.status);
@@ -284,17 +285,17 @@ export default function StationDetailPage() {
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 mb-3 text-[11px]">
         <Link href="/" className="text-muted no-underline hover:text-tx">
-          Trang chủ
+          {t('stationDetail.breadcrumbHome')}
         </Link>
         <ChevronRight className="w-3 h-3 text-muted shrink-0" />
         <Link
           href="/stations"
           className="text-muted no-underline hover:text-tx"
         >
-          Danh sách trạm
+          {t('stationDetail.breadcrumbStations')}
         </Link>
         <ChevronRight className="w-3 h-3 text-muted shrink-0" />
-        <span className="text-tx">Giám sát chi tiết</span>
+        <span className="text-tx">{t('stationDetail.breadcrumbDetail')}</span>
       </div>
 
       {/* Connection banner */}
@@ -318,8 +319,8 @@ export default function StationDetailPage() {
               {latest?.timestamp && (
                 <>
                   {" "}
-                  • Cập nhật:{" "}
-                  {new Date(latest.timestamp).toLocaleTimeString("vi-VN")}
+                  • {t('liveBar.updated')}:{" "}
+                  {new Date(latest.timestamp).toLocaleTimeString(locale === 'vi' ? 'vi-VN' : 'en-US')}
                 </>
               )}
             </span>
@@ -327,7 +328,7 @@ export default function StationDetailPage() {
         </div>
         <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-500">
           <Download className="w-3.5 h-3.5 shrink-0" />
-          <span>Xuất báo cáo</span>
+          <span>{t('stationDetail.exportReport')}</span>
         </button>
       </div>
 
@@ -335,7 +336,7 @@ export default function StationDetailPage() {
       <div className="grid grid-cols-4 gap-3 mb-3">
         {/* Mực nước */}
         <MetricCard
-          label="Mực nước"
+          label={t('dashboard.waterLevel')}
           value={waterLevel.toFixed(2)}
           unit="m"
           delta={waterDelta.delta ? `${waterDelta.delta}m` : null}
@@ -346,9 +347,9 @@ export default function StationDetailPage() {
           data={waterChartData}
           threshold={waterThreshold}
           stats={[
-            { lb: "Trung bình", val: `${waterStats.avg}m`, cl: "text-tx" },
+            { lb: t('stationDetail.average'), val: `${waterStats.avg}m`, cl: "text-tx" },
             {
-              lb: "Đỉnh 24h",
+              lb: t('stationDetail.peak24h'),
               val: `${waterStats.max}m`,
               cl: `text-${waterSt.level === "danger" ? "danger" : "warning"}`,
             },
@@ -358,7 +359,7 @@ export default function StationDetailPage() {
 
         {/* Độ ẩm */}
         <MetricCard
-          label="Độ ẩm thân đê"
+          label={t('stationDetail.moistureLeak')}
           value={moisture.toFixed(1)}
           unit="%"
           delta={humidDelta.delta ? `${humidDelta.delta}%` : null}
@@ -369,15 +370,15 @@ export default function StationDetailPage() {
           data={humidChartData}
           threshold={humThreshold}
           stats={[
-            { lb: "Trung bình", val: `${humidStats.avg}%`, cl: "text-tx" },
-            { lb: "Cao nhất", val: `${humidStats.max}%`, cl: "text-info" },
-            { lb: "Ngưỡng", val: `${humThreshold}%`, cl: "text-warning" },
+            { lb: t('stationDetail.average'), val: `${humidStats.avg}%`, cl: "text-tx" },
+            { lb: t('stationDetail.maxHigh'), val: `${humidStats.max}%`, cl: "text-info" },
+            { lb: t('stationDetail.threshold'), val: `${humThreshold}%`, cl: "text-warning" },
           ]}
         />
 
         {/* Độ rung */}
         <MetricCard
-          label="Độ rung (Freq)"
+          label={t('stationDetail.vibFreq')}
           value={freq.toFixed(2)}
           unit="Hz"
           delta={vibDelta.delta ? `${vibDelta.delta}Hz` : null}
@@ -388,14 +389,14 @@ export default function StationDetailPage() {
           data={vibChartData}
           threshold={vibThreshold}
           stats={[
-            { lb: "Trung bình", val: `${vibStats.avg} Hz`, cl: "text-tx" },
-            { lb: "Đỉnh 24h", val: `${vibStats.max} Hz`, cl: "text-warning" },
-            { lb: "Ngưỡng", val: `${vibThreshold} Hz`, cl: "text-muted" },
+            { lb: t('stationDetail.average'), val: `${vibStats.avg} Hz`, cl: "text-tx" },
+            { lb: t('stationDetail.peak24h'), val: `${vibStats.max} Hz`, cl: "text-warning" },
+            { lb: t('stationDetail.threshold'), val: `${vibThreshold} Hz`, cl: "text-muted" },
           ]}
         />
 
         <MetricCard
-          label="Độ rung (Amplitude)"
+          label={t('stationDetail.vibAmp')}
           value={amp.toFixed(2)} unit="mm/s"
           delta={ampDelta.delta ? `${ampDelta.delta}mm/s` : null}
           deltaUp={ampDelta.up}
@@ -405,8 +406,8 @@ export default function StationDetailPage() {
           data={ampChartData}
           threshold={vibThreshold}
           stats={[
-            { lb: 'Trung bình', val: `${ampStats.avg} mm/s`, cl: 'text-tx' },
-            { lb: 'Đỉnh 24h', val: `${ampStats.max} mm/s`, cl: 'text-warning' },
+            { lb: t('stationDetail.average'), val: `${ampStats.avg} mm/s`, cl: 'text-tx' },
+            { lb: t('stationDetail.peak24h'), val: `${ampStats.max} mm/s`, cl: 'text-warning' },
             { lb: `BĐ (${vibThreshold} mm/s)`, val: `${vibThreshold} mm/s`, cl: 'text-danger' },
           ]}
         />
