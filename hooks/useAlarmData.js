@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { getSocket } from '@/lib/socket'
-import { fetchAlarmEvents, fetchThresholdConfigs, resolveAlarmEvent as apiResolve } from '@/lib/api'
+import { fetchAlarmEvents, fetchThresholdConfigs, resolveAlarmEvent as apiResolve, getFormattedImageUrl } from '@/lib/api'
 /**
  * Hook quản lý alarm events & threshold configs từ backend.
  * - Lấy danh sách alarm events ban đầu qua REST
@@ -60,6 +60,14 @@ export function useAlarmData(damId = 'dam_1') {
         // Lắng nghe alarm event mới từ WebSocket
         const onAlarm = (alarm) => {
             if (!mountedRef.current) return
+            // Tải trước ảnh (Preload) vào Browser Cache ngay khi nhận tin từ WebSocket
+            if (alarm?.imageUrl) {
+                const imgUrl = getFormattedImageUrl(alarm.imageUrl)
+                if (imgUrl) {
+                    const img = new Image()
+                    img.src = imgUrl
+                }
+            }
             setAlarms(prev => {
                 // Nếu alarm đã tồn tại trong danh sách (được cập nhật kết quả AI), cập nhật phần tử đó
                 const exists = prev.some(a => a.id === alarm.id)

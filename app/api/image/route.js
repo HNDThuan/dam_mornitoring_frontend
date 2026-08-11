@@ -17,7 +17,6 @@ export async function GET(request) {
         'ngrok-skip-browser-warning': '69420',
         'User-Agent': 'DamMonitoringApp/1.0',
       },
-      cache: 'no-store',
     })
 
     if (!upstream.ok) {
