@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useAlarmData } from '@/hooks/useAlarmData'
-import { sendEmailAlert } from '@/lib/api'
+import { sendEmailAlert, getFormattedImageUrl } from '@/lib/api'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
@@ -291,7 +291,7 @@ export default function AlertsPage() {
                   </div>
                   <div className={`bg-card2 rounded ${sel.imageUrl ? 'h-48' : 'h-20'} overflow-hidden flex items-center justify-center relative mb-2`}>
                     {sel.imageUrl ? (
-                      <img src={sel.imageUrl} alt="AI Camera Capture" className="w-full h-full object-cover" />
+                      <img src={getFormattedImageUrl(sel.imageUrl)} alt="AI Camera Capture" className="w-full h-full object-cover" />
                     ) : (
                       <Camera className="w-8 h-8 text-muted opacity-30 shrink-0" />
                     )}
@@ -572,7 +572,7 @@ export default function AlertsPage() {
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 border border-white/20 text-white cursor-pointer transition-colors z-10">
             <X className="w-4 h-4" />
           </button>
-          <img src={sel.imageUrl} alt="AI Camera Capture — Full" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
+          <img src={getFormattedImageUrl(sel.imageUrl)} alt="AI Camera Capture — Full" className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg shadow-2xl"
             onClick={e => e.stopPropagation()} />
         </div>
       )}
