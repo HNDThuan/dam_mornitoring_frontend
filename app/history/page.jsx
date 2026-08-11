@@ -29,28 +29,49 @@ const TOOLTIP = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadi
 export default function HistoryPage() {
   const [search, setSearch] = useState('')
   const { alarms } = useAlarmData()
-  const { stations } = useDamData()
+  const { dams, stations } = useDamData()
 
   // Dynamic history records built from real alarms or stations
   const historyRecords = alarms.length > 0
-    ? alarms.map(a => ({
-        time: new Date(a.triggeredAt).toLocaleString('vi-VN'),
-        code: a.sensorId,
-        location: `Đập ${a.damId}`,
-        level: `${a.measuredVal} ${SENSOR_TYPE_UNITS[a.sensorType] || ''}`,
-        alertLv: a.severity === 'CRITICAL' ? 'danger' : a.severity === 'ALERT' ? 'warning' : 'info',
-        statusLv: a.resolvedAt ? 'safe' : 'warning',
-        statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'ĐANG XỬ LÝ',
-      }))
-    : stations.map(s => ({
-        time: new Date().toLocaleTimeString('vi-VN'),
-        code: `TR-${s.id}`,
-        location: s.location || s.name,
-        level: `${s.waterLevel}m`,
-        alertLv: s.status,
-        statusLv: s.status === 'safe' ? 'safe' : 'warning',
-        statusLbl: s.status === 'safe' ? 'BÌNH THƯỜNG' : 'ĐANG GIÁM SÁT',
-      }))
+    ? alarms.map(a => {
+        const dam = dams.find(d => d.id === a.damId) || dams[0]
+        const station = stations.find(st => String(st.id) === String(a.sensorId) || st.damId === a.damId) || stations[0]
+
+        const damName = dam?.name || `Đập ${a.damId}`
+        const damLoc = dam?.location || 'Hà Nội'
+        const stName = station?.name || `Trạm ${a.sensorId}`
+        const stLoc = station?.location || 'Thân đập'
+
+        return {
+          time: new Date(a.triggeredAt).toLocaleString('vi-VN'),
+          code: a.sensorId,
+          stationName: stName,
+          stationLocation: stLoc,
+          damName: damName,
+          damLocation: damLoc,
+          location: `${stName} (${stLoc}) — ${damName}`,
+          level: `${a.measuredVal} ${SENSOR_TYPE_UNITS[a.sensorType] || ''}`,
+          alertLv: a.severity === 'CRITICAL' ? 'danger' : a.severity === 'ALERT' ? 'warning' : 'info',
+          statusLv: a.resolvedAt ? 'safe' : 'warning',
+          statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'ĐANG XỬ LÝ',
+        }
+      })
+    : stations.map(s => {
+        const dam = dams.find(d => d.id === s.damId) || dams[0]
+        return {
+          time: new Date().toLocaleTimeString('vi-VN'),
+          code: `TR-${s.id}`,
+          stationName: s.name,
+          stationLocation: s.location || 'Hà Nội',
+          damName: dam?.name || 'Đập Thủy Điện',
+          damLocation: dam?.location || 'Việt Nam',
+          location: `${s.name} (${s.location || 'Hà Nội'}) — ${dam?.name || 'Đập Thủy Điện'}`,
+          level: `${s.waterLevel}m`,
+          alertLv: s.status,
+          statusLv: s.status === 'safe' ? 'safe' : 'warning',
+          statusLbl: s.status === 'safe' ? 'BÌNH THƯỜNG' : 'ĐANG GIÁM SÁT',
+        }
+      })
 
   const filtered = historyRecords.filter(r =>
     !search || r.code.toLowerCase().includes(search.toLowerCase()) || r.location.toLowerCase().includes(search.toLowerCase())

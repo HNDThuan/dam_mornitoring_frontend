@@ -175,25 +175,36 @@ export default function DashboardPage() {
                 const s = getStatusBySeverity(al.severity)
                 const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
                 const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
+
+                const dam = dams.find(d => d.id === al.damId) || dams[0]
+                const station = stations.find(st => String(st.id) === String(al.sensorId) || st.damId === al.damId) || stations[0]
+
+                const damName = dam?.name || 'Đập Thủy Điện'
+                const damLoc = dam?.location || 'Hà Nội'
+                const stName = station?.name || 'Trạm Quan Trắc'
+                const stLoc = station?.location || 'Thân đập chính'
+
                 return (
                   <div key={al.id}
-
-                    className={`bg-card border border-border border-l-[3px] ${s.leftBorder} rounded px-2.5 py-2
+                    className={`bg-card border border-border border-l-[3px] ${s.leftBorder} rounded-lg p-2.5
                     ${al.resolvedAt ? 'opacity-60' : ''}`}>
                     <div className="flex justify-between mb-1">
-
-                      <span className={`font-mono text-[8px] uppercase ${s.text} flex items-center gap-1`}>
-                        {sevInfo.icon && <sevInfo.icon className="w-2.5 h-2.5 shrink-0" />}
+                      <span className={`font-mono text-[9px] uppercase font-bold ${s.text} flex items-center gap-1`}>
+                        {sevInfo.icon && <sevInfo.icon className="w-3 h-3 shrink-0" />}
                         <span>{sevInfo.label}</span>
                       </span>
-                      <span className="font-mono text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</span>
+                      <span className="font-mono text-[9px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</span>
                     </div>
-                    <div className="text-[11px] font-semibold text-tx mb-1">{al.title}</div>
-                    <div className="text-[9px] text-muted">📍 {al.location}</div>
-                    <div className="text-[11px] font-semibold text-tx mb-1">
+
+                    <div className="text-[12px] font-bold text-tx mb-1">
                       {typeLb}: {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
                     </div>
-                    <div className="text-[9px] text-muted">🆔 {al.sensorId}</div>
+
+                    {/* Vị trí Trạm & Đập */}
+                    <div className="text-[10px] text-muted space-y-0.5 my-1 bg-card2 p-1.5 rounded border border-border/40">
+                      <div className="text-tx font-bold">📍 {stName} ({stLoc})</div>
+                      <div className="text-muted text-[9px]">🏞️ {damName} ({damLoc})</div>
+                    </div>
                   </div>
                 )
               })

@@ -2,14 +2,17 @@
 
 import { useState, useMemo } from 'react'
 import { useAlarmData } from '@/hooks/useAlarmData'
+import { useDamData } from '@/hooks/useDamData'
 import { sendEmailAlert, getFormattedImageUrl } from '@/lib/api'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
-import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio } from 'lucide-react'
 
 export default function AlertsPage() {
   const { alarms, thresholds, loading, error, resolveAlarm, unresolvedCount } = useAlarmData()
+  const { dams, stations } = useDamData()
+
   const [selId, setSelId] = useState(null)
   const [filter, setFilter] = useState('all') // 'all' | 'CRITICAL' | 'ALERT' | 'WARNING' | 'resolved'
   const [modes, setModes] = useState({ sms: false, zalo: false, email: true })
@@ -33,6 +36,26 @@ export default function AlertsPage() {
     return ['ruka13312002@gmail.com']
   })
   const [newEmailInput, setNewEmailInput] = useState('')
+
+  // Helper tra cứu vị trí Trạm & Đập
+  const getLocationInfo = (alarm) => {
+    if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', river: '', km: '', fullLocation: '' }
+
+    const dam = dams.find(d => d.id === alarm.damId) || dams[0]
+    const damName = dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
+    const damLocation = dam?.location || 'Việt Nam'
+
+    // Lookup station
+    const station = stations.find(s => String(s.id) === String(alarm.sensorId) || s.damId === alarm.damId) || stations[0]
+    const stationName = station?.name || `Trạm ${alarm.sensorId || 'Quan Trắc'}`
+    const stationLoc = station?.location || 'Thân đập chính'
+    const river = station?.river || 'Sông Hồng'
+    const km = station?.km || 'K25+500'
+
+    const fullLocation = `${stationName} (${stationLoc} — ${river} ${km}) thuộc ${damName} (${damLocation})`
+
+    return { damName, damLocation, stationName, stationLoc, river, km, fullLocation }
+  }
 
   const addEmailContact = () => {
     const trimmed = newEmailInput.trim().toLowerCase()
@@ -73,11 +96,9 @@ export default function AlertsPage() {
     const sevInfo = SEVERITY_MAP[sel.severity] || SEVERITY_MAP.WARNING
     const typeLb = SENSOR_TYPE_LABELS[sel.sensorType] || sel.sensorType
     const unit = SENSOR_TYPE_UNITS[sel.sensorType] || ''
-    const location = sel.sensorId === 'sensor_node_1'
-      ? 'Trạm K25+500 (Thân đập chính Đan Phượng)'
-      : `Trạm ${sel.sensorId} - Đập ${sel.damId}`
-    return `[${sevInfo.label}] Cảnh báo ${typeLb} tại vị trí: ${location}. Giá trị đo: ${sel.measuredVal} ${unit} (Ngưỡng: ${sel.thresholdVal} ${unit}). ${sel.notes || ''}`
-  }, [sel])
+    const locInfo = getLocationInfo(sel)
+    return `[${sevInfo.label}] Cảnh báo ${typeLb} tại vị trí: ${locInfo.fullLocation}. Giá trị đo: ${sel.measuredVal} ${unit} (Ngưỡng: ${sel.thresholdVal} ${unit}). ${sel.notes || ''}`
+  }, [sel, dams, stations])
 
   // Filter alarms
   const shown = useMemo(() => {
@@ -203,26 +224,41 @@ export default function AlertsPage() {
               const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
               const isSel = sel?.id === al.id
               const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
+              const loc = getLocationInfo(al)
 
               return (
                 <div key={al.id} onClick={() => setSelId(al.id)}
-                  className={`border-l-[3px] ${s.leftBorder} rounded px-2.5 py-2 cursor-pointer transition-all
-                  ${isSel ? `${s.bg} ${s.border} border` : 'bg-card border border-border'}
+                  className={`border-l-[3px] ${s.leftBorder} rounded-lg p-2.5 cursor-pointer transition-all
+                  ${isSel ? `${s.bg} ${s.border} border` : 'bg-card border border-border hover:bg-white/5'}
                   ${al.resolvedAt ? 'opacity-60' : ''}`}>
                   <div className="flex justify-between mb-1">
-                    <Mono className={`text-[8px] uppercase ${s.text} flex items-center gap-1`}>
-                      {sevInfo.icon && <sevInfo.icon className="w-2.5 h-2.5 shrink-0" />}
+                    <Mono className={`text-[10px] uppercase font-bold ${s.text} flex items-center gap-1`}>
+                      {sevInfo.icon && <sevInfo.icon className="w-3 h-3 shrink-0" />}
                       <span>{sevInfo.label}</span>
                     </Mono>
-                    <Mono className="text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</Mono>
+                    <Mono className="text-[10px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</Mono>
                   </div>
-                  <div className="text-[11px] font-semibold text-tx mb-1">
+
+                  <div className="text-[12px] font-bold text-tx mb-1">
                     {typeLb}: {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
                   </div>
-                  <div className="text-[9px] text-muted line-clamp-2">{al.notes}</div>
+
+                  {/* Vị trí Trạm & Đập */}
+                  <div className="text-[10px] text-muted space-y-0.5 my-1 bg-card2 p-1.5 rounded border border-border/40">
+                    <div className="flex items-center gap-1 text-tx font-medium">
+                      <Radio className="w-3 h-3 text-sky-400 shrink-0" />
+                      <span>{loc.stationName} ({loc.stationLoc})</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-muted">
+                      <Database className="w-3 h-3 text-indigo-400 shrink-0" />
+                      <span>{loc.damName} ({loc.damLocation})</span>
+                    </div>
+                  </div>
+
+                  <div className="text-[10px] text-muted line-clamp-2">{al.notes}</div>
                   {al.resolvedAt && (
-                    <Mono className="text-[8px] text-safe mt-1 flex items-center gap-1">
-                      <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                    <Mono className="text-[9px] text-safe mt-1 flex items-center gap-1 font-bold">
+                      <CheckCircle2 className="w-3 h-3 shrink-0" />
                       <span>Đã xử lý</span>
                     </Mono>
                   )}
@@ -239,43 +275,84 @@ export default function AlertsPage() {
           const typeLb = SENSOR_TYPE_LABELS[sel.sensorType] || sel.sensorType
           const unit = SENSOR_TYPE_UNITS[sel.sensorType] || ''
           const triggeredDate = sel.triggeredAt ? new Date(sel.triggeredAt) : null
+          const loc = getLocationInfo(sel)
 
           return (
-            <div className="overflow-y-auto">
+            <div className="overflow-y-auto space-y-3">
               {/* Header */}
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex justify-between items-start bg-card border border-border rounded-xl p-4 shadow-md">
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
-                    <h2 className="text-lg font-bold text-tx m-0">{typeLb} vượt ngưỡng</h2>
-                    <span className={`font-mono text-[9px] font-bold ${s.text} ${s.bg} ${s.border} border px-2 py-0.5 rounded-sm flex items-center gap-1`}>
-                      {sevInfo.icon && <sevInfo.icon className="w-2.5 h-2.5 shrink-0" />}
+                    <h2 className="text-xl font-bold text-tx m-0">{typeLb} vượt ngưỡng</h2>
+                    <span className={`font-mono text-[11px] font-bold ${s.text} ${s.bg} ${s.border} border px-2.5 py-0.5 rounded flex items-center gap-1`}>
+                      {sevInfo.icon && <sevInfo.icon className="w-3 h-3 shrink-0" />}
                       <span>{sevInfo.label}</span>
                     </span>
                     {sel.resolvedAt && (
-                      <span className="font-mono text-[9px] font-bold text-safe bg-safe-soft border border-safe-soft px-2 py-0.5 rounded-sm flex items-center gap-1">
-                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                      <span className="font-mono text-[11px] font-bold text-safe bg-safe-soft border border-safe-soft px-2.5 py-0.5 rounded flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 shrink-0" />
                         <span>ĐÃ XỬ LÝ</span>
                       </span>
                     )}
                   </div>
-                  <Mono className="text-[9px] text-muted flex items-center gap-3">
+                  <Mono className="text-[11px] text-muted flex items-center gap-3">
                     <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-muted shrink-0" /> {triggeredDate?.toLocaleDateString('vi-VN')}</span>
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-muted shrink-0" /> {triggeredDate?.toLocaleTimeString('vi-VN')}</span>
-                    <span className="flex items-center gap-1"><Fingerprint className="w-3.5 h-3.5 text-muted shrink-0" /> {sel.sensorId}</span>
+                    <span className="flex items-center gap-1"><Fingerprint className="w-3.5 h-3.5 text-muted shrink-0" /> ID: {sel.id || sel.sensorId}</span>
                   </Mono>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex gap-2">
                   {!sel.resolvedAt && (
                     <button onClick={() => resolveAlarm(sel.id)}
-                      className="px-2.5 py-1 border border-safe/40 rounded bg-safe/10 text-safe text-[10px] font-bold cursor-pointer hover:bg-safe/20 transition-colors flex items-center gap-1">
-                      <Check className="w-3 h-3 shrink-0" />
+                      className="px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[11px] font-bold cursor-pointer hover:bg-safe/20 transition-colors flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5 shrink-0" />
                       <span>Đánh dấu đã xử lý</span>
                     </button>
                   )}
-                  <button className="px-2.5 py-1 border border-border rounded bg-transparent text-tx text-[10px] cursor-pointer hover:bg-white/5 flex items-center gap-1">
-                    <Printer className="w-3 h-3 text-muted shrink-0" />
+                  <button className="px-3 py-1.5 border border-border rounded-lg bg-card2 text-tx text-[11px] font-semibold cursor-pointer hover:bg-white/5 flex items-center gap-1">
+                    <Printer className="w-3.5 h-3.5 text-muted shrink-0" />
                     <span>PDF</span>
                   </button>
+                </div>
+              </div>
+
+              {/* DEDICATED LOCATION CARD */}
+              <div className="bg-card2 border border-border rounded-xl p-4 shadow-md space-y-2">
+                <div className="text-[11px] font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-accent shrink-0" />
+                  <span>VỊ TRÍ XẢY RA CẢNH BÁO</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  {/* Đập thủy điện */}
+                  <div className="bg-card border border-border rounded-lg p-3 flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Database className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted uppercase font-semibold">Đập Thủy Điện</div>
+                      <div className="text-[13px] font-bold text-tx">{loc.damName}</div>
+                      <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-muted shrink-0" />
+                        <span>Vị trí đập: <strong>{loc.damLocation}</strong></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trạm quan trắc */}
+                  <div className="bg-card border border-border rounded-lg p-3 flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
+                      <Radio className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-muted uppercase font-semibold">Trạm Quan Trắc</div>
+                      <div className="text-[13px] font-bold text-tx">{loc.stationName}</div>
+                      <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
+                        <MapPin className="w-3 h-3 text-muted shrink-0" />
+                        <span>Vị trí: <strong>{loc.stationLoc}</strong> ({loc.river} — <Mono className="text-tx">{loc.km}</Mono>)</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
