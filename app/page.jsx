@@ -128,9 +128,9 @@ export default function DashboardPage() {
           })}
         </div>
         <div className="text-center mt-3">
-          <Link href="/stations"
+          <Link href="/dams"
             className="inline-block border border-border rounded text-accent text-[11px] font-semibold px-4 py-1.5 no-underline hover:bg-white/5 transition-colors">
-            Xem tất cả {stations.length} trạm →
+            {t('dashboard.viewAllStations', { count: stations.length })}
           </Link>
         </div>
       </div>

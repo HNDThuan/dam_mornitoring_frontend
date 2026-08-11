@@ -12,8 +12,7 @@ export default function NavBar() {
 
   const NAV = [
     { href: '/', label: t('nav.home'), icon: Home, badge: 0 },
-    { href: '/stations', label: t('nav.stations'), icon: ClipboardList, badge: 0 },
-    { href: '/admin/dams', label: t('nav.adminDams'), icon: Database, badge: 0 },
+    { href: '/dams', label: t('nav.dams'), icon: Database, badge: 0 },
     { href: '/forecast', label: t('nav.forecast'), icon: TrendingUp, badge: 0 },
     { href: '/alerts', label: t('nav.alerts'), icon: AlertTriangle, badge: unresolvedCount },
     { href: '/history', label: t('nav.history'), icon: Calendar, badge: 0 },
