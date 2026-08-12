@@ -20,6 +20,7 @@ import {
   Radio,
   MapPin,
 } from 'lucide-react'
+import DamPinMap from '@/components/DamMap'
 
 export default function DamsPage() {
   const router = useRouter()
@@ -42,11 +43,21 @@ export default function DamsPage() {
   const [editingDam, setEditingDam] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, name }
 
+  // Toast State
+  const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
   // Form states
   const [damForm, setDamForm] = useState({
     id: '',
     name: '',
     location: '',
+    latitude: 20.8167,
+    longitude: 105.3265,
     waterLevel: 0,
     flow: 0,
     fillPct: 50,
@@ -57,9 +68,11 @@ export default function DamsPage() {
   const openCreateDamModal = () => {
     setEditingDam(null)
     setDamForm({
-      id: `dam_${Date.now()}`,
+      id: '',
       name: '',
       location: '',
+      latitude: 20.8167,
+      longitude: 105.3265,
       waterLevel: 100,
       flow: 1000,
       fillPct: 70,
@@ -75,6 +88,8 @@ export default function DamsPage() {
       id: dam.id,
       name: dam.name || '',
       location: dam.location || '',
+      latitude: dam.latitude ?? 20.8167,
+      longitude: dam.longitude ?? 105.3265,
       waterLevel: dam.waterLevel || 0,
       flow: dam.flow || 0,
       fillPct: dam.fillPct || 0,
@@ -90,22 +105,33 @@ export default function DamsPage() {
         await updateDam(editingDam.id, {
           name: damForm.name,
           location: damForm.location,
+          latitude: Number(damForm.latitude),
+          longitude: Number(damForm.longitude),
           waterLevel: Number(damForm.waterLevel),
           flow: Number(damForm.flow),
           fillPct: Number(damForm.fillPct),
           status: damForm.status,
         })
+        showToast('✅ Cập nhật đập thủy điện thành công!', 'success')
       } else {
-        await createDam({
-          ...damForm,
+        const payload = {
+          name: damForm.name,
+          location: damForm.location,
+          latitude: Number(damForm.latitude),
+          longitude: Number(damForm.longitude),
           waterLevel: Number(damForm.waterLevel),
           flow: Number(damForm.flow),
           fillPct: Number(damForm.fillPct),
-        })
+          status: damForm.status,
+        }
+        const res = await createDam(payload)
+        const newId = res?.dam?.id || ''
+        showToast(`✅ Tạo đập thủy điện thành công! (Mã: ${newId})`, 'success')
       }
       setDamModalOpen(false)
+      refetch(true)
     } catch (err) {
-      alert(`Lỗi khi lưu đập: ${err.message}`)
+      showToast(`❌ ${err.message}`, 'error')
     }
   }
 
@@ -114,9 +140,11 @@ export default function DamsPage() {
     if (!deleteConfirm) return
     try {
       await deleteDam(deleteConfirm.id)
+      showToast(`✅ Đã xóa đập ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
+      refetch(true)
     } catch (err) {
-      alert(`Lỗi khi xóa: ${err.message}`)
+      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
     }
   }
 
@@ -171,6 +199,9 @@ export default function DamsPage() {
         </div>
       </div>
 
+      {/* ── INTERACTIVE LEAFLET GIS MAP ── */}
+      <DamPinMap dams={dams} stations={stations} height="360px" />
+
       {/* Dams List */}
       <div className="grid grid-cols-2 gap-3">
         {filteredDams.map(dam => {
@@ -194,12 +225,15 @@ export default function DamsPage() {
                     </h2>
                     <Badge status={dam.status} sm />
                   </div>
-                  {dam.location && (
-                    <div className="text-[10px] text-muted flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-muted shrink-0" />
-                      <span>{dam.location}</span>
-                    </div>
-                  )}
+                  <div className="text-[10px] text-muted flex items-center gap-1 font-mono">
+                    <MapPin className="w-3 h-3 text-muted shrink-0" />
+                    <span>
+                      {dam.latitude != null && dam.longitude != null
+                        ? `${dam.latitude}°N, ${dam.longitude}°E`
+                        : (dam.location || 'Chưa có tọa độ')}
+                      {dam.location && dam.latitude != null ? ` (${dam.location})` : ''}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-1.5">
@@ -271,6 +305,20 @@ export default function DamsPage() {
         )}
       </div>
 
+      {/* ── TOAST NOTIFICATION ── */}
+      {toast && (
+        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${
+          toast.type === 'error'
+            ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
+            : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
+        }`}>
+          <span className="text-[12px]">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ── MODAL: CREATE / EDIT DAM ── */}
       {damModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -290,15 +338,16 @@ export default function DamsPage() {
 
             <form onSubmit={handleSaveDam} className="p-5 space-y-3 text-[11px]">
               <div>
-                <Label className="mb-1">{t('admin.form.damIdSlug')}</Label>
+                <Label className="mb-1">Mã Đập Thủy Điện (ID)</Label>
                 <input
-                  disabled={Boolean(editingDam)}
-                  required
-                  value={damForm.id}
-                  onChange={e => setDamForm(p => ({ ...p, id: e.target.value }))}
-                  placeholder="vd: dam_hoa_binh"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent disabled:opacity-50 font-mono"
+                  disabled
+                  readOnly
+                  value={editingDam ? damForm.id : '(Tự động sinh bởi Backend)'}
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-muted outline-none opacity-70 font-mono cursor-not-allowed select-none"
                 />
+                <span className="text-[9px] text-muted mt-1 block">
+                  🔒 ID được Backend tự động tạo theo tên Đập để đảm bảo tính duy nhất.
+                </span>
               </div>
 
               <div>
@@ -312,8 +361,35 @@ export default function DamsPage() {
                 />
               </div>
 
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={damForm.latitude}
+                    onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
+                    placeholder="vd: 20.8167"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={damForm.longitude}
+                    onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
+                    placeholder="vd: 105.3265"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+              </div>
+
               <div>
-                <Label className="mb-1">{t('admin.form.locationLabel')}</Label>
+                <Label className="mb-1">Địa danh / Vị trí hành chính</Label>
                 <input
                   value={damForm.location}
                   onChange={e => setDamForm(p => ({ ...p, location: e.target.value }))}

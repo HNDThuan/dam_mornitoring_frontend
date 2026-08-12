@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   AreaChart,
   Area,
@@ -13,7 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { getStatus, getStatusBySeverity } from "@/lib/statusConfig";
-import { Mono, Badge } from "@/components/ui";
+import { Mono, Badge, Label } from "@/components/ui";
 import { useSensorData } from "@/hooks/useSensorData";
 import { useDamData } from "@/hooks/useDamData";
 import { useLanguage } from "@/context/LanguageContext";
@@ -30,8 +30,9 @@ import {
   SENSOR_TYPE_UNITS
 } from "@/lib/sensorHelpers";
 import CameraViewer from "@/components/CameraViewer";
+import DamMap from "@/components/DamMap";
 import { useAlarmData } from "@/hooks/useAlarmData";
-import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2 } from "lucide-react";
+import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, X, Radio } from "lucide-react";
 
 const CHART_STYLE = {
   background: "#0d1520",
@@ -202,14 +203,90 @@ function MetricCard({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 export default function StationDetailPage() {
   const { id } = useParams();
-  const { stations } = useDamData();
+  const router = useRouter();
+  const { dams, stations, refetch, updateStation, deleteStation } = useDamData();
   const { t, locale } = useLanguage();
-  const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
+  const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', latitude: 21.0381, longitude: 105.8492, river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
   const st = stations.find((s) => s.id === Number(id)) || defaultSt;
   const stStatus = getStatus(st.status);
 
-  // ── Real-time data from backend ──
-  const { latest, history, connected, error } = useSensorData();
+  // Toast State
+  const [toast, setToast] = useState(null) // { message, type }
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  // Edit / Delete Modal State
+  const [editingModalOpen, setEditingModalOpen] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [stationForm, setStationForm] = useState({
+    name: '',
+    location: '',
+    latitude: 21.0381,
+    longitude: 105.8492,
+    river: '',
+    km: '',
+    status: 'safe',
+    bd1: 6.0,
+    bd2: 8.0,
+    bd3: 10.0,
+  })
+
+  const openEditModal = () => {
+    setStationForm({
+      name: st.name || '',
+      location: st.location || '',
+      latitude: st.latitude ?? 21.0381,
+      longitude: st.longitude ?? 105.8492,
+      river: st.river || '',
+      km: st.km || '',
+      status: st.status || 'safe',
+      bd1: st.bd1 || 6.0,
+      bd2: st.bd2 || 8.0,
+      bd3: st.bd3 || 10.0,
+    })
+    setEditingModalOpen(true)
+  }
+
+  const handleSaveStation = async (e) => {
+    e.preventDefault()
+    try {
+      await updateStation(st.id, {
+        name: stationForm.name,
+        location: stationForm.location,
+        latitude: Number(stationForm.latitude),
+        longitude: Number(stationForm.longitude),
+        river: stationForm.river,
+        km: stationForm.km,
+        status: stationForm.status,
+        bd1: Number(stationForm.bd1),
+        bd2: Number(stationForm.bd2),
+        bd3: Number(stationForm.bd3),
+      })
+      showToast('✅ Cập nhật thông tin trạm quan trắc thành công!', 'success')
+      setEditingModalOpen(false)
+      refetch(true)
+    } catch (err) {
+      showToast(`❌ ${err.message}`, 'error')
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteStation(st.id)
+      showToast(`✅ Đã xóa trạm quan trắc ${st.name}!`, 'success')
+      setDeleteConfirm(false)
+      setTimeout(() => {
+        router.push(st.damId ? `/dams/${st.damId}` : '/dams')
+      }, 1000)
+    } catch (err) {
+      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
+    }
+  }
+
+  // ── Real-time data từ backend (chỉ nhận dữ liệu đúng của Trạm này) ──
+  const { latest, history, connected, error } = useSensorData(Number(id));
   const { alarms, thresholds } = useAlarmData()
 
   // Dùng real data nếu có, fallback về station data
@@ -302,12 +379,26 @@ export default function StationDetailPage() {
       {/* Connection banner */}
       <ConnectionBanner connected={connected} error={error} />
 
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${
+          toast.type === 'error'
+            ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
+            : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
+        }`}>
+          <span className="text-[12px]">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-start mb-5">
         <div>
           <div className="flex items-center gap-2.5 mb-1.5">
             <h1 className="text-xl font-bold text-tx tracking-wide m-0">
-              {st.river} — {st.km}
+              {st.name} ({st.river} — {st.km})
             </h1>
             <Badge status={waterSt.level} />
           </div>
@@ -316,7 +407,7 @@ export default function StationDetailPage() {
               className={`w-1.5 h-1.5 rounded-full animate-pulse-dot ${stStatus.dot}`}
             />
             <span className="text-[10px] text-muted">
-              {st.name}
+              Mã Trạm #{st.id}
               {latest?.timestamp && (
                 <>
                   {" "}
@@ -327,10 +418,44 @@ export default function StationDetailPage() {
             </span>
           </div>
         </div>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-500">
-          <Download className="w-3.5 h-3.5 shrink-0" />
-          <span>{t('stationDetail.exportReport')}</span>
-        </button>
+
+        {/* Action Buttons: Sửa, Xóa, Xuất báo cáo */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={openEditModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
+            title="Chỉnh sửa thông tin Trạm"
+          >
+            <Pencil className="w-3.5 h-3.5 shrink-0" />
+            <span>Sửa thông tin</span>
+          </button>
+          <button
+            onClick={() => setDeleteConfirm(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-danger/30 rounded-lg text-danger text-[11px] font-bold bg-danger/10 hover:bg-danger/20 transition-colors cursor-pointer"
+            title="Xóa Trạm quan trắc"
+          >
+            <Trash2 className="w-3.5 h-3.5 shrink-0" />
+            <span>Xóa trạm</span>
+          </button>
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-500">
+            <Download className="w-3.5 h-3.5 shrink-0" />
+            <span>{t('stationDetail.exportReport')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── GIS MAP BẢN ĐỒ TỌA ĐỘ TRẠM ── */}
+      <div className="bg-card border border-border rounded-xl p-3 mb-4 shadow-lg">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-sky-400" />
+            <span className="text-xs font-bold text-tx">Vị trí địa lý & Tọa độ GIS Trạm quan trắc</span>
+          </div>
+          <span className="font-mono text-[10px] text-muted">
+            📍 Tọa độ: {st.latitude != null && st.longitude != null ? `${st.latitude}°N, ${st.longitude}°E` : (st.location || 'Chưa cập nhật')}
+          </span>
+        </div>
+        <DamMap dams={dams.filter(d => d.id === st.damId)} stations={[st]} height="320px" />
       </div>
 
       {/* ── 3 Metric Cards ── */}
@@ -539,6 +664,175 @@ export default function StationDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* ── MODAL: EDIT STATION ── */}
+      {editingModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
+              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
+                <Radio className="w-4 h-4 text-accent" />
+                <span>Chỉnh sửa thông tin Trạm #{st.id}</span>
+              </h3>
+              <button
+                onClick={() => setEditingModalOpen(false)}
+                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveStation} className="p-5 space-y-3 text-[11px]">
+              <div>
+                <Label className="mb-1">Tên Trạm quan trắc</Label>
+                <input
+                  required
+                  value={stationForm.name}
+                  onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="vd: Trạm Tân Ấp 1"
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={stationForm.latitude}
+                    onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
+                    placeholder="vd: 21.0381"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={stationForm.longitude}
+                    onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
+                    placeholder="vd: 105.8492"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="mb-1">Địa danh / Vị trí</Label>
+                <input
+                  value={stationForm.location}
+                  onChange={e => setStationForm(p => ({ ...p, location: e.target.value }))}
+                  placeholder="vd: Hoàn Kiếm, Hà Nội"
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1">Tên Sông</Label>
+                  <input
+                    value={stationForm.river}
+                    onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
+                    placeholder="vd: Sông Hồng"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Vị trí Km / Lý trình</Label>
+                  <input
+                    value={stationForm.km}
+                    onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
+                    placeholder="vd: K25+500"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
+                <div>
+                  <Label className="mb-1">Báo động 1 (m)</Label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={stationForm.bd1}
+                    onChange={e => setStationForm(p => ({ ...p, bd1: e.target.value }))}
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Báo động 2 (m)</Label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={stationForm.bd2}
+                    onChange={e => setStationForm(p => ({ ...p, bd2: e.target.value }))}
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-warning"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Báo động 3 (m)</Label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={stationForm.bd3}
+                    onChange={e => setStationForm(p => ({ ...p, bd3: e.target.value }))}
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-danger font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setEditingModalOpen(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-transparent cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: DELETE CONFIRMATION ── */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-5 text-center animate-in fade-in zoom-in duration-150">
+            <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+            </div>
+            <h3 className="text-base font-bold text-tx mb-2">Xác nhận xóa Trạm?</h3>
+            <p className="text-xs text-muted mb-5 leading-relaxed">
+              Bạn có chắc chắn muốn xóa <strong className="text-tx">{st.name}</strong>? Thao tác này không thể hoàn tác.
+            </p>
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => setDeleteConfirm(false)}
+                className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 bg-danger hover:bg-danger/80 text-white rounded-lg text-xs font-bold border-none cursor-pointer shadow-lg shadow-danger/20"
+              >
+                Xóa vĩnh viễn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

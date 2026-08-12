@@ -19,9 +19,9 @@ export function useDamData() {
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     try {
-      setLoading(true)
+      if (!silent) setLoading(true)
       const [damsRes, stationsRes] = await Promise.all([fetchDams(), fetchStations()])
       if (!mountedRef.current) return
       setDams(damsRes.dams || [])
@@ -32,13 +32,13 @@ export function useDamData() {
       setError('Không thể tải dữ liệu đập và trạm từ backend.')
       console.error('[useDamData]', err)
     } finally {
-      if (mountedRef.current) setLoading(false)
+      if (!silent && mountedRef.current) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     mountedRef.current = true
-    loadData()
+    loadData(false)
     return () => {
       mountedRef.current = false
     }
@@ -46,37 +46,37 @@ export function useDamData() {
 
   const createDam = async (data) => {
     const res = await apiCreateDam(data)
-    await loadData()
+    await loadData(true)
     return res
   }
 
   const updateDam = async (id, data) => {
     const res = await apiUpdateDam(id, data)
-    await loadData()
+    await loadData(true)
     return res
   }
 
   const deleteDam = async (id) => {
     const res = await apiDeleteDam(id)
-    await loadData()
+    await loadData(true)
     return res
   }
 
   const createStation = async (data) => {
     const res = await apiCreateStation(data)
-    await loadData()
+    await loadData(true)
     return res
   }
 
   const updateStation = async (id, data) => {
     const res = await apiUpdateStation(id, data)
-    await loadData()
+    await loadData(true)
     return res
   }
 
   const deleteStation = async (id) => {
     const res = await apiDeleteStation(id)
-    await loadData()
+    await loadData(true)
     return res
   }
 

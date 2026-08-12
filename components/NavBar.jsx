@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useLanguage } from '@/context/LanguageContext'
-import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets, Database, Globe } from 'lucide-react'
+import { Home, ClipboardList, TrendingUp, AlertTriangle, Calendar, Droplets, Database, Globe, Cpu } from 'lucide-react'
 
 export default function NavBar() {
   const pathname = usePathname()
@@ -16,6 +16,7 @@ export default function NavBar() {
     { href: '/forecast', label: t('nav.forecast'), icon: TrendingUp, badge: 0 },
     { href: '/alerts', label: t('nav.alerts'), icon: AlertTriangle, badge: unresolvedCount },
     { href: '/history', label: t('nav.history'), icon: Calendar, badge: 0 },
+    { href: '/admin/sensor-clusters', label: 'Cụm cảm biến', icon: Cpu, badge: 0 },
   ]
 
   return (

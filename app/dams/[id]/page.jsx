@@ -24,6 +24,7 @@ import {
   Droplet,
   Activity
 } from 'lucide-react'
+import DamMap from '@/components/DamMap'
 
 export default function DamDetailPage() {
   const { id } = useParams()
@@ -35,6 +36,8 @@ export default function DamDetailPage() {
     loading,
     error,
     refetch,
+    updateDam,
+    deleteDam,
     createStation,
     updateStation,
     deleteStation,
@@ -42,6 +45,20 @@ export default function DamDetailPage() {
   const { t, locale } = useLanguage()
 
   const [search, setSearch] = useState('')
+
+  // Modals state for Dam
+  const [damModalOpen, setDamModalOpen] = useState(false)
+  const [deleteDamConfirm, setDeleteDamConfirm] = useState(false)
+  const [damForm, setDamForm] = useState({
+    name: '',
+    location: '',
+    latitude: 20.8167,
+    longitude: 105.3265,
+    waterLevel: 0,
+    flow: 0,
+    fillPct: 50,
+    status: 'safe',
+  })
 
   // Modals state for Stations
   const [stationModalOpen, setStationModalOpen] = useState(false)
@@ -67,10 +84,69 @@ export default function DamDetailPage() {
     return isThisDam && matchesSearch
   })
 
+  // Dam Handlers
+  const openEditDamModal = () => {
+    setDamForm({
+      name: dam.name || '',
+      location: dam.location || '',
+      latitude: dam.latitude ?? 20.8167,
+      longitude: dam.longitude ?? 105.3265,
+      waterLevel: dam.waterLevel || 0,
+      flow: dam.flow || 0,
+      fillPct: dam.fillPct || 0,
+      status: dam.status || 'safe',
+    })
+    setDamModalOpen(true)
+  }
+
+  const handleSaveDam = async (e) => {
+    e.preventDefault()
+    try {
+      await updateDam(dam.id, {
+        name: damForm.name,
+        location: damForm.location,
+        latitude: Number(damForm.latitude),
+        longitude: Number(damForm.longitude),
+        waterLevel: Number(damForm.waterLevel),
+        flow: Number(damForm.flow),
+        fillPct: Number(damForm.fillPct),
+        status: damForm.status,
+      })
+      showToast('✅ Cập nhật thông tin đập thành công!', 'success')
+      setDamModalOpen(false)
+      refetch(true)
+    } catch (err) {
+      showToast(`❌ ${err.message}`, 'error')
+    }
+  }
+
+  const handleConfirmDeleteDam = async () => {
+    try {
+      await deleteDam(dam.id)
+      showToast(`✅ Đã xóa đập thủy điện ${dam.name}!`, 'success')
+      setDeleteDamConfirm(false)
+      setTimeout(() => {
+        router.push('/dams')
+      }, 1000)
+    } catch (err) {
+      showToast(`❌ Lỗi khi xóa đập: ${err.message}`, 'error')
+    }
+  }
+
+  // Toast State
+  const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' }
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 4000)
+  }
+
   // Form state
   const [stationForm, setStationForm] = useState({
     name: '',
     location: '',
+    latitude: 21.0381,
+    longitude: 105.8492,
     river: '',
     km: '',
     status: 'safe',
@@ -90,6 +166,8 @@ export default function DamDetailPage() {
     setStationForm({
       name: '',
       location: dam.location || '',
+      latitude: dam.latitude || 21.0381,
+      longitude: dam.longitude || 105.8492,
       river: 'Sông Hồng',
       km: 'K10+000',
       status: 'safe',
@@ -111,6 +189,8 @@ export default function DamDetailPage() {
     setStationForm({
       name: st.name || '',
       location: st.location || '',
+      latitude: st.latitude ?? 21.0381,
+      longitude: st.longitude ?? 105.8492,
       river: st.river || '',
       km: st.km || '',
       status: st.status || 'safe',
@@ -134,6 +214,8 @@ export default function DamDetailPage() {
         await updateStation(editingStation.id, {
           name: stationForm.name,
           location: stationForm.location,
+          latitude: Number(stationForm.latitude),
+          longitude: Number(stationForm.longitude),
           river: stationForm.river,
           km: stationForm.km,
           status: stationForm.status,
@@ -147,9 +229,12 @@ export default function DamDetailPage() {
           bd3: Number(stationForm.bd3),
           damId: damId,
         })
+        showToast('✅ Cập nhật trạm quan trắc thành công!', 'success')
       } else {
         await createStation({
           ...stationForm,
+          latitude: Number(stationForm.latitude),
+          longitude: Number(stationForm.longitude),
           waterLevel: Number(stationForm.waterLevel),
           change: Number(stationForm.change),
           pressure: Number(stationForm.pressure),
@@ -160,10 +245,12 @@ export default function DamDetailPage() {
           bd3: Number(stationForm.bd3),
           damId: damId,
         })
+        showToast(`✅ Tạo trạm "${stationForm.name}" thành công!`, 'success')
       }
       setStationModalOpen(false)
+      refetch(true)
     } catch (err) {
-      alert(`Lỗi khi lưu trạm: ${err.message}`)
+      showToast(`❌ ${err.message}`, 'error')
     }
   }
 
@@ -171,9 +258,11 @@ export default function DamDetailPage() {
     if (!deleteConfirm) return
     try {
       await deleteStation(deleteConfirm.id)
+      showToast(`✅ Đã xóa trạm ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
+      refetch(true)
     } catch (err) {
-      alert(`Lỗi khi xóa: ${err.message}`)
+      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
     }
   }
 
@@ -208,7 +297,28 @@ export default function DamDetailPage() {
             )}
           </div>
 
-          <div className="flex gap-4 bg-card2 border border-border rounded-xl p-3">
+          <div className="flex items-center gap-3">
+            {/* Dam Action Buttons: Sửa, Xóa */}
+            <div className="flex items-center gap-1.5 border-r border-border/60 pr-3">
+              <button
+                onClick={openEditDamModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
+                title="Sửa thông tin Đập"
+              >
+                <Pencil className="w-3.5 h-3.5 shrink-0" />
+                <span>Sửa đập</span>
+              </button>
+              <button
+                onClick={() => setDeleteDamConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-danger/30 rounded-lg text-danger text-[11px] font-bold bg-danger/10 hover:bg-danger/20 transition-colors cursor-pointer"
+                title="Xóa Đập Thủy Điện"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Xóa đập</span>
+              </button>
+            </div>
+
+            <div className="flex gap-4 bg-card2 border border-border rounded-xl p-3">
             <div>
               <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
               <Mono className={`text-base font-bold ${damStatus.text}`}>{dam.waterLevel} m</Mono>
@@ -225,6 +335,7 @@ export default function DamDetailPage() {
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Top Header Actions for Stations */}
@@ -266,6 +377,9 @@ export default function DamDetailPage() {
         </div>
       </div>
 
+      {/* ── INTERACTIVE LEAFLET GIS MAP ── */}
+      <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.id} height="320px" />
+
       {/* Stations Grid */}
       {damStations.length > 0 ? (
         <div className="grid grid-cols-3 gap-3.5">
@@ -280,12 +394,14 @@ export default function DamDetailPage() {
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="text-[13px] font-bold text-tx">{st.name}</div>
-                      {st.location && (
-                        <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-3 h-3 text-muted shrink-0" />
-                          <span>{st.location}</span>
-                        </div>
-                      )}
+                      <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5 font-mono">
+                        <MapPin className="w-3 h-3 text-muted shrink-0" />
+                        <span>
+                          {st.latitude != null && st.longitude != null
+                            ? `${st.latitude}°N, ${st.longitude}°E`
+                            : (st.location || 'Chưa có tọa độ')}
+                        </span>
+                      </div>
                     </div>
                     <Badge status={st.status} sm />
                   </div>
@@ -346,6 +462,20 @@ export default function DamDetailPage() {
         </div>
       )}
 
+      {/* ── TOAST NOTIFICATION ── */}
+      {toast && (
+        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${
+          toast.type === 'error'
+            ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
+            : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
+        }`}>
+          <span className="text-[12px]">{toast.message}</span>
+          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* ── MODAL: CREATE / EDIT STATION ── */}
       {stationModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
@@ -386,12 +516,40 @@ export default function DamDetailPage() {
                 </div>
 
                 <div>
-                  <Label className="mb-1">{t('admin.form.locationLabel')}</Label>
+                  <Label className="mb-1">Địa danh / Vị trí</Label>
                   <input
                     value={stationForm.location}
                     onChange={e => setStationForm(p => ({ ...p, location: e.target.value }))}
                     placeholder="vd: Hoàn Kiếm, Hà Nội"
                     className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={stationForm.latitude}
+                    onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
+                    placeholder="vd: 21.0381"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+
+                <div>
+                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={stationForm.longitude}
+                    onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
+                    placeholder="vd: 105.8492"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
                   />
                 </div>
               </div>
@@ -551,6 +709,164 @@ export default function DamDetailPage() {
                 className="px-4 py-2 bg-danger rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-danger/20"
               >
                 {t('admin.confirmDelete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: EDIT DAM ── */}
+      {damModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
+              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
+                <Database className="w-4 h-4 text-accent" />
+                <span>Chỉnh sửa thông tin Đập thủy điện ({dam.id})</span>
+              </h3>
+              <button
+                onClick={() => setDamModalOpen(false)}
+                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDam} className="p-5 space-y-3 text-[11px]">
+              <div>
+                <Label className="mb-1">Mã Đập Thủy Điện (ID)</Label>
+                <input
+                  disabled
+                  readOnly
+                  value={dam.id}
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-muted outline-none opacity-70 font-mono cursor-not-allowed select-none"
+                />
+              </div>
+
+              <div>
+                <Label className="mb-1">Tên Đập Thủy Điện</Label>
+                <input
+                  required
+                  value={damForm.name}
+                  onChange={e => setDamForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="vd: Đập Thủy điện Hòa Bình"
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={damForm.latitude}
+                    onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
+                    placeholder="vd: 20.8167"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    value={damForm.longitude}
+                    onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
+                    placeholder="vd: 105.3265"
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label className="mb-1">Địa danh / Vị trí hành chính</Label>
+                <input
+                  value={damForm.location}
+                  onChange={e => setDamForm(p => ({ ...p, location: e.target.value }))}
+                  placeholder="vd: Hòa Bình"
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="mb-1">Mực nước (m)</Label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={damForm.waterLevel}
+                    onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Lưu lượng (m3/s)</Label>
+                  <input
+                    type="number"
+                    value={damForm.flow}
+                    onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1">Dung tích (%)</Label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={damForm.fillPct}
+                    onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
+                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setDamModalOpen(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-transparent cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
+                >
+                  Lưu thay đổi
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: DELETE DAM CONFIRMATION ── */}
+      {deleteDamConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-5 text-center animate-in fade-in zoom-in duration-150">
+            <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-3">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+            </div>
+            <h3 className="text-base font-bold text-tx mb-2">Xác nhận xóa Đập Thủy Điện?</h3>
+            <p className="text-xs text-muted mb-5 leading-relaxed">
+              Bạn có chắc chắn muốn xóa đập <strong className="text-tx">{dam.name}</strong> ({dam.id}) và toàn bộ các trạm trực thuộc? Thao tác này không thể hoàn tác.
+            </p>
+            <div className="flex justify-center gap-2">
+              <button
+                onClick={() => setDeleteDamConfirm(false)}
+                className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmDeleteDam}
+                className="px-4 py-2 bg-danger hover:bg-danger/80 text-white rounded-lg text-xs font-bold border-none cursor-pointer shadow-lg shadow-danger/20"
+              >
+                Xóa vĩnh viễn
               </button>
             </div>
           </div>

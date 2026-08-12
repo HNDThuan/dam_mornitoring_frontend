@@ -8,6 +8,8 @@ import { useLanguage } from '@/context/LanguageContext'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
 import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle } from 'lucide-react'
 
+import DamMap from '@/components/DamMap'
+
 export default function DashboardPage() {
   const { alarms, unresolvedCount } = useAlarmData()
   const { dams, stations, loading, error } = useDamData()
@@ -79,25 +81,9 @@ export default function DashboardPage() {
       </div>
       {/* ── CENTER ── */}
       <div>
-        {/* Map placeholder */}
-        <div className="rounded-lg border border-border mb-3.5 h-44 flex flex-col items-center justify-center relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg,#0a1628,#0d2040,#091220)' }}>
-          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 40% 50%,rgba(56,189,248,.06) 0%,transparent 60%)' }} />
-          <div className="relative text-center">
-            <div className="flex justify-center mb-1.5">
-              <Map className="w-8 h-8 text-accent opacity-60" />
-            </div>
-            <div className="text-[13px] font-bold text-tx tracking-widest">BẢN ĐỒ ĐIỂM NÓNG</div>
-            <div className="text-[10px] text-muted mt-1">Tích hợp bản đồ GIS đang phát triển</div>
-            <div className="flex gap-3.5 mt-2.5 justify-center">
-              {[['bg-danger', `${counts.danger} Nguy hiểm`], ['bg-warning', `${counts.warning} Cảnh báo`], ['bg-safe', `${counts.safe} An toàn`]].map(([cl, lb]) => (
-                <div key={lb} className="flex items-center gap-1">
-                  <div className={`w-1.5 h-1.5 rounded-full ${cl}`} />
-                  <span className="text-[9px] text-muted">{lb}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Leaflet GIS Map */}
+        <div className="mb-3.5">
+          <DamMap dams={dams} stations={stations} height="420px" />
         </div>
         {/* Station cards grid */}
         <div className="grid grid-cols-2 gap-2.5">

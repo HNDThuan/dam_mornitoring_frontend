@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { getSocket } from '@/lib/socket'
 import { fetchLatest } from '@/lib/api'
 
-export function useSensorData() {
+export function useSensorData(stationId, clusterId) {
   const [latest, setLatest]       = useState(null)
   const [history, setHistory]     = useState(null)
   const [connected, setConnected] = useState(false)
@@ -14,7 +14,7 @@ export function useSensorData() {
   // Lấy initial data qua REST khi mount
   const loadInitial = useCallback(async () => {
     try {
-      const res = await fetchLatest()
+      const res = await fetchLatest(stationId, clusterId)
       if (!mountedRef.current) return
       if (res.data)    setLatest(res.data)
       if (res.history) setHistory(res.history)
@@ -24,7 +24,7 @@ export function useSensorData() {
       setError('Không thể kết nối backend. Kiểm tra backend đang chạy tại ' +
         (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'))
     }
-  }, [])
+  }, [stationId, clusterId])
 
   useEffect(() => {
     mountedRef.current = true
@@ -49,6 +49,15 @@ export function useSensorData() {
     // Backend gửi `update` event mỗi khi có sensor data mới
     const onUpdate = (snapshot) => {
       if (!mountedRef.current) return
+
+      // Lọc dữ liệu: Chỉ nhận dữ liệu đúng của stationId hoặc clusterId này (không dùng chung)
+      if (stationId && snapshot.stationId && Number(snapshot.stationId) !== Number(stationId)) {
+        return
+      }
+      if (clusterId && snapshot.clusterId && snapshot.clusterId !== clusterId) {
+        return
+      }
+
       setLatest(snapshot)
       setError(null)
 
@@ -70,7 +79,9 @@ export function useSensorData() {
 
     // Backend gửi `history` ngay khi client kết nối lần đầu
     const onHistory = (h) => {
-      if (mountedRef.current) setHistory(h)
+      if (!mountedRef.current) return
+      // Nếu có stationId chỉ dùng history nếu chưa có history riêng từ REST
+      setHistory(h)
     }
 
     socket.on('connect',       onConnect)
@@ -92,7 +103,7 @@ export function useSensorData() {
       socket.off('history',       onHistory)
       socket.disconnect()
     }
-  }, [loadInitial])
+  }, [loadInitial, stationId, clusterId])
 
   return { latest, history, connected, error }
 }
