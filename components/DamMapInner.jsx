@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { MapContainer, TileLayer, Marker, Popup, LayersControl, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -73,18 +73,69 @@ const createStationIcon = (status) => {
   })
 }
 
-// Auto Recenter component
+// Auto Recenter component — only repositions when exact lat/lng values change
 function MapController({ center, zoom }) {
   const map = useMap()
+  const prevKeyRef = useRef('')
+
   useEffect(() => {
-    if (center) {
+    if (!center || !center[0] || !center[1]) return
+    const key = `${center[0]}_${center[1]}_${zoom}`
+    if (prevKeyRef.current !== key) {
+      prevKeyRef.current = key
       map.setView(center, zoom || map.getZoom())
     }
   }, [center, zoom, map])
+
   return null
 }
 
-export default function DamMapInner({ dams = [], stations = [], selectedDamId = null, height = '450px' }) {
+function damMapPropsAreEqual(prevProps, nextProps) {
+  if (prevProps.selectedDamId !== nextProps.selectedDamId) return false
+  if (prevProps.height !== nextProps.height) return false
+
+  // Compare dams array
+  const pDams = prevProps.dams || []
+  const nDams = nextProps.dams || []
+  if (pDams.length !== nDams.length) return false
+  for (let i = 0; i < pDams.length; i++) {
+    if (
+      pDams[i].id !== nDams[i].id ||
+      pDams[i].name !== nDams[i].name ||
+      pDams[i].latitude !== nDams[i].latitude ||
+      pDams[i].longitude !== nDams[i].longitude ||
+      pDams[i].status !== nDams[i].status ||
+      pDams[i].waterLevel !== nDams[i].waterLevel ||
+      pDams[i].flow !== nDams[i].flow ||
+      pDams[i].fillPct !== nDams[i].fillPct
+    ) {
+      return false
+    }
+  }
+
+  // Compare stations array
+  const pStations = prevProps.stations || []
+  const nStations = nextProps.stations || []
+  if (pStations.length !== nStations.length) return false
+  for (let i = 0; i < pStations.length; i++) {
+    if (
+      pStations[i].id !== nStations[i].id ||
+      pStations[i].name !== nStations[i].name ||
+      pStations[i].latitude !== nStations[i].latitude ||
+      pStations[i].longitude !== nStations[i].longitude ||
+      pStations[i].status !== nStations[i].status ||
+      pStations[i].damId !== nStations[i].damId ||
+      pStations[i].waterLevel !== nStations[i].waterLevel ||
+      pStations[i].humidity !== nStations[i].humidity
+    ) {
+      return false
+    }
+  }
+
+  return true
+}
+
+const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], selectedDamId = null, height = '450px' }) {
   const router = useRouter()
   const [activeLayer, setActiveLayer] = useState('terrain') // 'terrain' | 'satellite'
 
@@ -351,4 +402,6 @@ export default function DamMapInner({ dams = [], stations = [], selectedDamId = 
       `}</style>
     </div>
   )
-}
+}, damMapPropsAreEqual)
+
+export default DamMapInner
