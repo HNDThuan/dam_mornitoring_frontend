@@ -31,6 +31,8 @@ export default function DamsPage() {
     loading,
     error,
     refetch,
+    createDam,
+    updateDam,
     deleteDam,
   } = useDamData()
   const { t } = useLanguage()

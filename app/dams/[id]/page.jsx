@@ -38,8 +38,11 @@ export default function DamDetailPage() {
     loading,
     error,
     refetch,
+    createDam,
     updateDam,
     deleteDam,
+    createStation,
+    updateStation,
     deleteStation,
   } = useDamData()
   const { t, locale } = useLanguage()
