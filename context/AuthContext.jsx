@@ -18,7 +18,7 @@ const AuthContext = createContext({
 
 // Các trang công khai cho Khách xem VIEWER truy cập không cần đăng nhập
 const isPublicRoute = (path) => {
-  if (['/', '/dams', '/forecast', '/login', '/register'].includes(path)) return true
+  if (['/', '/dams', '/login', '/register'].includes(path)) return true
   if (path.startsWith('/dams/') || path.startsWith('/stations/')) return true
   return false
 }
