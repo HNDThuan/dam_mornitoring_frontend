@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
+import { useAuth } from '@/context/AuthContext'
+import { getSocket } from '@/lib/socket'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import {
@@ -38,13 +40,44 @@ export default function DamDetailPage() {
     refetch,
     updateDam,
     deleteDam,
-    createStation,
-    updateStation,
     deleteStation,
   } = useDamData()
   const { t, locale } = useLanguage()
+  const { isAdmin } = useAuth()
 
   const [search, setSearch] = useState('')
+
+  // Real-time Socket.IO live updating for station sensors
+  const [liveStationMap, setLiveStationMap] = useState({})
+
+  useEffect(() => {
+    const socket = getSocket()
+    const onUpdate = (snapshot) => {
+      if (!snapshot) return
+      const stId = snapshot.stationId
+      if (stId) {
+        setLiveStationMap(prev => ({
+          ...prev,
+          [stId]: {
+            waterLevel: snapshot.waterLevel,
+            humidity: snapshot.moisture,
+            vibration: snapshot.amp,
+            freq: snapshot.freq,
+            clusterId: snapshot.clusterId,
+            timestamp: snapshot.timestamp || new Date().toISOString(),
+            status: 'online',
+          }
+        }))
+      }
+    }
+
+    socket.on('update', onUpdate)
+    socket.connect()
+
+    return () => {
+      socket.off('update', onUpdate)
+    }
+  }, [])
 
   // Modals state for Dam
   const [damModalOpen, setDamModalOpen] = useState(false)
@@ -58,6 +91,7 @@ export default function DamDetailPage() {
     flow: 0,
     fillPct: 50,
     status: 'safe',
+    cameraUrl: '',
   })
 
   // Modals state for Stations
@@ -74,6 +108,7 @@ export default function DamDetailPage() {
     flow: 1200,
     fillPct: 78,
     status: 'safe',
+    cameraUrl: '',
   }
   const damStatus = getStatus(dam.status)
 
@@ -95,6 +130,7 @@ export default function DamDetailPage() {
       flow: dam.flow || 0,
       fillPct: dam.fillPct || 0,
       status: dam.status || 'safe',
+      cameraUrl: dam.cameraUrl || '',
     })
     setDamModalOpen(true)
   }
@@ -111,6 +147,7 @@ export default function DamDetailPage() {
         flow: Number(damForm.flow),
         fillPct: Number(damForm.fillPct),
         status: damForm.status,
+        cameraUrl: damForm.cameraUrl,
       })
       showToast('✅ Cập nhật thông tin đập thành công!', 'success')
       setDamModalOpen(false)
@@ -385,6 +422,35 @@ export default function DamDetailPage() {
         <div className="grid grid-cols-3 gap-3.5">
           {damStations.map(st => {
             const stS = getStatus(st.status)
+            const live = liveStationMap[st.id] || {}
+            const isLiveStreamActive = Boolean(live.timestamp)
+
+            // Kiểm tra trung thực cụm cảm biến của trạm
+            const clusters = st.sensorClusters || []
+            const hasClusters = clusters.length > 0
+            const onlineClusters = clusters.filter(c => c.status === 'online')
+
+            let isConnected = false
+            let connectionStatusLabel = 'DISCONNECTED (CHƯA GẮN CỤM)'
+            let connectionStatusColor = 'text-danger'
+            let statusDotColor = 'bg-danger'
+
+            if (isLiveStreamActive || onlineClusters.length > 0) {
+              isConnected = true
+              connectionStatusLabel = 'CỤM ONLINE (ĐANG TRUYỀN DATA)'
+              connectionStatusColor = 'text-safe'
+              statusDotColor = 'bg-safe animate-pulse'
+            } else if (hasClusters) {
+              isConnected = false
+              connectionStatusLabel = 'MẤT KẾT NỐI (OFFLINE)'
+              connectionStatusColor = 'text-danger'
+              statusDotColor = 'bg-danger'
+            }
+
+            const currentWater = live.waterLevel ?? st.waterLevel ?? 0
+            const currentHumidity = live.humidity ?? st.humidity ?? 0
+            const currentVibration = live.vibration ?? (st.bd3 != null && st.bd3 > 0 ? st.bd3 : (st.vibration ?? 0))
+
             return (
               <div
                 key={st.id}
@@ -393,7 +459,14 @@ export default function DamDetailPage() {
                 <div>
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="text-[13px] font-bold text-tx">{st.name}</div>
+                      <div className="text-[13px] font-bold text-tx flex items-center gap-2">
+                        <span>{st.name}</span>
+                        {isLiveStreamActive && (
+                          <span className="px-1.5 py-0.5 bg-safe/10 border border-safe/30 text-safe text-[8px] font-mono rounded font-bold animate-pulse">
+                            ● LIVE
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5 font-mono">
                         <MapPin className="w-3 h-3 text-muted shrink-0" />
                         <span>
@@ -406,22 +479,54 @@ export default function DamDetailPage() {
                     <Badge status={st.status} sm />
                   </div>
 
-                  <div className="text-[10px] text-muted mb-2">
-                    <span>{st.river}</span> • <Mono className="text-tx">{st.km}</Mono>
+                  <div className="text-[10px] text-muted mb-2 flex items-center justify-between">
+                    <div><span>{st.river || 'Tuyến sông'}</span> • <Mono className="text-tx">{st.km || 'K0+000'}</Mono></div>
+                    {live.timestamp && (
+                      <Mono className="text-[8px] text-sky-400 font-bold">
+                        {new Date(live.timestamp).toLocaleTimeString('vi-VN')}
+                      </Mono>
+                    )}
                   </div>
 
+                  {/* Trạng thái kết nối thực tế của Cụm Cảm Biến ở Trạm này (Không gian dối) */}
+                  <div className="flex items-center justify-between py-1.5 px-2 bg-card2/80 rounded-md border border-border/40 text-[9px] mb-2">
+                    <span className="text-muted text-[8px] uppercase tracking-wider font-semibold">Cụm cảm biến:</span>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className={`inline-flex items-center gap-1 text-[9px] font-bold ${connectionStatusColor}`}>
+                        <span className={`w-2 h-2 rounded-full ${statusDotColor}`} />
+                        <span>{connectionStatusLabel}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Dữ liệu thu được từ Cảm biến Mực nước, Độ ẩm, Độ rung */}
                   <div className="grid grid-cols-3 gap-1 bg-card2 p-2.5 rounded-lg text-[10px] my-2 border border-border/40">
                     <div>
-                      <div className="text-[7px] text-muted uppercase">{t('damsPage.waterLevel')}</div>
-                      <Mono className={`font-bold ${stS.text}`}>{st.waterLevel} m</Mono>
+                      <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
+                        <Activity className="w-2.5 h-2.5 text-sky-400" />
+                        <span>Mực nước</span>
+                      </div>
+                      <Mono className={`font-bold ${isConnected ? stS.text : 'text-muted'}`}>
+                        {currentWater} m
+                      </Mono>
                     </div>
                     <div>
-                      <div className="text-[7px] text-muted uppercase">Áp lực</div>
-                      <Mono className="text-tx">{st.pressure} atm</Mono>
+                      <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
+                        <Droplet className="w-2.5 h-2.5 text-indigo-400" />
+                        <span>Độ ẩm</span>
+                      </div>
+                      <Mono className={`font-bold ${isConnected ? 'text-tx' : 'text-muted'}`}>
+                        {currentHumidity}%
+                      </Mono>
                     </div>
                     <div>
-                      <div className="text-[7px] text-muted uppercase">Độ ẩm</div>
-                      <Mono className="text-tx">{st.humidity}%</Mono>
+                      <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
+                        <Radio className="w-2.5 h-2.5 text-emerald-400" />
+                        <span>Độ rung</span>
+                      </div>
+                      <Mono className={`font-bold ${isConnected ? 'text-tx' : 'text-muted'}`}>
+                        {currentVibration > 0 ? `${currentVibration} mm/s` : '--'}
+                      </Mono>
                     </div>
                   </div>
                 </div>
@@ -435,22 +540,24 @@ export default function DamDetailPage() {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
 
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => openEditStationModal(st)}
-                      className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent cursor-pointer transition-colors"
-                      title={t('damsPage.editStation')}
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => setDeleteConfirm({ id: st.id, name: st.name })}
-                      className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger cursor-pointer transition-colors"
-                      title="Xóa Trạm"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => openEditStationModal(st)}
+                        className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent cursor-pointer transition-colors"
+                        title={t('damsPage.editStation')}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirm({ id: st.id, name: st.name })}
+                        className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger cursor-pointer transition-colors"
+                        title="Xóa Trạm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -822,6 +929,17 @@ export default function DamDetailPage() {
                     className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
                   />
                 </div>
+              </div>
+
+              <div>
+                <Label className="mb-1">{t('admin.form.cameraUrlLabel')}</Label>
+                <input
+                  type="text"
+                  value={damForm.cameraUrl}
+                  onChange={e => setDamForm(p => ({ ...p, cameraUrl: e.target.value }))}
+                  placeholder="vd: http://192.168.1.50:8000"
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-[12px]"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-border">

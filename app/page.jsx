@@ -162,13 +162,17 @@ export default function DashboardPage() {
                 const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
                 const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
 
-                const dam = dams.find(d => d.id === al.damId) || dams[0]
-                const station = stations.find(st => String(st.id) === String(al.sensorId) || st.damId === al.damId) || stations[0]
+                const station = stations.find(st => 
+                  (al.stationId && String(st.id) === String(al.stationId)) ||
+                  String(st.id) === String(al.sensorId)
+                ) || stations.find(st => st.damId === al.damId) || stations[0]
 
-                const damName = dam?.name || 'Đập Thủy Điện'
+                const dam = dams.find(d => d.id === al.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+
+                const damName = al.damName || dam?.name || 'Đập Thủy Điện'
                 const damLoc = dam?.location || 'Hà Nội'
-                const stName = station?.name || 'Trạm Quan Trắc'
-                const stLoc = station?.location || 'Thân đập chính'
+                const stName = al.stationName || station?.name || 'Trạm Quan Trắc'
+                const stLoc = al.location || station?.location || 'Thân đập chính'
 
                 return (
                   <div key={al.id}

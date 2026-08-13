@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
+import { useAuth } from '@/context/AuthContext'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
 import {
@@ -30,11 +31,10 @@ export default function DamsPage() {
     loading,
     error,
     refetch,
-    createDam,
-    updateDam,
     deleteDam,
   } = useDamData()
   const { t } = useLanguage()
+  const { isAdmin } = useAuth()
 
   const [search, setSearch] = useState('')
 
@@ -62,6 +62,7 @@ export default function DamsPage() {
     flow: 0,
     fillPct: 50,
     status: 'safe',
+    cameraUrl: '',
   })
 
   // Dam Form Handlers
@@ -77,6 +78,7 @@ export default function DamsPage() {
       flow: 1000,
       fillPct: 70,
       status: 'safe',
+      cameraUrl: '',
     })
     setDamModalOpen(true)
   }
@@ -94,6 +96,7 @@ export default function DamsPage() {
       flow: dam.flow || 0,
       fillPct: dam.fillPct || 0,
       status: dam.status || 'safe',
+      cameraUrl: dam.cameraUrl || '',
     })
     setDamModalOpen(true)
   }
@@ -111,6 +114,7 @@ export default function DamsPage() {
           flow: Number(damForm.flow),
           fillPct: Number(damForm.fillPct),
           status: damForm.status,
+          cameraUrl: damForm.cameraUrl,
         })
         showToast('✅ Cập nhật đập thủy điện thành công!', 'success')
       } else {
@@ -123,6 +127,7 @@ export default function DamsPage() {
           flow: Number(damForm.flow),
           fillPct: Number(damForm.fillPct),
           status: damForm.status,
+          cameraUrl: damForm.cameraUrl,
         }
         const res = await createDam(payload)
         const newId = res?.dam?.id || ''
@@ -189,13 +194,15 @@ export default function DamsPage() {
             <span>{t('stationsPage.refresh')}</span>
           </button>
 
-          <button
-            onClick={openCreateDamModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('damsPage.addDam')}</span>
-          </button>
+          {isAdmin && (
+            <button
+              onClick={openCreateDamModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('damsPage.addDam')}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -236,26 +243,28 @@ export default function DamsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => openEditDamModal(dam, e)}
-                    className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent transition-colors cursor-pointer"
-                    title={t('damsPage.editDam')}
-                  >
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
+                {isAdmin && (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => openEditDamModal(dam, e)}
+                      className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent transition-colors cursor-pointer"
+                      title={t('damsPage.editDam')}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setDeleteConfirm({ id: dam.id, name: dam.name })
-                    }}
-                    className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger transition-colors cursor-pointer"
-                    title="Xóa Đập"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setDeleteConfirm({ id: dam.id, name: dam.name })
+                      }}
+                      className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger transition-colors cursor-pointer"
+                      title="Xóa Đập"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Metrics */}
@@ -445,6 +454,17 @@ export default function DamsPage() {
                   <option value="warning">{t('status.warning')}</option>
                   <option value="danger">{t('status.danger')}</option>
                 </select>
+              </div>
+
+              <div>
+                <Label className="mb-1">{t('admin.form.cameraUrlLabel')}</Label>
+                <input
+                  type="text"
+                  value={damForm.cameraUrl}
+                  onChange={e => setDamForm(p => ({ ...p, cameraUrl: e.target.value }))}
+                  placeholder="vd: http://192.168.1.50:8000"
+                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-[12px]"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">

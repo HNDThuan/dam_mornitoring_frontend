@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { getSocket } from '@/lib/socket'
 import { fetchAlarmEvents, fetchThresholdConfigs, resolveAlarmEvent as apiResolve, getFormattedImageUrl } from '@/lib/api'
 /**
@@ -8,7 +8,7 @@ import { fetchAlarmEvents, fetchThresholdConfigs, resolveAlarmEvent as apiResolv
  * - Lắng nghe event `alarm` từ WebSocket để nhận alarm mới real-time
  * - Lấy threshold configs từ backend
  */
-export function useAlarmData(damId = 'dam_1') {
+export function useAlarmData(damId = 'all') {
     const [alarms, setAlarms] = useState([])
     const [thresholds, setThresholds] = useState(null)   // { vibration, water_level, humidity }
     const [loading, setLoading] = useState(true)
@@ -25,18 +25,19 @@ export function useAlarmData(damId = 'dam_1') {
     const loadInitial = useCallback(async () => {
         try {
             setLoading(true)
+            const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+            const targetDamForThresh = !damId || damId === 'all' ? 'dam_1' : damId
             const [alarmsRes, threshRes] = await Promise.all([
-                fetchAlarmEvents(damId, 50),
-                fetchThresholdConfigs(damId),
+                fetchAlarmEvents(damId, 50, undefined, undefined, token),
+                fetchThresholdConfigs(targetDamForThresh),
             ])
             if (!mountedRef.current) return
-            setAlarms(alarmsRes.alarms || [])
-            setThresholds(mapThresholds(threshRes.configs))
+            setAlarms(alarmsRes?.alarms || [])
+            setThresholds(mapThresholds(threshRes?.configs))
             setError(null)
         } catch (err) {
             if (!mountedRef.current) return
-            setError('Không thể tải dữ liệu cảnh báo từ backend.')
-            console.error('[useAlarmData]', err)
+            console.error('[useAlarmData] loadInitial error:', err)
         } finally {
             if (mountedRef.current) setLoading(false)
         }
@@ -60,6 +61,12 @@ export function useAlarmData(damId = 'dam_1') {
         // Lắng nghe alarm event mới từ WebSocket
         const onAlarm = (alarm) => {
             if (!mountedRef.current) return
+
+            // Lọc theo đập: Nếu hook được gọi cho 1 đập cụ thể (không phải 'all'), bỏ qua cảnh báo của đập khác
+            if (damId && damId !== 'all' && alarm?.damId && String(alarm.damId) !== String(damId)) {
+                return
+            }
+
             // Tải trước ảnh (Preload) vào Browser Cache ngay khi nhận tin từ WebSocket
             if (alarm?.imageUrl) {
                 const imgUrl = getFormattedImageUrl(alarm.imageUrl)
@@ -89,8 +96,10 @@ export function useAlarmData(damId = 'dam_1') {
             mountedRef.current = false
             socket.off('alarm', onAlarm)
         }
-    }, [loadInitial])
-    // ── Derived: đếm số alarm chưa xử lý ──
-    const unresolvedCount = alarms.filter(a => !a.resolvedAt).length
+    }, [loadInitial, damId])
+    // ── Derived: đếm chính xác số lượng alarm chưa xử lý ──
+    const unresolvedCount = useMemo(() => {
+        return alarms.filter(a => !a.resolvedAt || a.resolvedAt === null || a.resolvedAt === '').length
+    }, [alarms])
     return { alarms, thresholds, loading, error, resolveAlarm, unresolvedCount, refetch: loadInitial }
 }

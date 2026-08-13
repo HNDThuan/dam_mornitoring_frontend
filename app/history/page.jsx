@@ -7,6 +7,8 @@ import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { Download, AlertTriangle, Droplet, Clock, Search, Check } from 'lucide-react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
+import { useAuth } from '@/context/AuthContext'
+import { exportAlarmsToExcel } from '@/lib/exportHelpers'
 import { timeAgo, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS } from '@/lib/sensorHelpers'
 
 const lineData = [
@@ -27,20 +29,28 @@ const barData = [
 const TOOLTIP = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadius: 4, fontSize: 9 }
 
 export default function HistoryPage() {
+  const { user, isOperator, assignedDamId } = useAuth()
   const [search, setSearch] = useState('')
   const { alarms } = useAlarmData()
   const { dams, stations } = useDamData()
 
-  // Dynamic history records built from real alarms or stations
-  const historyRecords = alarms.length > 0
-    ? alarms.map(a => {
-        const dam = dams.find(d => d.id === a.damId) || dams[0]
-        const station = stations.find(st => String(st.id) === String(a.sensorId) || st.damId === a.damId) || stations[0]
+  // Lọc dữ liệu theo đập phụ trách đối với Operator
+  const scopedAlarms = isOperator && assignedDamId ? alarms.filter(a => a.damId === assignedDamId || !a.damId) : alarms
 
-        const damName = dam?.name || `Đập ${a.damId}`
-        const damLoc = dam?.location || 'Hà Nội'
-        const stName = station?.name || `Trạm ${a.sensorId}`
-        const stLoc = station?.location || 'Thân đập'
+  // Dynamic history records built from real alarms or stations
+  const historyRecords = scopedAlarms.length > 0
+    ? scopedAlarms.map(a => {
+        const station = stations.find(st => 
+          (a.stationId && String(st.id) === String(a.stationId)) ||
+          String(st.id) === String(a.sensorId)
+        ) || stations.find(st => st.damId === a.damId) || stations[0]
+
+        const dam = dams.find(d => d.id === a.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+
+        const damName = a.damName || dam?.name || `Đập ${a.damId}`
+        const damLoc = dam?.location || 'Việt Nam'
+        const stName = a.stationName || station?.name || `Trạm ${a.stationId || a.sensorId}`
+        const stLoc = a.location || station?.location || 'Thân đập'
 
         return {
           time: new Date(a.triggeredAt).toLocaleString('vi-VN'),
@@ -121,12 +131,13 @@ export default function HistoryPage() {
             <Mono className="text-[9px] text-muted">Dữ liệu cập nhật lần cuối: 15:30, 24/08/2023</Mono>
           </div>
           <div className="flex gap-2">
-            {['Xuất Excel', 'Xuất PDF'].map(lb => (
-              <button key={lb} className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border rounded bg-transparent text-tx text-[10px] font-semibold cursor-pointer hover:bg-white/5">
-                <Download className="w-3 h-3 text-muted shrink-0" />
-                <span>{lb}</span>
-              </button>
-            ))}
+            <button
+              onClick={() => exportAlarmsToExcel(scopedAlarms, user?.assignedDamId || 'Dam')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-500/40 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold cursor-pointer hover:bg-emerald-500/20"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>Xuất Excel</span>
+            </button>
           </div>
         </div>
 

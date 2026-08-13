@@ -3,13 +3,16 @@
 import { useState, useMemo } from 'react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
+import { useAuth } from '@/context/AuthContext'
 import { sendEmailAlert, getFormattedImageUrl } from '@/lib/api'
+import { exportAlarmsToExcel, exportAlarmToPDF } from '@/lib/exportHelpers'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
-import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio, FileSpreadsheet } from 'lucide-react'
 
 export default function AlertsPage() {
+  const { user, isOperator, isViewer, assignedDamId } = useAuth()
   const { alarms, thresholds, loading, error, resolveAlarm, unresolvedCount } = useAlarmData()
   const { dams, stations } = useDamData()
 
@@ -41,18 +44,23 @@ export default function AlertsPage() {
   const getLocationInfo = (alarm) => {
     if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', river: '', km: '', fullLocation: '' }
 
-    const dam = dams.find(d => d.id === alarm.damId) || dams[0]
-    const damName = dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
+    const station = stations.find(s => 
+      (alarm.stationId && String(s.id) === String(alarm.stationId)) ||
+      String(s.id) === String(alarm.sensorId)
+    ) || stations.find(s => s.damId === alarm.damId) || stations[0]
+
+    const dam = dams.find(d => d.id === alarm.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+    const damName = alarm.damName || dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
     const damLocation = dam?.location || 'Việt Nam'
 
-    // Lookup station
-    const station = stations.find(s => String(s.id) === String(alarm.sensorId) || s.damId === alarm.damId) || stations[0]
-    const stationName = station?.name || `Trạm ${alarm.sensorId || 'Quan Trắc'}`
-    const stationLoc = station?.location || 'Thân đập chính'
-    const river = station?.river || 'Sông Hồng'
-    const km = station?.km || 'K25+500'
+    const stationName = alarm.stationName || station?.name || `Trạm ${alarm.stationId || alarm.sensorId || 'Quan Trắc'}`
+    const stationLoc = alarm.location || station?.location || 'Thân đập chính'
+    const river = station?.river || ''
+    const km = station?.km || ''
 
-    const fullLocation = `${stationName} (${stationLoc} — ${river} ${km}) thuộc ${damName} (${damLocation})`
+    const riverKm = [river, km].filter(Boolean).join(' ')
+    const locDesc = riverKm ? `${stationLoc} — ${riverKm}` : stationLoc
+    const fullLocation = `${stationName} (${locDesc}) thuộc ${damName} (${damLocation})`
 
     return { damName, damLocation, stationName, stationLoc, river, km, fullLocation }
   }
@@ -84,11 +92,19 @@ export default function AlertsPage() {
     }
   }
 
+  // Scoped alarms cho Operator (Chỉ thấy đập phụ trách)
+  const scopedAlarms = useMemo(() => {
+    if (isOperator && assignedDamId) {
+      return alarms.filter(a => a.damId === assignedDamId || !a.damId)
+    }
+    return alarms
+  }, [alarms, isOperator, assignedDamId])
+
   // Tự chọn alarm đầu tiên nếu chưa chọn
   const sel = useMemo(() => {
-    if (selId) return alarms.find(a => a.id === selId) || alarms[0] || null
-    return alarms[0] || null
-  }, [selId, alarms])
+    if (selId) return scopedAlarms.find(a => a.id === selId) || scopedAlarms[0] || null
+    return scopedAlarms[0] || null
+  }, [selId, scopedAlarms])
 
   // Cập nhật message template khi chọn alarm khác
   const defaultMsg = useMemo(() => {
@@ -102,18 +118,18 @@ export default function AlertsPage() {
 
   // Filter alarms
   const shown = useMemo(() => {
-    if (filter === 'all') return alarms
-    if (filter === 'resolved') return alarms.filter(a => a.resolvedAt)
-    return alarms.filter(a => a.severity === filter && !a.resolvedAt)
-  }, [alarms, filter])
+    if (filter === 'all') return scopedAlarms
+    if (filter === 'resolved') return scopedAlarms.filter(a => a.resolvedAt)
+    return scopedAlarms.filter(a => a.severity === filter && !a.resolvedAt)
+  }, [scopedAlarms, filter])
 
   // Counts per severity
   const counts = useMemo(() => ({
-    CRITICAL: alarms.filter(a => a.severity === 'CRITICAL' && !a.resolvedAt).length,
-    ALERT: alarms.filter(a => a.severity === 'ALERT' && !a.resolvedAt).length,
-    WARNING: alarms.filter(a => a.severity === 'WARNING' && !a.resolvedAt).length,
-    resolved: alarms.filter(a => a.resolvedAt).length,
-  }), [alarms])
+    CRITICAL: scopedAlarms.filter(a => a.severity === 'CRITICAL' && !a.resolvedAt).length,
+    ALERT: scopedAlarms.filter(a => a.severity === 'ALERT' && !a.resolvedAt).length,
+    WARNING: scopedAlarms.filter(a => a.severity === 'WARNING' && !a.resolvedAt).length,
+    resolved: scopedAlarms.filter(a => a.resolvedAt).length,
+  }), [scopedAlarms])
 
   // Sensor data rows cho bảng chi tiết (dùng real alarm data)
   const sensorRows = useMemo(() => {
@@ -169,6 +185,19 @@ export default function AlertsPage() {
       <div className="text-center">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
         <div className="text-[11px] text-muted">Đang tải dữ liệu cảnh báo...</div>
+      </div>
+    </div>
+  )
+
+  // Block Viewer role from viewing Emergency Alert Center
+  if (isViewer) return (
+    <div className="flex items-center justify-center h-[calc(100vh-48px)] p-6 font-sans">
+      <div className="bg-card border border-border rounded-2xl p-8 max-w-md text-center space-y-4 shadow-xl">
+        <Shield className="w-12 h-12 text-danger mx-auto" />
+        <h2 className="text-lg font-bold text-tx">Khu Vực Hạn Chế Phân Quyền</h2>
+        <p className="text-xs text-muted">
+          Tài khoản vai trò <strong className="text-accent">VIEWER (Khách quan sát)</strong> chỉ có quyền xem bản đồ & chỉ số tổng quan, không có quyền truy cập Trung tâm Cảnh Báo Khẩn Cấp.
+        </p>
       </div>
     </div>
   )
@@ -301,7 +330,7 @@ export default function AlertsPage() {
                     <span className="flex items-center gap-1"><Fingerprint className="w-3.5 h-3.5 text-muted shrink-0" /> ID: {sel.id || sel.sensorId}</span>
                   </Mono>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {!sel.resolvedAt && (
                     <button onClick={() => resolveAlarm(sel.id)}
                       className="px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[11px] font-bold cursor-pointer hover:bg-safe/20 transition-colors flex items-center gap-1">
@@ -309,9 +338,25 @@ export default function AlertsPage() {
                       <span>Đánh dấu đã xử lý</span>
                     </button>
                   )}
-                  <button className="px-3 py-1.5 border border-border rounded-lg bg-card2 text-tx text-[11px] font-semibold cursor-pointer hover:bg-white/5 flex items-center gap-1">
-                    <Printer className="w-3.5 h-3.5 text-muted shrink-0" />
-                    <span>PDF</span>
+
+                  {/* Nút Xuất Excel */}
+                  <button
+                    onClick={() => exportAlarmsToExcel(shown, loc.damName)}
+                    className="px-3 py-1.5 border border-emerald-500/40 rounded-lg bg-emerald-500/10 text-emerald-400 text-[11px] font-bold cursor-pointer hover:bg-emerald-500/20 transition-colors flex items-center gap-1"
+                    title="Xuất bảng nhật ký cảnh báo ra file Excel"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                    <span>Xuất Excel</span>
+                  </button>
+
+                  {/* Nút Xuất PDF Báo Cáo */}
+                  <button
+                    onClick={() => exportAlarmToPDF(sel, loc, user)}
+                    className="px-3 py-1.5 border border-accent/40 rounded-lg bg-accent/10 text-accent text-[11px] font-bold cursor-pointer hover:bg-accent/20 transition-colors flex items-center gap-1"
+                    title="Xuất phiếu báo cáo sự cố PDF chính thức"
+                  >
+                    <Printer className="w-3.5 h-3.5 shrink-0" />
+                    <span>Xuất PDF</span>
                   </button>
                 </div>
               </div>
