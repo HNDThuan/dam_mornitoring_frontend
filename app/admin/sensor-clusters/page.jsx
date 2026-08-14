@@ -160,14 +160,15 @@ export default function SensorClustersPage() {
   const openEditClusterModal = (cluster, e) => {
     e?.stopPropagation()
     setEditingCluster(cluster)
+    const effectiveStationId = cluster.stationId || cluster.gateway?.stationId || ''
     setClusterForm({
       id: cluster.id,
       name: cluster.name || '',
       description: cluster.description || '',
-      espMacAddress: cluster.espMacAddress || '',
+      espMacAddress: cluster.macAddress || cluster.espMacAddress || '',
       firmwareVersion: cluster.firmwareVersion || '',
       installLocation: cluster.installLocation || '',
-      stationId: cluster.stationId || '',
+      stationId: effectiveStationId,
     })
     setClusterModalOpen(true)
   }
@@ -175,28 +176,22 @@ export default function SensorClustersPage() {
   const handleSaveCluster = async (e) => {
     e.preventDefault()
     try {
+      const payload = {
+        name: clusterForm.name,
+        description: clusterForm.description,
+        macAddress: clusterForm.espMacAddress,
+        espMacAddress: clusterForm.espMacAddress,
+        firmwareVersion: clusterForm.firmwareVersion,
+        installLocation: clusterForm.installLocation,
+        stationId: clusterForm.stationId ? Number(clusterForm.stationId) : undefined,
+      }
       if (editingCluster) {
-        await updateSensorCluster(editingCluster.id, {
-          name: clusterForm.name,
-          description: clusterForm.description,
-          espMacAddress: clusterForm.espMacAddress,
-          firmwareVersion: clusterForm.firmwareVersion,
-          installLocation: clusterForm.installLocation,
-          stationId: Number(clusterForm.stationId),
-        })
-        showToast('✅ Cập nhật cụm cảm biến thành công!', 'success')
+        await updateSensorCluster(editingCluster.id, payload)
+        showToast('✅ Cập nhật thông tin node thành công!', 'success')
       } else {
-        const payload = {
-          name: clusterForm.name,
-          description: clusterForm.description,
-          espMacAddress: clusterForm.espMacAddress,
-          firmwareVersion: clusterForm.firmwareVersion,
-          installLocation: clusterForm.installLocation,
-          stationId: Number(clusterForm.stationId),
-        }
         const res = await createSensorCluster(payload)
-        const newId = res?.cluster?.id || ''
-        showToast(`✅ Tạo cụm cảm biến thành công! (Mã: ${newId})`, 'success')
+        const newId = res?.node?.id || res?.cluster?.id || ''
+        showToast(`✅ Tạo node thành công! (Mã: ${newId})`, 'success')
       }
       setClusterModalOpen(false)
       loadData(true)
@@ -467,14 +462,14 @@ export default function SensorClustersPage() {
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link
-                        href={`/stations/${cluster.stationId}`}
+                        href={`/stations/${cluster.stationId || cluster.gateway?.stationId}`}
                         className="text-tx hover:text-accent font-semibold text-[11px] inline-flex items-center gap-1 group/st"
                         title="Xem chi tiết Trạm quan trắc"
                       >
-                        <span>{getStationName(cluster.stationId)}</span>
+                        <span>{getStationName(cluster.stationId || cluster.gateway?.stationId)}</span>
                         <ExternalLink className="w-3 h-3 text-muted group-hover/st:text-accent transition-colors" />
                       </Link>
-                      <div className="text-[9px] text-muted">{getDamName(cluster.stationId)}</div>
+                      <div className="text-[9px] text-muted">{getDamName(cluster.stationId || cluster.gateway?.stationId)}</div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-[10px] text-muted">{cluster.espMacAddress || '—'}</span>

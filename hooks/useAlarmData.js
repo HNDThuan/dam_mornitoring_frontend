@@ -76,10 +76,11 @@ export function useAlarmData(damId = 'all') {
                 }
             }
             setAlarms(prev => {
-                // Nếu alarm đã tồn tại trong danh sách (được cập nhật kết quả AI), cập nhật phần tử đó
-                const exists = prev.some(a => a.id === alarm.id)
+                // Nếu alarm đã tồn tại trong danh sách (theo id hoặc eventId), cập nhật thông tin mới
+                const isMatch = (a) => a.id === alarm.id || (a.eventId && alarm.eventId && a.eventId === alarm.eventId)
+                const exists = prev.some(isMatch)
                 if (exists) {
-                    return prev.map(a => a.id === alarm.id ? alarm : a)
+                    return prev.map(a => isMatch(a) ? { ...a, ...alarm } : a)
                 }
                 // Ngược lại, thêm alarm mới vào đầu danh sách, giới hạn 100
                 const next = [alarm, ...prev]

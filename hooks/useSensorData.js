@@ -46,41 +46,52 @@ export function useSensorData(stationId, clusterId) {
       }
     }
 
+    let frameId = null
+    const latestRef = { current: null }
+
+    const processBatchUpdate = () => {
+      frameId = null
+      const snap = latestRef.current
+      if (!snap || !mountedRef.current) return
+
+      setLatest(snap)
+      setError(null)
+
+      setHistory(prev => {
+        if (!prev) return prev
+        const MAX = 60
+        return {
+          timestamps: [...prev.timestamps, snap.timestamp].slice(-MAX),
+          freq:       [...prev.freq,       snap.freq].slice(-MAX),
+          amp:        [...prev.amp,        snap.amp].slice(-MAX),
+          waterLevel: [...prev.waterLevel, snap.waterLevel].slice(-MAX),
+          moisture:   [...prev.moisture,   snap.moisture].slice(-MAX),
+          percent:    [...prev.percent,    snap.percent].slice(-MAX),
+        }
+      })
+    }
+
     // Backend gửi `update` event mỗi khi có sensor data mới
     const onUpdate = (snapshot) => {
       if (!mountedRef.current) return
 
-      // Lọc dữ liệu: Chỉ nhận dữ liệu đúng của stationId hoặc clusterId này (không dùng chung)
+      // Lọc dữ liệu: Chỉ lọc nếu stationId hoặc clusterId không trùng khớp
       if (stationId && snapshot.stationId && Number(snapshot.stationId) !== Number(stationId)) {
         return
       }
-      if (clusterId && snapshot.clusterId && snapshot.clusterId !== clusterId) {
+      if (!stationId && clusterId && snapshot.clusterId && snapshot.clusterId !== clusterId) {
         return
       }
 
-      setLatest(snapshot)
-      setError(null)
-
-      // Append vào history local (mirror logic của backend)
-      setHistory(prev => {
-        if (!prev) return prev
-        const MAX = 60
-        const next = {
-          timestamps: [...prev.timestamps, snapshot.timestamp].slice(-MAX),
-          freq:       [...prev.freq,       snapshot.freq].slice(-MAX),
-          amp:        [...prev.amp,        snapshot.amp].slice(-MAX),
-          waterLevel: [...prev.waterLevel, snapshot.waterLevel].slice(-MAX),
-          moisture:   [...prev.moisture,   snapshot.moisture].slice(-MAX),
-          percent:    [...prev.percent,    snapshot.percent].slice(-MAX),
-        }
-        return next
-      })
+      latestRef.current = snapshot
+      if (!frameId) {
+        frameId = requestAnimationFrame(processBatchUpdate)
+      }
     }
 
     // Backend gửi `history` ngay khi client kết nối lần đầu
     const onHistory = (h) => {
       if (!mountedRef.current) return
-      // Nếu có stationId chỉ dùng history nếu chưa có history riêng từ REST
       setHistory(h)
     }
 
@@ -92,16 +103,20 @@ export function useSensorData(stationId, clusterId) {
 
     // Khởi động
     loadInitial()
-    socket.connect()
+    if (!socket.connected) {
+      socket.connect()
+    } else {
+      setConnected(true)
+    }
 
     return () => {
       mountedRef.current = false
+      if (frameId) cancelAnimationFrame(frameId)
       socket.off('connect',       onConnect)
       socket.off('disconnect',    onDisconnect)
       socket.off('connect_error', onConnectError)
       socket.off('update',        onUpdate)
       socket.off('history',       onHistory)
-      socket.disconnect()
     }
   }, [loadInitial, stationId, clusterId])
 
