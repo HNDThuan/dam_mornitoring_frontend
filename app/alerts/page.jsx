@@ -13,7 +13,8 @@ import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, 
 
 export default function AlertsPage() {
   const { user, isOperator, isViewer, assignedDamId } = useAuth()
-  const { alarms, thresholds, loading, error, resolveAlarm, unresolvedCount } = useAlarmData()
+  const damIdForAlerts = isOperator && assignedDamId ? assignedDamId : 'all'
+  const { alarms, thresholds, loading, error, resolveAlarm, unresolvedCount } = useAlarmData(damIdForAlerts)
   const { dams, stations } = useDamData()
 
   const [selId, setSelId] = useState(null)

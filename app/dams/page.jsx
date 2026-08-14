@@ -36,7 +36,7 @@ export default function DamsPage() {
     deleteDam,
   } = useDamData()
   const { t } = useLanguage()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isOperator, assignedDamId } = useAuth()
 
   const [search, setSearch] = useState('')
 
@@ -155,8 +155,12 @@ export default function DamsPage() {
     }
   }
 
+  // Scope dams and stations for operators
+  const visibleDams = isOperator && assignedDamId ? dams.filter(d => d.id === assignedDamId) : dams
+  const visibleStations = isOperator && assignedDamId ? stations.filter(s => s.damId === assignedDamId) : stations
+
   // Filter dams
-  const filteredDams = dams.filter(d => {
+  const filteredDams = visibleDams.filter(d => {
     if (!search) return true
     const q = search.toLowerCase()
     return d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || (d.location && d.location.toLowerCase().includes(q))
@@ -209,13 +213,13 @@ export default function DamsPage() {
       </div>
 
       {/* ── INTERACTIVE LEAFLET GIS MAP ── */}
-      <DamPinMap dams={dams} stations={stations} height="360px" />
+      <DamPinMap dams={visibleDams} stations={visibleStations} height="360px" />
 
       {/* Dams List */}
       <div className="grid grid-cols-2 gap-3">
         {filteredDams.map(dam => {
           const s = getStatus(dam.status)
-          const damStations = stations.filter(st => st.damId === dam.id)
+          const damStations = visibleStations.filter(st => st.damId === dam.id)
 
           return (
             <div

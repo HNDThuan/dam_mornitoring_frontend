@@ -32,6 +32,7 @@ import {
 import CameraViewer from "@/components/CameraViewer";
 import DamMap from "@/components/DamMap";
 import { useAlarmData } from "@/hooks/useAlarmData";
+import { useAuth } from "@/context/AuthContext";
 import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, X, Radio } from "lucide-react";
 
 const CHART_STYLE = {
@@ -58,24 +59,17 @@ function ConnectionBanner({ connected, error }) {
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 bg-safe/10 border border-safe/30 rounded-lg mb-3">
         <div className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse-dot" />
-        <span className="text-[10px] text-safe font-semibold">
-          WebSocket đã kết nối — Đang nhận dữ liệu thời gian thực
-        </span>
-      </div>
-    );
-  if (error)
-    return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-warning/10 border border-warning/30 rounded-lg mb-3">
-        <AlertTriangle className="w-3.5 h-3.5 text-warning shrink-0" />
-        <span className="text-[10px] text-warning font-semibold">
-          {error} — Hiển thị dữ liệu mẫu
+        <span className="text-[10px] font-semibold text-safe">
+          ● REAL-TIME STREAMING ACTIVE (ĐANG TRUYỀN DATA)
         </span>
       </div>
     );
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 bg-card2 border border-border rounded-lg mb-3">
-      <div className="w-1.5 h-1.5 rounded-full bg-muted animate-pulse-dot" />
-      <span className="text-[10px] text-muted">Đang kết nối backend...</span>
+      <div className="w-1.5 h-1.5 rounded-full bg-muted" />
+      <span className="text-[10px] text-muted">
+        {error ? `Mất kết nối: ${error}` : "Đang chờ dữ liệu từ thiết bị IoT..."}
+      </span>
     </div>
   );
 }
@@ -140,41 +134,38 @@ function MetricCard({
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={data}
-            margin={{ top: 4, right: 4, left: -38, bottom: 0 }}
+            margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
           >
             <defs>
-              <linearGradient
-                id={`g${label.replace(/\s/g, "")}`}
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0.02} />
+              <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="t" hide />
-            <YAxis hide domain={["auto", "auto"]} />
             <Tooltip
               contentStyle={CHART_STYLE}
-              labelStyle={{ color: "#dde6f0", fontSize: 9 }}
-              formatter={(v) => [`${v} ${unit}`, ""]}
+              formatter={(v) => [`${v} ${unit}`, label]}
+              labelFormatter={(l) => `Thời gian: ${l}`}
             />
-            {threshold != null && (
+            {threshold && (
               <ReferenceLine
                 y={threshold}
                 stroke="#f43f5e"
                 strokeDasharray="3 3"
-                strokeWidth={1}
+                label={{
+                  value: `BĐ: ${threshold}`,
+                  fill: "#f43f5e",
+                  fontSize: 8,
+                  position: "insideTopRight",
+                }}
               />
             )}
             <Area
               type="monotone"
               dataKey="v"
               stroke={color}
-              strokeWidth={1.8}
-              fill={`url(#g${label.replace(/\s/g, "")})`}
+              strokeWidth={1.5}
+              fill={`url(#grad-${label})`}
               dot={false}
               isAnimationActive={false}
             />
@@ -204,6 +195,7 @@ function MetricCard({
 export default function StationDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user, isAdmin, isOperator, assignedDamId } = useAuth();
   const { dams, stations, refetch, updateStation, deleteStation } = useDamData();
   const { t, locale } = useLanguage();
   const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', latitude: 21.0381, longitude: 105.8492, river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
@@ -357,6 +349,30 @@ export default function StationDetailPage() {
   console.log("water threshold: ", waterThreshold)
 
   const mainColor = STATUS_HEX[waterSt.level] || "#fb923c";
+
+  // Operator Restriction: Cannot access stations outside assigned dam
+  if (isOperator && assignedDamId && st?.damId && st.damId !== assignedDamId) {
+    return (
+      <div className="p-8 min-h-[calc(100vh-48px)] flex items-center justify-center">
+        <div className="bg-card border border-border max-w-md w-full rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+          <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto border border-danger/30">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-base font-bold text-tx">Truy cập bị giới hạn</h2>
+          <p className="text-xs text-muted leading-relaxed">
+            Bạn là Cán bộ phụ trách đập <strong className="text-accent">{assignedDamId}</strong>. Trạm quan trắc này thuộc đập khác.
+          </p>
+          <Link
+            href={`/dams/${assignedDamId}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white font-bold text-xs rounded-xl no-underline hover:bg-accent/90"
+          >
+            <span>Về trang Đập của bạn ({assignedDamId})</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">

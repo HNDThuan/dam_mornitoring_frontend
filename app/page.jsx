@@ -5,20 +5,27 @@ import { Mono, Badge, Divider, Label } from '@/components/ui'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
+import { useAuth } from '@/context/AuthContext'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
 import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle } from 'lucide-react'
 
 import DamMap from '@/components/DamMap'
 
 export default function DashboardPage() {
-  const { alarms, unresolvedCount } = useAlarmData()
+  const { user, isOperator, assignedDamId } = useAuth()
+  const damIdForDashboard = isOperator && assignedDamId ? assignedDamId : 'all'
+  const { alarms, unresolvedCount } = useAlarmData(damIdForDashboard)
   const { dams, stations, loading, error } = useDamData()
   const { t } = useLanguage()
 
+  const visibleDams = isOperator && assignedDamId ? dams.filter(d => d.id === assignedDamId) : dams
+  const visibleStations = isOperator && assignedDamId ? stations.filter(s => s.damId === assignedDamId) : stations
+  const visibleAlarms = isOperator && assignedDamId ? alarms.filter(a => a.damId === assignedDamId || !a.damId) : alarms
+
   const counts = {
-    danger: stations.filter(s => s.status === 'danger').length,
-    warning: stations.filter(s => s.status === 'warning').length,
-    safe: stations.filter(s => s.status === 'safe').length,
+    danger: visibleStations.filter(s => s.status === 'danger').length,
+    warning: visibleStations.filter(s => s.status === 'warning').length,
+    safe: visibleStations.filter(s => s.status === 'safe').length,
   }
   return (
     <div className="grid gap-3.5 p-4 min-h-[calc(100vh-48px)]"
@@ -27,10 +34,10 @@ export default function DashboardPage() {
       <div>
         <Label>
           {t('dashboard.damList')}
-          <span className="float-right font-normal">{dams.length} {t('dashboard.damCount')}</span>
+          <span className="float-right font-normal">{visibleDams.length} {t('dashboard.damCount')}</span>
         </Label>
         <div className="flex flex-col gap-2 mb-3.5">
-          {dams.map(d => {
+          {visibleDams.map(d => {
             const s = getStatus(d.status)
             return (
               <div key={d.id}
@@ -75,7 +82,7 @@ export default function DashboardPage() {
           <Divider />
           <div className="flex justify-between">
             <span className="text-[11px] text-muted">{t('dashboard.totalActive')}</span>
-            <Mono className="text-[13px] text-tx">{stations.length} trạm</Mono>
+            <Mono className="text-[13px] text-tx">{visibleStations.length} trạm</Mono>
           </div>
         </div>
       </div>
@@ -83,11 +90,11 @@ export default function DashboardPage() {
       <div>
         {/* Leaflet GIS Map */}
         <div className="mb-3.5">
-          <DamMap dams={dams} stations={stations} height="420px" />
+          <DamMap dams={visibleDams} stations={visibleStations} height="420px" />
         </div>
         {/* Station cards grid */}
         <div className="grid grid-cols-2 gap-2.5">
-          {stations.slice(0, 6).map(st => {
+          {visibleStations.slice(0, 6).map(st => {
             const s = getStatus(st.status)
             return (
               <Link key={st.id} href={`/stations/${st.id}`}
@@ -116,7 +123,7 @@ export default function DashboardPage() {
         <div className="text-center mt-3">
           <Link href="/dams"
             className="inline-block border border-border rounded text-accent text-[11px] font-semibold px-4 py-1.5 no-underline hover:bg-white/5 transition-colors">
-            {t('dashboard.viewAllStations', { count: stations.length })}
+            {t('dashboard.viewAllStations', { count: visibleStations.length })}
           </Link>
         </div>
       </div>
@@ -126,7 +133,7 @@ export default function DashboardPage() {
         <div className="bg-card border border-border rounded-lg p-3.5 mb-3.5">
           <Label>Trạm trọng điểm</Label>
           <div className="flex justify-between items-center my-2">
-            <span className="text-base font-bold text-tx">Hà Nội</span>
+            <span className="text-base font-bold text-tx">{visibleStations[0]?.name || 'Hà Nội'}</span>
             <span className="font-mono text-[9px] text-warning bg-warning-soft px-2 py-0.5 rounded-sm">BÁO ĐỘNG 1</span>
           </div>
           <Mono className="text-[40px] font-bold text-warning leading-none block">
@@ -157,17 +164,17 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col gap-2">
             {
-              alarms.slice(0, 4).map(al => {
+              visibleAlarms.slice(0, 4).map(al => {
                 const s = getStatusBySeverity(al.severity)
                 const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
                 const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
 
-                const station = stations.find(st => 
+                const station = visibleStations.find(st => 
                   (al.stationId && String(st.id) === String(al.stationId)) ||
                   String(st.id) === String(al.sensorId)
-                ) || stations.find(st => st.damId === al.damId) || stations[0]
+                ) || visibleStations.find(st => st.damId === al.damId) || visibleStations[0] || stations[0]
 
-                const dam = dams.find(d => d.id === al.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+                const dam = visibleDams.find(d => d.id === al.damId) || visibleDams.find(d => d.id === station?.damId) || visibleDams[0] || dams[0]
 
                 const damName = al.damName || dam?.name || 'Đập Thủy Điện'
                 const damLoc = dam?.location || 'Hà Nội'
@@ -200,7 +207,7 @@ export default function DashboardPage() {
               })
             }
             {
-              alarms.length === 0 && (
+              visibleAlarms.length === 0 && (
                 <div className="bg-card border border-border rounded px-2.5 py-4 text-center text-[10px] text-muted flex items-center justify-center gap-1.5">
                   <CheckCircle className="w-3.5 h-3.5 text-safe shrink-0" />
                   <span>Không có cảnh báo — Hệ thống ổn định</span>

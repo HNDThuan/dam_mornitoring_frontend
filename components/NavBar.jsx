@@ -23,7 +23,7 @@ export default function NavBar() {
   if (isAdmin || isOperator) {
     NAV.push({ href: '/alerts', label: t('nav.alerts'), icon: AlertTriangle, badge: unresolvedCount })
     NAV.push({ href: '/history', label: t('nav.history'), icon: Calendar, badge: 0 })
-    NAV.push({ href: '/admin/sensor-clusters', label: 'Cụm cảm biến', icon: Cpu, badge: 0 })
+    NAV.push({ href: '/admin/sensor-clusters', label: t('nav.sensorNodes') || 'Sensor Node', icon: Cpu, badge: 0 })
   }
 
   if (isAdmin) {

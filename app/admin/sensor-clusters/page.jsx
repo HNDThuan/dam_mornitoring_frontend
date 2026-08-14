@@ -14,6 +14,7 @@ import {
 } from '@/lib/api'
 import { Label } from '@/components/ui'
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 import {
   Plus,
   Pencil,
@@ -33,6 +34,7 @@ import {
   CircleDot,
   Server,
   ExternalLink,
+  MapPin,
 } from 'lucide-react'
 
 const SENSOR_TYPE_CONFIG = {
@@ -54,6 +56,7 @@ const DEVICE_STATUS_CONFIG = {
 }
 
 export default function SensorClustersPage() {
+  const { user, isAdmin, isOperator, assignedDamId } = useAuth()
   const [clusters, setClusters] = useState([])
   const [dams, setDams] = useState([])
   const [stations, setStations] = useState([])
@@ -99,25 +102,43 @@ export default function SensorClustersPage() {
     if (!silent) setLoading(true)
     setError(null)
     try {
+      const activeDam = isOperator && assignedDamId ? assignedDamId : (filterDamId || undefined)
       const [clustersRes, damsRes, stationsRes] = await Promise.all([
-        fetchSensorClusters(filterStationId || undefined, filterDamId || undefined),
+        fetchSensorClusters(filterStationId || undefined, activeDam),
         fetchDams(),
-        fetchStations(),
+        fetchStations(activeDam),
       ])
-      setClusters(clustersRes.clusters || [])
-      setDams(damsRes.dams || [])
-      setStations(stationsRes.stations || [])
+
+      let allClusters = clustersRes.clusters || []
+      let allDams = damsRes.dams || []
+      let allStations = stationsRes.stations || []
+
+      // Scope strictly to assigned dam for operators
+      if (isOperator && assignedDamId) {
+        allDams = allDams.filter(d => d.id === assignedDamId)
+        allStations = allStations.filter(s => s.damId === assignedDamId)
+        allClusters = allClusters.filter(c => {
+          const st = allStations.find(s => s.id === c.stationId || s.id === c.gateway?.stationId)
+          return c.damId === assignedDamId || (st && st.damId === assignedDamId)
+        })
+      }
+
+      setClusters(allClusters)
+      setDams(allDams)
+      setStations(allStations)
     } catch (err) {
       setError(err.message)
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [filterDamId, filterStationId])
+  }, [filterDamId, filterStationId, isOperator, assignedDamId])
 
   useEffect(() => { loadData(false) }, [loadData])
 
   // Filter stations by selected dam
-  const filteredStations = filterDamId
+  const filteredStations = (isOperator && assignedDamId)
+    ? stations.filter(s => s.damId === assignedDamId)
+    : filterDamId
     ? stations.filter(s => s.damId === filterDamId)
     : stations
 
@@ -204,7 +225,7 @@ export default function SensorClustersPage() {
     if (!deleteConfirm) return
     try {
       await deleteSensorCluster(deleteConfirm.id)
-      showToast(`✅ Đã xóa cụm cảm biến ${deleteConfirm.name}!`, 'success')
+      showToast(`✅ Đã xóa Sensor Node ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       loadData(true)
     } catch (err) {
@@ -243,7 +264,7 @@ export default function SensorClustersPage() {
         showToast('✅ Cập nhật cảm biến thành công!', 'success')
       } else {
         await addSensorDevice(deviceClusterId, deviceForm)
-        showToast('✅ Thêm cảm biến vào cụm thành công!', 'success')
+        showToast('✅ Thêm cảm biến vào Sensor Node thành công!', 'success')
       }
       setDeviceModalOpen(false)
       loadData(true)
@@ -301,21 +322,28 @@ export default function SensorClustersPage() {
             <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
               <Cpu className="w-4 h-4" />
             </div>
-            <h1 className="text-xl font-bold text-tx tracking-wide m-0">Quản lý Cụm cảm biến</h1>
+            <h1 className="text-xl font-bold text-tx tracking-wide m-0">Quản lý Sensor Node</h1>
           </div>
-          <p className="text-[10px] text-muted m-0">Quản lý ESP32 + các cảm biến mực nước, độ ẩm, độ rung cho từng trạm</p>
+          <p className="text-[10px] text-muted m-0">Quản lý thiết bị IoT ESP32 Node + các cảm biến mực nước, độ ẩm, độ rung cho từng trạm</p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Filter by Dam */}
-          <select
-            value={filterDamId}
-            onChange={e => { setFilterDamId(e.target.value); setFilterStationId('') }}
-            className="bg-card2 border border-border rounded-lg px-3 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
-          >
-            <option value="">Tất cả đập</option>
-            {dams.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
+          {/* Filter by Dam (Locked to assigned dam for operators) */}
+          {isOperator && assignedDamId ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-accent text-[11px] font-bold">
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{dams.find(d => d.id === assignedDamId)?.name || `Đập ${assignedDamId}`}</span>
+            </div>
+          ) : (
+            <select
+              value={filterDamId}
+              onChange={e => { setFilterDamId(e.target.value); setFilterStationId('') }}
+              className="bg-card2 border border-border rounded-lg px-3 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
+            >
+              <option value="">Tất cả đập</option>
+              {dams.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          )}
 
           {/* Filter by Station */}
           <select
@@ -333,7 +361,7 @@ export default function SensorClustersPage() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Tìm kiếm cụm..."
+              placeholder="Tìm kiếm Sensor Node..."
               className="bg-transparent border-none outline-none text-tx text-[11px] w-full placeholder:text-muted"
             />
           </div>
@@ -351,7 +379,7 @@ export default function SensorClustersPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" />
-            <span>Thêm cụm</span>
+            <span>Thêm Sensor Node</span>
           </button>
         </div>
       </div>
@@ -363,7 +391,7 @@ export default function SensorClustersPage() {
             <Server className="w-4.5 h-4.5 text-indigo-400" />
           </div>
           <div>
-            <div className="text-[9px] text-muted uppercase tracking-wider">Tổng cụm</div>
+            <div className="text-[9px] text-muted uppercase tracking-wider">Tổng Node</div>
             <div className="text-lg font-bold text-tx font-mono">{clusters.length}</div>
           </div>
         </div>
@@ -411,8 +439,8 @@ export default function SensorClustersPage() {
           <thead>
             <tr className="bg-card2 border-b border-border text-muted text-[10px] uppercase tracking-wider">
               <th className="text-left px-4 py-2.5 font-semibold w-8"></th>
-              <th className="text-left px-4 py-2.5 font-semibold">ID Cụm</th>
-              <th className="text-left px-4 py-2.5 font-semibold">Tên cụm</th>
+              <th className="text-left px-4 py-2.5 font-semibold">Node ID</th>
+              <th className="text-left px-4 py-2.5 font-semibold">Tên Sensor Node</th>
               <th className="text-left px-4 py-2.5 font-semibold">Trạm / Đập</th>
               <th className="text-left px-4 py-2.5 font-semibold">ESP32 MAC</th>
               <th className="text-left px-4 py-2.5 font-semibold">Firmware</th>
@@ -428,7 +456,7 @@ export default function SensorClustersPage() {
             )}
 
             {!loading && filteredClusters.length === 0 && (
-              <tr><td colSpan={10} className="text-center py-12 text-muted">Không tìm thấy cụm cảm biến nào.</td></tr>
+              <tr><td colSpan={10} className="text-center py-12 text-muted">Không tìm thấy Sensor Node nào.</td></tr>
             )}
 
             {!loading && filteredClusters.map(cluster => {
@@ -617,7 +645,7 @@ export default function SensorClustersPage() {
             <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
               <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
                 <Cpu className="w-4 h-4 text-indigo-400" />
-                <span>{editingCluster ? 'Sửa cụm cảm biến' : 'Thêm cụm cảm biến mới'}</span>
+                <span>{editingCluster ? 'Sửa Sensor Node' : 'Thêm Sensor Node mới'}</span>
               </h3>
               <button
                 onClick={() => setClusterModalOpen(false)}
@@ -630,12 +658,12 @@ export default function SensorClustersPage() {
             <form onSubmit={handleSaveCluster} className="p-5 space-y-3 text-[11px]">
 
               <div>
-                <Label className="mb-1">Tên cụm</Label>
+                <Label className="mb-1">Tên Sensor Node</Label>
                 <input
                   required
                   value={clusterForm.name}
                   onChange={e => setClusterForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="vd: Cụm cảm biến K25+500"
+                  placeholder="vd: Sensor Node K25+500"
                   className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
                 />
               </div>
@@ -851,15 +879,15 @@ export default function SensorClustersPage() {
                 <AlertTriangle className="w-5 h-5 text-danger" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-tx m-0">Xác nhận xóa cụm cảm biến</h3>
+                <h3 className="text-sm font-bold text-tx m-0">Xác nhận xóa Sensor Node</h3>
                 <p className="text-[10px] text-muted m-0">Hành động này không thể hoàn tác</p>
               </div>
             </div>
 
             <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2 p-3 rounded border border-border">
-              Xóa cụm cảm biến <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
+              Xóa Sensor Node <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
               <span className="block text-[10px] text-warning mt-1">
-                ⚠️ Tất cả cảm biến trong cụm sẽ bị xóa theo.
+                ⚠️ Tất cả cảm biến trong Sensor Node này sẽ bị xóa theo.
               </span>
             </p>
 
@@ -874,7 +902,7 @@ export default function SensorClustersPage() {
                 onClick={handleDeleteCluster}
                 className="px-4 py-2 bg-danger rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-danger/20"
               >
-                Xóa cụm
+                Xóa Sensor Node
               </button>
             </div>
           </div>

@@ -46,7 +46,7 @@ export default function DamDetailPage() {
     deleteStation,
   } = useDamData()
   const { t, locale } = useLanguage()
-  const { isAdmin } = useAuth()
+  const { isAdmin, isOperator, assignedDamId } = useAuth()
 
   const [search, setSearch] = useState('')
 
@@ -306,6 +306,30 @@ export default function DamDetailPage() {
     }
   }
 
+  // Operator Restriction: Cannot access other dams
+  if (isOperator && assignedDamId && assignedDamId !== id) {
+    return (
+      <div className="p-8 min-h-[calc(100vh-48px)] flex items-center justify-center">
+        <div className="bg-card border border-border max-w-md w-full rounded-2xl p-6 text-center space-y-4 shadow-2xl">
+          <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto border border-danger/30">
+            <AlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-base font-bold text-tx">Truy cập bị giới hạn</h2>
+          <p className="text-xs text-muted leading-relaxed">
+            Bạn là Cán bộ phụ trách đập <strong className="text-accent">{assignedDamId}</strong>. Bạn không có quyền truy cập hoặc xem dữ liệu của đập khác.
+          </p>
+          <Link
+            href={`/dams/${assignedDamId}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white font-bold text-xs rounded-xl no-underline hover:bg-accent/90"
+          >
+            <span>Về trang Đập của bạn ({assignedDamId})</span>
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="p-4 min-h-[calc(100vh-48px)] space-y-4">
       {/* Breadcrumb */}
@@ -428,19 +452,19 @@ export default function DamDetailPage() {
             const live = liveStationMap[st.id] || {}
             const isLiveStreamActive = Boolean(live.timestamp)
 
-            // Kiểm tra trung thực cụm cảm biến của trạm
+            // Kiểm tra trung thực Sensor Node của trạm
             const clusters = st.sensorClusters || []
             const hasClusters = clusters.length > 0
             const onlineClusters = clusters.filter(c => c.status === 'online')
 
             let isConnected = false
-            let connectionStatusLabel = 'DISCONNECTED (CHƯA GẮN CỤM)'
+            let connectionStatusLabel = 'DISCONNECTED (CHƯA GẮN NODE)'
             let connectionStatusColor = 'text-danger'
             let statusDotColor = 'bg-danger'
 
             if (isLiveStreamActive || onlineClusters.length > 0) {
               isConnected = true
-              connectionStatusLabel = 'CỤM ONLINE (ĐANG TRUYỀN DATA)'
+              connectionStatusLabel = 'NODE ONLINE (ĐANG TRUYỀN DATA)'
               connectionStatusColor = 'text-safe'
               statusDotColor = 'bg-safe animate-pulse'
             } else if (hasClusters) {
@@ -491,9 +515,9 @@ export default function DamDetailPage() {
                     )}
                   </div>
 
-                  {/* Trạng thái kết nối thực tế của Cụm Cảm Biến ở Trạm này (Không gian dối) */}
+                  {/* Trạng thái kết nối thực tế của Sensor Node ở Trạm này */}
                   <div className="flex items-center justify-between py-1.5 px-2 bg-card2/80 rounded-md border border-border/40 text-[9px] mb-2">
-                    <span className="text-muted text-[8px] uppercase tracking-wider font-semibold">Cụm cảm biến:</span>
+                    <span className="text-muted text-[8px] uppercase tracking-wider font-semibold">Sensor Node:</span>
                     <div className="flex items-center gap-2 font-mono">
                       <span className={`inline-flex items-center gap-1 text-[9px] font-bold ${connectionStatusColor}`}>
                         <span className={`w-2 h-2 rounded-full ${statusDotColor}`} />

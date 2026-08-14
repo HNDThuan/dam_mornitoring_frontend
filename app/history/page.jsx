@@ -31,19 +31,21 @@ const TOOLTIP = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadi
 export default function HistoryPage() {
   const { user, isOperator, assignedDamId } = useAuth()
   const [search, setSearch] = useState('')
-  const { alarms } = useAlarmData()
+  const damIdForHistory = isOperator && assignedDamId ? assignedDamId : 'all'
+  const { alarms } = useAlarmData(damIdForHistory)
   const { dams, stations } = useDamData()
 
   // Lọc dữ liệu theo đập phụ trách đối với Operator
   const scopedAlarms = isOperator && assignedDamId ? alarms.filter(a => a.damId === assignedDamId || !a.damId) : alarms
+  const scopedStations = isOperator && assignedDamId ? stations.filter(s => s.damId === assignedDamId) : stations
 
   // Dynamic history records built from real alarms or stations
   const historyRecords = scopedAlarms.length > 0
     ? scopedAlarms.map(a => {
-        const station = stations.find(st => 
+        const station = scopedStations.find(st => 
           (a.stationId && String(st.id) === String(a.stationId)) ||
           String(st.id) === String(a.sensorId)
-        ) || stations.find(st => st.damId === a.damId) || stations[0]
+        ) || scopedStations.find(st => st.damId === a.damId) || scopedStations[0] || stations[0]
 
         const dam = dams.find(d => d.id === a.damId) || dams.find(d => d.id === station?.damId) || dams[0]
 
@@ -66,7 +68,7 @@ export default function HistoryPage() {
           statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'ĐANG XỬ LÝ',
         }
       })
-    : stations.map(s => {
+    : scopedStations.map(s => {
         const dam = dams.find(d => d.id === s.damId) || dams[0]
         return {
           time: new Date().toLocaleTimeString('vi-VN'),
