@@ -14,6 +14,7 @@
   html,
   body {
     @apply bg-bg text-tx font-sans text-[14px] leading-relaxed;
+    zoom: 1.1;
     scrollbar-width: thin;
     scrollbar-color: #293b52 #060b14;
   }

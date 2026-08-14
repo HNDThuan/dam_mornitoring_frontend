@@ -139,8 +139,8 @@ export default function SensorClustersPage() {
   const filteredStations = (isOperator && assignedDamId)
     ? stations.filter(s => s.damId === assignedDamId)
     : filterDamId
-    ? stations.filter(s => s.damId === filterDamId)
-    : stations
+      ? stations.filter(s => s.damId === filterDamId)
+      : stations
 
   // Filter clusters by search
   const filteredClusters = clusters.filter(c => {
@@ -327,10 +327,10 @@ export default function SensorClustersPage() {
           <p className="text-[10px] text-muted m-0">Quản lý thiết bị IoT ESP32 Node + các cảm biến mực nước, độ ẩm, độ rung cho từng trạm</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
           {/* Filter by Dam (Locked to assigned dam for operators) */}
           {isOperator && assignedDamId ? (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-lg text-accent text-[11px] font-bold">
+            <div className="h-9 flex items-center gap-1.5 px-3 bg-accent/10 border border-accent/30 rounded-lg text-accent text-[11px] font-bold shrink-0 whitespace-nowrap">
               <MapPin className="w-3.5 h-3.5" />
               <span>{dams.find(d => d.id === assignedDamId)?.name || `Đập ${assignedDamId}`}</span>
             </div>
@@ -338,7 +338,7 @@ export default function SensorClustersPage() {
             <select
               value={filterDamId}
               onChange={e => { setFilterDamId(e.target.value); setFilterStationId('') }}
-              className="bg-card2 border border-border rounded-lg px-3 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
+              className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] outline-none focus:border-accent shrink-0 cursor-pointer"
             >
               <option value="">Tất cả đập</option>
               {dams.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -349,14 +349,14 @@ export default function SensorClustersPage() {
           <select
             value={filterStationId}
             onChange={e => setFilterStationId(e.target.value)}
-            className="bg-card2 border border-border rounded-lg px-3 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
+            className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] outline-none focus:border-accent shrink-0 cursor-pointer"
           >
             <option value="">Tất cả trạm</option>
             {filteredStations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
 
           {/* Search */}
-          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 w-52">
+          <div className="h-9 flex items-center gap-2 bg-card2 border border-border rounded-lg px-3 w-56 shrink-0 focus-within:border-accent">
             <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input
               value={search}
@@ -368,15 +368,15 @@ export default function SensorClustersPage() {
 
           <button
             onClick={loadData}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-muted text-[11px] font-medium bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
+            className="h-9 flex items-center gap-1.5 px-3.5 border border-border rounded-lg text-tx text-[11px] font-semibold bg-card2 hover:bg-white/5 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 text-accent ${loading ? 'animate-spin' : ''}`} />
             <span>Làm mới</span>
           </button>
 
           <button
             onClick={openCreateClusterModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-indigo-500/20"
+            className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-indigo-500/20 shrink-0 whitespace-nowrap transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Thêm Sensor Node</span>

@@ -181,9 +181,9 @@ export default function DamsPage() {
           <p className="text-[10px] text-muted m-0">{t('damsPage.subtitle')}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Search */}
-          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 w-60">
+          <div className="h-9 flex items-center gap-2 bg-card2 border border-border rounded-lg px-3 w-60 shrink-0 focus-within:border-accent">
             <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input
               value={search}
@@ -195,16 +195,16 @@ export default function DamsPage() {
 
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-muted text-[11px] font-medium bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
+            className="h-9 flex items-center gap-1.5 px-3.5 border border-border rounded-lg text-tx text-[11px] font-semibold bg-card2 hover:bg-white/5 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
           >
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className="w-3.5 h-3.5 text-accent" />
             <span>{t('stationsPage.refresh')}</span>
           </button>
 
           {isAdmin && (
             <button
               onClick={openCreateDamModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
+              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20 shrink-0 whitespace-nowrap transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>{t('damsPage.addDam')}</span>
