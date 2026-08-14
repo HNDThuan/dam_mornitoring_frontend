@@ -150,8 +150,9 @@ export default function NavBar() {
           </div>
         ) : (
           <div className="flex items-center gap-2 shrink-0">
-            <div className="px-2.5 py-1 bg-card2 border border-border rounded-lg text-[10px] text-muted font-bold font-mono hidden sm:block">
-              👁️ KHÁCH QUAN SÁT
+            <div className="px-2.5 py-1 bg-card2 border border-border rounded-lg text-[10px] text-muted font-bold font-mono hidden sm:flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-muted shrink-0" />
+              <span>KHÁCH QUAN SÁT</span>
             </div>
             <Link
               href="/login"

@@ -152,24 +152,24 @@ export default function DamDetailPage() {
         status: damForm.status,
         cameraUrl: damForm.cameraUrl,
       })
-      showToast('✅ Cập nhật thông tin đập thành công!', 'success')
+      showToast('Cập nhật thông tin đập thành công!', 'success')
       setDamModalOpen(false)
       refetch(true)
     } catch (err) {
-      showToast(`❌ ${err.message}`, 'error')
+      showToast(err.message, 'error')
     }
   }
 
   const handleConfirmDeleteDam = async () => {
     try {
       await deleteDam(dam.id)
-      showToast(`✅ Đã xóa đập thủy điện ${dam.name}!`, 'success')
+      showToast(`Đã xóa đập thủy điện ${dam.name}!`, 'success')
       setDeleteDamConfirm(false)
       setTimeout(() => {
         router.push('/dams')
       }, 1000)
     } catch (err) {
-      showToast(`❌ Lỗi khi xóa đập: ${err.message}`, 'error')
+      showToast(`Lỗi khi xóa đập: ${err.message}`, 'error')
     }
   }
 
@@ -269,7 +269,7 @@ export default function DamDetailPage() {
           bd3: Number(stationForm.bd3),
           damId: damId,
         })
-        showToast('✅ Cập nhật trạm quan trắc thành công!', 'success')
+        showToast('Cập nhật trạm quan trắc thành công!', 'success')
       } else {
         await createStation({
           ...stationForm,
@@ -285,12 +285,12 @@ export default function DamDetailPage() {
           bd3: Number(stationForm.bd3),
           damId: damId,
         })
-        showToast(`✅ Tạo trạm "${stationForm.name}" thành công!`, 'success')
+        showToast(`Tạo trạm "${stationForm.name}" thành công!`, 'success')
       }
       setStationModalOpen(false)
       refetch(true)
     } catch (err) {
-      showToast(`❌ ${err.message}`, 'error')
+      showToast(err.message, 'error')
     }
   }
 
@@ -298,11 +298,11 @@ export default function DamDetailPage() {
     if (!deleteConfirm) return
     try {
       await deleteStation(deleteConfirm.id)
-      showToast(`✅ Đã xóa trạm ${deleteConfirm.name}!`, 'success')
+      showToast(`Đã xóa trạm ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       refetch(true)
     } catch (err) {
-      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
+      showToast(`Lỗi khi xóa: ${err.message}`, 'error')
     }
   }
 

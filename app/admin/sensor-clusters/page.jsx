@@ -208,16 +208,16 @@ export default function SensorClustersPage() {
       }
       if (editingCluster) {
         await updateSensorCluster(editingCluster.id, payload)
-        showToast('✅ Cập nhật thông tin node thành công!', 'success')
+        showToast('Cập nhật thông tin node thành công!', 'success')
       } else {
         const res = await createSensorCluster(payload)
         const newId = res?.node?.id || res?.cluster?.id || ''
-        showToast(`✅ Tạo node thành công! (Mã: ${newId})`, 'success')
+        showToast(`Tạo node thành công! (Mã: ${newId})`, 'success')
       }
       setClusterModalOpen(false)
       loadData(true)
     } catch (err) {
-      showToast(`❌ ${err.message}`, 'error')
+      showToast(err.message, 'error')
     }
   }
 
@@ -225,11 +225,11 @@ export default function SensorClustersPage() {
     if (!deleteConfirm) return
     try {
       await deleteSensorCluster(deleteConfirm.id)
-      showToast(`✅ Đã xóa Sensor Node ${deleteConfirm.name}!`, 'success')
+      showToast(`Đã xóa Sensor Node ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       loadData(true)
     } catch (err) {
-      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
+      showToast(`Lỗi khi xóa: ${err.message}`, 'error')
     }
   }
 
@@ -261,15 +261,15 @@ export default function SensorClustersPage() {
     try {
       if (editingDevice) {
         await updateSensorDevice(deviceClusterId, editingDevice.id, deviceForm)
-        showToast('✅ Cập nhật cảm biến thành công!', 'success')
+        showToast('Cập nhật cảm biến thành công!', 'success')
       } else {
         await addSensorDevice(deviceClusterId, deviceForm)
-        showToast('✅ Thêm cảm biến vào Sensor Node thành công!', 'success')
+        showToast('Thêm cảm biến vào Sensor Node thành công!', 'success')
       }
       setDeviceModalOpen(false)
       loadData(true)
     } catch (err) {
-      showToast(`❌ ${err.message}`, 'error')
+      showToast(err.message, 'error')
     }
   }
 
@@ -277,10 +277,10 @@ export default function SensorClustersPage() {
     if (!confirm('Xóa cảm biến này?')) return
     try {
       await deleteSensorDevice(clusterId, deviceId)
-      showToast('✅ Đã xóa cảm biến!', 'success')
+      showToast('Đã xóa cảm biến!', 'success')
       loadData(true)
     } catch (err) {
-      showToast(`❌ Lỗi khi xóa cảm biến: ${err.message}`, 'error')
+      showToast(`Lỗi khi xóa cảm biến: ${err.message}`, 'error')
     }
   }
 
@@ -886,8 +886,9 @@ export default function SensorClustersPage() {
 
             <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2 p-3 rounded border border-border">
               Xóa Sensor Node <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
-              <span className="block text-[10px] text-warning mt-1">
-                ⚠️ Tất cả cảm biến trong Sensor Node này sẽ bị xóa theo.
+              <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
+                <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
+                <span>Tất cả cảm biến trong Sensor Node này sẽ bị xóa theo.</span>
               </span>
             </p>
 

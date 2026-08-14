@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { fetchUsers, approveUser as apiApproveUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser, fetchDams } from '@/lib/api'
 import { Mono, Badge } from '@/components/ui'
-import { Users, CheckCircle, XCircle, Shield, Building2, Trash2, Edit2, RefreshCw, AlertTriangle, UserCheck } from 'lucide-react'
+import { Users, CheckCircle, XCircle, Shield, Building2, Trash2, Edit2, RefreshCw, AlertTriangle, UserCheck, Clock, Ban } from 'lucide-react'
 
 export default function UsersPage() {
   const { token, isAdmin } = useAuth()
@@ -177,16 +177,19 @@ export default function UsersPage() {
                       </td>
                       <td className="py-3 px-4">
                         {isPending ? (
-                          <span className="px-2 py-0.5 bg-warning/10 border border-warning/30 text-warning rounded text-[10px] font-bold animate-pulse">
-                            ⏳ CHỜ PHÊ DUYỆT
+                          <span className="px-2 py-0.5 bg-warning/10 border border-warning/30 text-warning rounded text-[10px] font-bold animate-pulse flex items-center gap-1 w-fit">
+                            <Clock className="w-3 h-3 shrink-0" />
+                            <span>CHỜ PHÊ DUYỆT</span>
                           </span>
                         ) : u.status === 'ACTIVE' ? (
-                          <span className="px-2 py-0.5 bg-safe/10 border border-safe/30 text-safe rounded text-[10px] font-bold">
-                            🟢 HOẠT ĐỘNG
+                          <span className="px-2 py-0.5 bg-safe/10 border border-safe/30 text-safe rounded text-[10px] font-bold flex items-center gap-1 w-fit">
+                            <CheckCircle className="w-3 h-3 shrink-0" />
+                            <span>HOẠT ĐỘNG</span>
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-danger/10 border border-danger/30 text-danger rounded text-[10px] font-bold">
-                            🔴 BỊ KHÓA
+                          <span className="px-2 py-0.5 bg-danger/10 border border-danger/30 text-danger rounded text-[10px] font-bold flex items-center gap-1 w-fit">
+                            <Ban className="w-3 h-3 shrink-0" />
+                            <span>BỊ KHÓA</span>
                           </span>
                         )}
                       </td>
@@ -279,9 +282,9 @@ export default function UsersPage() {
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
                   className="w-full bg-card2 border border-border rounded-xl p-2.5 text-tx focus:outline-none focus:border-accent"
                 >
-                  <option value="ACTIVE">ACTIVE (🟢 Hoạt động)</option>
-                  <option value="PENDING_APPROVAL">PENDING_APPROVAL (🟡 Chờ duyệt)</option>
-                  <option value="SUSPENDED">SUSPENDED (🔴 Bị khóa)</option>
+                  <option value="ACTIVE">ACTIVE (Hoạt động)</option>
+                  <option value="PENDING_APPROVAL">PENDING_APPROVAL (Chờ duyệt)</option>
+                  <option value="SUSPENDED">SUSPENDED (Bị khóa)</option>
                 </select>
               </div>
             </div>

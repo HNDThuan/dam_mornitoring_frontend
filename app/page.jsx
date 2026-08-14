@@ -7,7 +7,7 @@ import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
-import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle } from 'lucide-react'
+import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle, Database } from 'lucide-react'
 
 import DamMap from '@/components/DamMap'
 
@@ -198,9 +198,15 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Vị trí Trạm & Đập */}
-                    <div className="text-[10px] text-muted space-y-0.5 my-1 bg-card2 p-1.5 rounded border border-border/40">
-                      <div className="text-tx font-bold">📍 {stName} ({stLoc})</div>
-                      <div className="text-muted text-[9px]">🏞️ {damName} ({damLoc})</div>
+                    <div className="text-[10px] text-muted space-y-1 my-1 bg-card2 p-1.5 rounded border border-border/40">
+                      <div className="text-tx font-bold flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-sky-400 shrink-0" />
+                        <span>{stName} ({stLoc})</span>
+                      </div>
+                      <div className="text-muted text-[9px] flex items-center gap-1.5">
+                        <Database className="w-3 h-3 text-muted shrink-0" />
+                        <span>{damName} ({damLoc})</span>
+                      </div>
                     </div>
                   </div>
                 )

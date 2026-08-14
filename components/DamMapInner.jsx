@@ -6,6 +6,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { MapPin } from 'lucide-react'
 
 // Fix default Leaflet icon paths in Next.js
 delete L.Icon.Default.prototype._getIconUrl
@@ -251,7 +252,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   {/* Dam Name & Coordinates */}
                   <h4 className="font-extrabold text-white text-base mb-1 tracking-tight">{dam.name}</h4>
                   <div className="text-[11px] text-slate-300 mb-2.5 font-medium flex items-center gap-1">
-                    <span className="text-emerald-400">📍</span>
+                    <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span>{lat.toFixed(4)}°N, {lng.toFixed(4)}°E ({dam.location || 'N/A'})</span>
                   </div>
 
@@ -342,7 +343,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   {/* Station Name & Coordinates */}
                   <h4 className="font-extrabold text-white text-base mb-1 tracking-tight">{st.name}</h4>
                   <div className="text-[11px] text-slate-300 mb-2.5 font-medium flex items-center gap-1">
-                    <span className="text-sky-400">📍</span>
+                    <MapPin className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                     <span>{lat.toFixed(4)}°N, {lng.toFixed(4)}°E ({st.river || 'Sông Hồng'})</span>
                   </div>
 

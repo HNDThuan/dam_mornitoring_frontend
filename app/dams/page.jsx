@@ -20,6 +20,7 @@ import {
   Database,
   Radio,
   MapPin,
+  Lock,
 } from 'lucide-react'
 import DamPinMap from '@/components/DamMap'
 
@@ -118,7 +119,7 @@ export default function DamsPage() {
           status: damForm.status,
           cameraUrl: damForm.cameraUrl,
         })
-        showToast('✅ Cập nhật đập thủy điện thành công!', 'success')
+        showToast('Cập nhật đập thủy điện thành công!', 'success')
       } else {
         const payload = {
           name: damForm.name,
@@ -133,12 +134,12 @@ export default function DamsPage() {
         }
         const res = await createDam(payload)
         const newId = res?.dam?.id || ''
-        showToast(`✅ Tạo đập thủy điện thành công! (Mã: ${newId})`, 'success')
+        showToast(`Tạo đập thủy điện thành công! (Mã: ${newId})`, 'success')
       }
       setDamModalOpen(false)
       refetch(true)
     } catch (err) {
-      showToast(`❌ ${err.message}`, 'error')
+      showToast(err.message, 'error')
     }
   }
 
@@ -147,11 +148,11 @@ export default function DamsPage() {
     if (!deleteConfirm) return
     try {
       await deleteDam(deleteConfirm.id)
-      showToast(`✅ Đã xóa đập ${deleteConfirm.name}!`, 'success')
+      showToast(`Đã xóa đập ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       refetch(true)
     } catch (err) {
-      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
+      showToast(`Lỗi khi xóa: ${err.message}`, 'error')
     }
   }
 
@@ -360,8 +361,9 @@ export default function DamsPage() {
                   value={editingDam ? damForm.id : '(Tự động sinh bởi Backend)'}
                   className="w-full bg-card2 border border-border rounded px-3 py-2 text-muted outline-none opacity-70 font-mono cursor-not-allowed select-none"
                 />
-                <span className="text-[9px] text-muted mt-1 block">
-                  🔒 ID được Backend tự động tạo theo tên Đập để đảm bảo tính duy nhất.
+                <span className="text-[9px] text-muted mt-1 flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-muted shrink-0" />
+                  <span>ID được Backend tự động tạo theo tên Đập để đảm bảo tính duy nhất.</span>
                 </span>
               </div>
 
@@ -509,8 +511,9 @@ export default function DamsPage() {
 
             <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2 p-3 rounded border border-border">
               Xóa Đập thủy điện <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
-              <span className="block text-[10px] text-warning mt-1">
-                ⚠️ {t('admin.deleteDamNotice')}
+              <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
+                <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
+                <span>{t('admin.deleteDamNotice')}</span>
               </span>
             </p>
 

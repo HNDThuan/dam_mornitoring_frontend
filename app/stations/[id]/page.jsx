@@ -256,24 +256,24 @@ export default function StationDetailPage() {
         bd2: Number(stationForm.bd2),
         bd3: Number(stationForm.bd3),
       })
-      showToast('✅ Cập nhật thông tin trạm quan trắc thành công!', 'success')
+      showToast('Cập nhật thông tin trạm quan trắc thành công!', 'success')
       setEditingModalOpen(false)
       refetch(true)
     } catch (err) {
-      showToast(`❌ ${err.message}`, 'error')
+      showToast(err.message, 'error')
     }
   }
 
   const handleConfirmDelete = async () => {
     try {
       await deleteStation(st.id)
-      showToast(`✅ Đã xóa trạm quan trắc ${st.name}!`, 'success')
+      showToast(`Đã xóa trạm quan trắc ${st.name}!`, 'success')
       setDeleteConfirm(false)
       setTimeout(() => {
         router.push(st.damId ? `/dams/${st.damId}` : '/dams')
       }, 1000)
     } catch (err) {
-      showToast(`❌ Lỗi khi xóa: ${err.message}`, 'error')
+      showToast(`Lỗi khi xóa: ${err.message}`, 'error')
     }
   }
 
@@ -467,8 +467,9 @@ export default function StationDetailPage() {
             <MapPin className="w-4 h-4 text-sky-400" />
             <span className="text-xs font-bold text-tx">Vị trí địa lý & Tọa độ GIS Trạm quan trắc</span>
           </div>
-          <span className="font-mono text-[10px] text-muted">
-            📍 Tọa độ: {st.latitude != null && st.longitude != null ? `${st.latitude}°N, ${st.longitude}°E` : (st.location || 'Chưa cập nhật')}
+          <span className="font-mono text-[10px] text-muted flex items-center gap-1">
+            <MapPin className="w-3 h-3 text-muted shrink-0" />
+            <span>Tọa độ: {st.latitude != null && st.longitude != null ? `${st.latitude}°N, ${st.longitude}°E` : (st.location || 'Chưa cập nhật')}</span>
           </span>
         </div>
         <DamMap dams={dams.filter(d => d.id === st.damId)} stations={[st]} height="320px" />
