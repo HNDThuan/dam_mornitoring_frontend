@@ -1,13 +1,20 @@
 'use client'
 
+import { usePathname } from 'next/navigation'
 import { useSensorData } from '@/hooks/useSensorData'
 import { useLanguage } from '@/context/LanguageContext'
 import { Mono } from '@/components/ui'
 import { Droplet, CloudRain, Activity, TrendingUp } from 'lucide-react'
 
 export default function LiveStatusBar() {
+  const pathname = usePathname()
   const { latest, connected, error } = useSensorData()
   const { t, locale } = useLanguage()
+
+  // Ẩn LiveStatusBar ở trang Login và Register
+  if (pathname === '/login' || pathname === '/register') {
+    return null
+  }
 
   if (!connected && !latest) return null
 

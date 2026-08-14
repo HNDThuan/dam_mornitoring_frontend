@@ -44,7 +44,7 @@ export default function AlertsPage() {
   const getLocationInfo = (alarm) => {
     if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', river: '', km: '', fullLocation: '' }
 
-    const station = stations.find(s => 
+    const station = stations.find(s =>
       (alarm.stationId && String(s.id) === String(alarm.stationId)) ||
       String(s.id) === String(alarm.sensorId)
     ) || stations.find(s => s.damId === alarm.damId) || stations[0]
@@ -446,9 +446,9 @@ export default function AlertsPage() {
                 <div className="bg-card border border-border rounded-lg p-3.5 flex flex-col justify-center">
                   <div className="text-[15px] text-white uppercase tracking-wider mb-2">Giá trị đo</div>
                   <Mono className={`text-2xl font-bold ${s.text}`}>{sel.measuredVal} {unit}</Mono>
-                  <p className={`text-[12px] ${s.text} mt-1.5`}>Ngưỡng: {sel.thresholdVal} {unit}</p>
+                  <p className={`text-[12px] text-white mt-1.5`}>Ngưỡng: {sel.thresholdVal} {unit}</p>
                   <div className="h-1 bg-border rounded-full mt-2">
-                    <div className={`h-full rounded-full ${sel.severity === 'CRITICAL' ? 'bg-danger' : 'bg-warning'} opacity-70`}
+                    <div className={`h-full rounded-full ${s.dot} opacity-85`}
                       style={{ width: `${Math.min((sel.measuredVal / (sel.thresholdVal * 1.5)) * 100, 100)}%` }} />
                   </div>
                 </div>

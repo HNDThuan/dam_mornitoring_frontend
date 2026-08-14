@@ -23,6 +23,7 @@ module.exports = {
         muted:   '#94a3b8',
         // Status
         danger:  '#f43f5e',
+        critical:'#9333ea',
         warning: '#fb923c',
         safe:    '#34d399',
         info:    '#38bdf8',

@@ -11,37 +11,98 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  html, body {
+  html,
+  body {
     @apply bg-bg text-tx font-sans text-[14px] leading-relaxed;
     scrollbar-width: thin;
     scrollbar-color: #293b52 #060b14;
   }
 
-  ::-webkit-scrollbar        { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track  { background: #060b14; }
-  ::-webkit-scrollbar-thumb  { background: #293b52; border-radius: 4px; }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-  select option { background: #0d1520; color: #f8fafc; }
+  ::-webkit-scrollbar-track {
+    background: #060b14;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #293b52;
+    border-radius: 4px;
+  }
+
+  select option {
+    background: #0d1520;
+    color: #f8fafc;
+  }
 }
 
 @layer utilities {
+
   /* Status badge backgrounds */
-  .bg-danger-soft  { background: rgba(244, 63,  94,  0.12); }
-  .bg-warning-soft { background: rgba(251, 146, 60,  0.12); }
-  .bg-safe-soft    { background: rgba(52,  211, 153, 0.12); }
-  .bg-info-soft    { background: rgba(56,  189, 248, 0.12); }
-  .bg-accent-soft  { background: rgba(129, 140, 248, 0.15); }
+  .bg-critical-soft {
+    background: rgba(147, 51, 234, 0.2);
+  }
+
+  .bg-danger-soft {
+    background: rgba(244, 63, 94, 0.12);
+  }
+
+  .bg-warning-soft {
+    background: rgba(251, 146, 60, 0.12);
+  }
+
+  .bg-safe-soft {
+    background: rgba(52, 211, 153, 0.12);
+  }
+
+  .bg-info-soft {
+    background: rgba(56, 189, 248, 0.12);
+  }
+
+  .bg-accent-soft {
+    background: rgba(129, 140, 248, 0.15);
+  }
 
   /* Status borders */
-  .border-danger-soft  { border-color: rgba(244, 63,  94,  0.4); }
-  .border-warning-soft { border-color: rgba(251, 146, 60,  0.4); }
-  .border-safe-soft    { border-color: rgba(52,  211, 153, 0.4); }
-  .border-info-soft    { border-color: rgba(56,  189, 248, 0.4); }
-  .border-accent-soft  { border-color: rgba(129, 140, 248, 0.4); }
+  .border-critical-soft {
+    border-color: rgba(147, 51, 234, 0.55);
+  }
+
+  .border-danger-soft {
+    border-color: rgba(244, 63, 94, 0.4);
+  }
+
+  .border-warning-soft {
+    border-color: rgba(251, 146, 60, 0.4);
+  }
+
+  .border-safe-soft {
+    border-color: rgba(52, 211, 153, 0.4);
+  }
+
+  .border-info-soft {
+    border-color: rgba(56, 189, 248, 0.4);
+  }
+
+  .border-accent-soft {
+    border-color: rgba(129, 140, 248, 0.4);
+  }
 
   @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50%       { opacity: 0.35; }
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.35;
+    }
   }
-  .animate-pulse-dot { animation: pulse-dot 2s infinite; }
+
+  .animate-pulse-dot {
+    animation: pulse-dot 2s infinite;
+  }
 }

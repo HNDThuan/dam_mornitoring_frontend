@@ -46,11 +46,15 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center p-4 relative overflow-hidden font-sans">
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-accent/20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-sky-500/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans bg-[#060b14]">
+      {/* Full Uncropped Bright Background Image */}
+      <img
+        src="/login-bg.jpg"
+        alt="Dam Monitoring"
+        className="absolute inset-0 w-full h-full object-contain object-center pointer-events-none z-0 select-none"
+      />
 
-      <div className="w-full max-w-lg bg-card/80 backdrop-blur-xl border border-border/80 rounded-2xl p-8 shadow-2xl z-10 space-y-6">
+      <div className="w-full max-w-lg bg-card/95 backdrop-blur-md border border-border rounded-3xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-10 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
           <div className="inline-flex items-center justify-center w-12 h-12 bg-accent/10 border border-accent/30 rounded-2xl text-accent mb-1">
