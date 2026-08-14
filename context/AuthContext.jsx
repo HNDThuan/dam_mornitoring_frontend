@@ -57,10 +57,11 @@ export function AuthProvider({ children }) {
     initAuth()
   }, [initAuth])
 
-  // Tải lại thông tin người dùng từ CSDL để cập nhật Role mới ngay lập tức
+  // Tải lại thông tin người dùng từ CSDL khi cần (sau login, cập nhật thông tin)
   const refreshUser = useCallback(async () => {
     try {
       const savedToken = typeof window !== 'undefined' ? localStorage.getItem('access_token') : token
+      if (!savedToken) return null
       const profile = await apiFetchMe(savedToken)
       if (profile) {
         setUser(profile)
@@ -71,12 +72,20 @@ export function AuthProvider({ children }) {
     }
   }, [token])
 
-  // Tự động đồng bộ profile mới từ CSDL mỗi khi người dùng chuyển trang
+  // Đồng bộ lại profile khi người dùng quay lại tab (window focus) thay vì gọi mỗi khi chuyển trang
   useEffect(() => {
-    if (!loading && typeof window !== 'undefined') {
-      refreshUser()
+    if (typeof window === 'undefined') return
+
+    const handleFocus = () => {
+      const savedToken = localStorage.getItem('access_token')
+      if (savedToken && !loading) {
+        refreshUser()
+      }
     }
-  }, [pathname, loading, refreshUser])
+
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [loading, refreshUser])
 
   // Điều hướng dựa vào phiên đăng nhập và vai trò (Role Policy Enforcement)
   useEffect(() => {
