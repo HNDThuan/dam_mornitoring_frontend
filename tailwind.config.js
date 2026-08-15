@@ -32,6 +32,7 @@ module.exports = {
         warning: '#f59e0b',
         safe:    '#22c55e',
         info:    '#38bdf8',
+        unknown: '#64748b',
         // Status bg (low opacity — use bg-danger/10 etc.)
       },
       backgroundOpacity: {

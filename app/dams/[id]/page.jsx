@@ -128,7 +128,7 @@ export default function DamDetailPage() {
 
       const waterCfg = configs.find(c => c.sensorType === 'water_level') || {}
       const vibCfg = configs.find(c => c.sensorType === 'vibration') || {}
-      const mstCfg = configs.find(c => c.sensorType === 'moisture') || {}
+      const mstCfg = configs.find(c => c.sensorType === 'humidity') || {}
 
       setThresholdForm({
         waterWarn: waterCfg.warnHigh ?? 10.0,
@@ -151,13 +151,35 @@ export default function DamDetailPage() {
     }
   }
 
+  // Mức báo động sau phải cao hơn mức trước: Chú ý < Cảnh báo < Nguy cấp — cùng quy tắc backend
+  // dùng để phân loại severity (classifySeverity so sánh '>=' theo thứ tự warn -> alert -> critical).
+  const validateThresholdForm = () => {
+    const groups = [
+      ['Mực nước', thresholdForm.waterWarn, thresholdForm.waterAlert, thresholdForm.waterCritical],
+      ['Độ rung', thresholdForm.vibWarn, thresholdForm.vibAlert, thresholdForm.vibCritical],
+      ['Độ ẩm', thresholdForm.mstWarn, thresholdForm.mstAlert, thresholdForm.mstCritical],
+    ]
+    for (const [label, warn, alert, critical] of groups) {
+      const w = Number(warn), a = Number(alert), c = Number(critical)
+      if (!(w < a && a < c)) {
+        return `Ngưỡng "${label}" không hợp lệ: yêu cầu Chú ý (${w}) < Cảnh báo (${a}) < Nguy cấp (${c}).`
+      }
+    }
+    return null
+  }
+
   const handleSaveThresholds = async (e) => {
     e.preventDefault()
+    const validationError = validateThresholdForm()
+    if (validationError) {
+      showToast(validationError, 'error')
+      return
+    }
     try {
       setSavingThresholds(true)
       const waterCfg = thresholdConfigs.find(c => c.sensorType === 'water_level')
       const vibCfg = thresholdConfigs.find(c => c.sensorType === 'vibration')
-      const mstCfg = thresholdConfigs.find(c => c.sensorType === 'moisture')
+      const mstCfg = thresholdConfigs.find(c => c.sensorType === 'humidity')
 
       const promises = []
 
@@ -211,7 +233,7 @@ export default function DamDetailPage() {
       }
     } catch (err) {
       console.error('[DamDetail] Lỗi lưu ngưỡng:', err)
-      showToast('Không thể cập nhật cấu hình ngưỡng!', 'error')
+      showToast(err.message || 'Không thể cập nhật cấu hình ngưỡng!', 'error')
     } finally {
       setSavingThresholds(false)
     }
@@ -323,9 +345,6 @@ export default function DamDetailPage() {
     pressure: 0,
     flow: 0,
     humidity: 50,
-    bd1: 6.0,
-    bd2: 8.0,
-    bd3: 10.0,
     damId: damId,
   })
 
@@ -344,9 +363,6 @@ export default function DamDetailPage() {
       pressure: 150,
       flow: 1200,
       humidity: 50,
-      bd1: 6.0,
-      bd2: 8.0,
-      bd3: 10.0,
       damId: damId,
     })
     setStationModalOpen(true)
@@ -367,9 +383,6 @@ export default function DamDetailPage() {
       pressure: st.pressure || 0,
       flow: st.flow || 0,
       humidity: st.humidity || 0,
-      bd1: st.bd1 || 0,
-      bd2: st.bd2 || 0,
-      bd3: st.bd3 || 0,
       damId: st.damId || damId,
     })
     setStationModalOpen(true)
@@ -393,9 +406,6 @@ export default function DamDetailPage() {
           pressure: Number(stationForm.pressure),
           flow: Number(stationForm.flow),
           humidity: Number(stationForm.humidity),
-          bd1: Number(stationForm.bd1),
-          bd2: Number(stationForm.bd2),
-          bd3: Number(stationForm.bd3),
           damId: damId,
         })
         showToast('Cập nhật trạm quan trắc thành công!', 'success')
@@ -409,9 +419,6 @@ export default function DamDetailPage() {
           pressure: Number(stationForm.pressure),
           flow: Number(stationForm.flow),
           humidity: Number(stationForm.humidity),
-          bd1: Number(stationForm.bd1),
-          bd2: Number(stationForm.bd2),
-          bd3: Number(stationForm.bd3),
           damId: damId,
         })
         showToast(`Tạo trạm "${stationForm.name}" thành công!`, 'success')
@@ -893,49 +900,9 @@ export default function DamDetailPage() {
                 <option value="safe">{t('status.safe')}</option>
                 <option value="warning">{t('status.warning')}</option>
                 <option value="danger">{t('status.danger')}</option>
+                <option value="critical">{t('status.critical')}</option>
               </Select>
             </Field>
-          </div>
-
-          {/* Ngưỡng Báo Động Mực Nước Trạm (BĐ1 / BĐ2 / BĐ3) */}
-          <div className="bg-card2/60 border border-border/60 rounded-lg p-2.5 space-y-2">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
-              Ngưỡng cảnh báo mực nước trạm (BĐ1 / BĐ2 / BĐ3)
-            </div>
-            <div className="grid grid-cols-3 gap-2.5">
-              <Field label={t('admin.form.bd1Label')} htmlFor="station-bd1">
-                <TextInput
-                  id="station-bd1"
-                  type="number"
-                  step="0.1"
-                  value={stationForm.bd1}
-                  onChange={e => setStationForm(p => ({ ...p, bd1: e.target.value }))}
-                  className="font-mono"
-                />
-              </Field>
-
-              <Field label={t('admin.form.bd2Label')} htmlFor="station-bd2">
-                <TextInput
-                  id="station-bd2"
-                  type="number"
-                  step="0.1"
-                  value={stationForm.bd2}
-                  onChange={e => setStationForm(p => ({ ...p, bd2: e.target.value }))}
-                  className="font-mono"
-                />
-              </Field>
-
-              <Field label={t('admin.form.bd3Label')} htmlFor="station-bd3">
-                <TextInput
-                  id="station-bd3"
-                  type="number"
-                  step="0.1"
-                  value={stationForm.bd3}
-                  onChange={e => setStationForm(p => ({ ...p, bd3: e.target.value }))}
-                  className="font-mono text-danger font-bold"
-                />
-              </Field>
-            </div>
           </div>
         </form>
       </Modal>

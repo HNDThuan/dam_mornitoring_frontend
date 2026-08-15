@@ -19,11 +19,13 @@ L.Icon.Default.mergeOptions({
 // Create custom HTML markers for Dam and Station
 const createDamIcon = (status) => {
   const colorMap = {
-    safe: '#10b981',    // Emerald green
-    warning: '#f59e0b', // Amber/orange
-    danger: '#ef4444',  // Red
+    safe: '#10b981',     // Emerald green
+    warning: '#f59e0b',  // Amber/orange
+    danger: '#ef4444',   // Red
+    critical: '#a855f7', // Purple — khớp với --critical trong tailwind.config.js
+    unknown: '#64748b',  // Xám — không có tín hiệu nào còn tươi (mất kết nối), khớp --unknown
   }
-  const color = colorMap[status] || '#10b981'
+  const color = colorMap[status] || '#38bdf8' // Info blue cho trạng thái không xác định (không mặc định về "an toàn")
 
   const html = `
     <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;">
@@ -47,11 +49,13 @@ const createDamIcon = (status) => {
 
 const createStationIcon = (status) => {
   const colorMap = {
-    safe: '#3b82f6',    // Blue
-    warning: '#f59e0b', // Amber
-    danger: '#ef4444',  // Red
+    safe: '#3b82f6',     // Blue
+    warning: '#f59e0b',  // Amber
+    danger: '#ef4444',   // Red
+    critical: '#a855f7', // Purple — khớp với --critical trong tailwind.config.js
+    unknown: '#64748b',  // Xám — không có tín hiệu nào còn tươi (mất kết nối), khớp --unknown
   }
-  const color = colorMap[status] || '#3b82f6'
+  const color = colorMap[status] || '#38bdf8' // Info blue cho trạng thái không xác định (không mặc định về "an toàn")
 
   const html = `
     <div style="position: relative; display: flex; align-items: center; justify-content: center; width: 26px; height: 26px;">
@@ -243,9 +247,13 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                         ? 'bg-emerald-500 text-white'
                         : dam.status === 'warning'
                           ? 'bg-amber-400 text-slate-950'
-                          : 'bg-rose-500 text-white'
+                          : dam.status === 'critical'
+                            ? 'bg-purple-500 text-white'
+                            : dam.status === 'unknown'
+                              ? 'bg-slate-500 text-white'
+                              : 'bg-rose-500 text-white'
                       }`}>
-                      {dam.status === 'safe' ? 'An toàn' : dam.status === 'warning' ? 'Cảnh báo' : 'Nguy hiểm'}
+                      {dam.status === 'safe' ? 'An toàn' : dam.status === 'warning' ? 'Cảnh báo' : dam.status === 'critical' ? 'Nguy cấp' : dam.status === 'unknown' ? 'Không xác định' : 'Nguy hiểm'}
                     </span>
                   </div>
 
@@ -334,9 +342,13 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                         ? 'bg-emerald-500 text-slate-950'
                         : st.status === 'warning'
                           ? 'bg-amber-400 text-slate-950'
-                          : 'bg-rose-500 text-white'
+                          : st.status === 'critical'
+                            ? 'bg-purple-500 text-white'
+                            : st.status === 'unknown'
+                              ? 'bg-slate-500 text-white'
+                              : 'bg-rose-500 text-white'
                       }`}>
-                      {st.status === 'safe' ? 'An toàn' : st.status === 'warning' ? 'Cảnh báo' : 'Nguy hiểm'}
+                      {st.status === 'safe' ? 'An toàn' : st.status === 'warning' ? 'Cảnh báo' : st.status === 'critical' ? 'Nguy cấp' : st.status === 'unknown' ? 'Không xác định' : 'Nguy hiểm'}
                     </span>
                   </div>
 

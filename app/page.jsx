@@ -7,7 +7,7 @@ import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
-import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle, Database, AlertTriangle, AlertOctagon, ShieldCheck, BellRing } from 'lucide-react'
+import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle, Database, AlertTriangle, AlertOctagon, ShieldCheck, BellRing, Siren } from 'lucide-react'
 
 import DamMap from '@/components/DamMap'
 
@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const visibleAlarms = isOperator && assignedDamId ? alarms.filter(a => a.damId === assignedDamId || !a.damId) : alarms
 
   const counts = {
+    critical: visibleStations.filter(s => s.status === 'critical').length,
     danger: visibleStations.filter(s => s.status === 'danger').length,
     warning: visibleStations.filter(s => s.status === 'warning').length,
     safe: visibleStations.filter(s => s.status === 'safe').length,
@@ -34,8 +35,9 @@ export default function DashboardPage() {
   return (
     <div className="p-4 min-h-[calc(100vh-48px)] space-y-3.5">
       {/* ── KPI ROW ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatTile icon={Database} label={t('dashboard.damList')} value={visibleDams.length} status="info" />
+        <StatTile icon={Siren} label={t('status.critical')} value={counts.critical} status="critical" />
         <StatTile icon={AlertOctagon} label={t('status.danger')} value={counts.danger} status="danger" />
         <StatTile icon={AlertTriangle} label={t('status.warning')} value={counts.warning} status="warning" />
         <StatTile icon={ShieldCheck} label={t('status.safe')} value={counts.safe} status="safe" />
@@ -82,7 +84,7 @@ export default function DashboardPage() {
 
           {/* Summary */}
           <Panel title={t('dashboard.stationOverview')}>
-            {[[t('status.danger'), counts.danger, 'text-danger', 'bg-danger'], [t('status.warning'), counts.warning, 'text-warning', 'bg-warning'], [t('status.safe'), counts.safe, 'text-safe', 'bg-safe']].map(([lb, ct, cl, dot]) => (
+            {[[t('status.critical'), counts.critical, 'text-critical', 'bg-critical'], [t('status.danger'), counts.danger, 'text-danger', 'bg-danger'], [t('status.warning'), counts.warning, 'text-warning', 'bg-warning'], [t('status.safe'), counts.safe, 'text-safe', 'bg-safe']].map(([lb, ct, cl, dot]) => (
               <div key={lb} className="flex justify-between items-center mb-2.5 last:mb-0">
                 <div className="flex items-center gap-1.5">
                   <div className={`w-1.5 h-1.5 rounded-full ${dot}`} />

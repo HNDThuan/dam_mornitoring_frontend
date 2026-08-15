@@ -78,6 +78,10 @@
     background: rgba(56, 189, 248, 0.12);
   }
 
+  .bg-unknown-soft {
+    background: rgba(100, 116, 139, 0.15);
+  }
+
   .bg-accent-soft {
     background: rgba(129, 140, 248, 0.15);
   }
@@ -101,6 +105,10 @@
 
   .border-info-soft {
     border-color: rgba(56, 189, 248, 0.4);
+  }
+
+  .border-unknown-soft {
+    border-color: rgba(100, 116, 139, 0.45);
   }
 
   .border-accent-soft {

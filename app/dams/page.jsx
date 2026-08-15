@@ -458,6 +458,7 @@ export default function DamsPage() {
                 <option value="safe">{t('status.safe')}</option>
                 <option value="warning">{t('status.warning')}</option>
                 <option value="danger">{t('status.danger')}</option>
+                <option value="critical">{t('status.critical')}</option>
               </Select>
             </Field>
           </div>
