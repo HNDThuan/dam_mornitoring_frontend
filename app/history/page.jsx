@@ -1,265 +1,572 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getStatus } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Label } from '@/components/ui'
-import { Download, AlertTriangle, Droplet, Clock, Search, Check } from 'lucide-react'
+import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert } from 'lucide-react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
 import { useAuth } from '@/context/AuthContext'
+import { fetchLongTermHistory, fetchHistoryKpi } from '@/lib/api'
 import { exportAlarmsToExcel } from '@/lib/exportHelpers'
 import { timeAgo, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS } from '@/lib/sensorHelpers'
 
-const lineData = [
-  { d: '01/08', c: 5.2, l71: 8.1, l96: 7.4 },
-  { d: '05/08', c: 5.8, l71: 8.1, l96: 7.4 },
-  { d: '10/08', c: 6.5, l71: 8.1, l96: 7.4 },
-  { d: '15/08', c: 6.1, l71: 8.1, l96: 7.4 },
-  { d: '18/08', c: 6.9, l71: 8.1, l96: 7.4 },
-  { d: '20/08', c: 7.2, l71: 8.1, l96: 7.4 },
-  { d: '24/08', c: 7.45, l71: 8.1, l96: 7.4 },
-]
-const barData = [
-  { d: '01/08', cb: 2, kc: 0 }, { d: '05/08', cb: 3, kc: 1 },
-  { d: '10/08', cb: 5, kc: 2 }, { d: '15/08', cb: 4, kc: 1 },
-  { d: '18/08', cb: 6, kc: 3 }, { d: '20/08', cb: 8, kc: 4 },
-  { d: '24/08', cb: 7, kc: 3 },
-]
-const TOOLTIP = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadius: 4, fontSize: 9 }
+const TOOLTIP_STYLE = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }
 
 export default function HistoryPage() {
   const { user, isOperator, assignedDamId } = useAuth()
-  const [search, setSearch] = useState('')
   const damIdForHistory = isOperator && assignedDamId ? assignedDamId : 'all'
-  const { alarms } = useAlarmData(damIdForHistory)
-  const { dams, stations } = useDamData()
 
-  // Lọc dữ liệu theo đập phụ trách đối với Operator
-  const scopedAlarms = isOperator && assignedDamId ? alarms.filter(a => a.damId === assignedDamId || !a.damId) : alarms
-  const scopedStations = isOperator && assignedDamId ? stations.filter(s => s.damId === assignedDamId) : stations
+  const { alarms, loading: alarmsLoading } = useAlarmData(damIdForHistory)
+  const { dams, stations, loading: damLoading } = useDamData()
 
-  // Dynamic history records built from real alarms or stations
-  const historyRecords = scopedAlarms.length > 0
-    ? scopedAlarms.map(a => {
-        const station = scopedStations.find(st => 
-          (a.stationId && String(st.id) === String(a.stationId)) ||
-          String(st.id) === String(a.sensorId)
-        ) || scopedStations.find(st => st.damId === a.damId) || scopedStations[0] || stations[0]
+  // State Bộ lọc nâng cao
+  const [selectedDamId, setSelectedDamId] = useState(isOperator && assignedDamId ? assignedDamId : 'all')
+  const [selectedStationId, setSelectedStationId] = useState('all')
+  const [sensorType, setSensorType] = useState('all')
+  const [timeRange, setTimeRange] = useState('7d') // '24h' | '7d' | '30d' | 'all'
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
-        const dam = dams.find(d => d.id === a.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+  // State Dữ liệu Thật từ Backend DB
+  const [historyReadings, setHistoryReadings] = useState([])
+  const [kpiData, setKpiData] = useState(null)
+  const [loadingHistory, setLoadingHistory] = useState(true)
 
-        const damName = a.damName || dam?.name || `Đập ${a.damId}`
-        const damLoc = dam?.location || 'Việt Nam'
-        const stName = a.stationName || station?.name || `Trạm ${a.stationId || a.sensorId}`
-        const stLoc = a.location || station?.location || 'Thân đập'
+  // Tính toán khoảng thời gian từ timeRange
+  const dateParams = useMemo(() => {
+    if (timeRange === 'all') return {}
+    const now = new Date()
+    let startDate = new Date()
 
+    if (timeRange === '24h') startDate.setHours(now.getHours() - 24)
+    else if (timeRange === '7d') startDate.setDate(now.getDate() - 7)
+    else if (timeRange === '30d') startDate.setDate(now.getDate() - 30)
+
+    return {
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString(),
+    }
+  }, [timeRange])
+
+  // Lấy dữ liệu thực tế từ CSDL khi thay đổi bộ lọc
+  const loadHistoryData = async () => {
+    setLoadingHistory(true)
+    try {
+      const [readingsRes, kpiRes] = await Promise.all([
+        fetchLongTermHistory({
+          damId: selectedDamId,
+          stationId: selectedStationId !== 'all' ? selectedStationId : undefined,
+          type: sensorType,
+          startDate: dateParams.startDate,
+          endDate: dateParams.endDate,
+          limit: 150,
+        }),
+        fetchHistoryKpi({
+          damId: selectedDamId,
+          startDate: dateParams.startDate,
+          endDate: dateParams.endDate,
+        }),
+      ])
+
+      setHistoryReadings(readingsRes.data || [])
+      setKpiData(kpiRes.kpi || null)
+    } catch (err) {
+      console.error('[HistoryPage] Error loading history data:', err)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
+
+  useEffect(() => {
+    loadHistoryData()
+  }, [selectedDamId, selectedStationId, sensorType, dateParams])
+
+  // Lọc dữ liệu Đập và Trạm phù hợp với phân quyền
+  const availableDams = useMemo(() => {
+    if (isOperator && assignedDamId) return dams.filter(d => d.id === assignedDamId)
+    return dams
+  }, [dams, isOperator, assignedDamId])
+
+  const availableStations = useMemo(() => {
+    if (selectedDamId && selectedDamId !== 'all') {
+      return stations.filter(s => s.damId === selectedDamId)
+    }
+    if (isOperator && assignedDamId) {
+      return stations.filter(s => s.damId === assignedDamId)
+    }
+    return stations
+  }, [stations, selectedDamId, isOperator, assignedDamId])
+
+  // Scoped alarms thực tế từ CSDL
+  const scopedAlarms = useMemo(() => {
+    let list = alarms
+    if (selectedDamId && selectedDamId !== 'all') {
+      list = list.filter(a => a.damId === selectedDamId)
+    }
+    if (selectedStationId && selectedStationId !== 'all') {
+      list = list.filter(a => String(a.stationId) === String(selectedStationId) || String(a.sensorId) === String(selectedStationId))
+    }
+    if (sensorType && sensorType !== 'all') {
+      const typeLower = sensorType.toLowerCase()
+      list = list.filter(a => {
+        const st = (a.sensorType || '').toLowerCase()
+        if (typeLower === 'vibration' || typeLower === 'vib') return st.startsWith('vibration') || st === 'vib'
+        if (typeLower === 'water_level' || typeLower === 'wtl') return st === 'water_level' || st === 'wtl' || st === 'water'
+        if (typeLower === 'moisture' || typeLower === 'mst') return st === 'moisture' || st === 'humidity' || st === 'mst'
+        return st === typeLower
+      })
+    }
+    if (dateParams.startDate) {
+      const startMs = new Date(dateParams.startDate).getTime()
+      list = list.filter(a => new Date(a.triggeredAt).getTime() >= startMs)
+    }
+    return list
+  }, [alarms, selectedDamId, selectedStationId, sensorType, dateParams])
+
+  // Biến đổi dữ liệu CSDL cho Biểu đồ Đường (LineChart)
+  const lineChartData = useMemo(() => {
+    if (!historyReadings || historyReadings.length === 0) return []
+    return historyReadings.map(r => ({
+      d: new Date(r.time).toLocaleDateString('vi-VN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
+      value: Number(r.value),
+      sensorType: r.sensorType,
+      unit: r.unit || SENSOR_TYPE_UNITS[r.sensorType] || '',
+    }))
+  }, [historyReadings])
+
+  // Biến đổi dữ liệu CSDL cho Biểu đồ Cột (BarChart - Phân bố sự cố)
+  const barChartData = useMemo(() => {
+    if (!scopedAlarms || scopedAlarms.length === 0) return []
+    const map = new Map()
+    scopedAlarms.forEach(a => {
+      const d = new Date(a.triggeredAt).toLocaleDateString('vi-VN', { month: '2-digit', day: '2-digit' })
+      if (!map.has(d)) map.set(d, { d, warning: 0, alert: 0, critical: 0 })
+      const item = map.get(d)
+      if (a.severity === 'CRITICAL') item.critical += 1
+      else if (a.severity === 'ALERT') item.alert += 1
+      else item.warning += 1
+    })
+    return Array.from(map.values()).slice(-10)
+  }, [scopedAlarms])
+
+  // Helper tra cứu vị trí Trạm & Đập
+  const getLocationInfo = (alarm) => {
+    if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', fullLocation: '' }
+
+    const station = stations.find(s =>
+      (alarm.stationId && String(s.id) === String(alarm.stationId)) ||
+      String(s.id) === String(alarm.sensorId)
+    ) || stations.find(s => s.damId === alarm.damId) || stations[0]
+
+    const dam = dams.find(d => d.id === alarm.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+    const damName = alarm.damName || dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
+    const damLocation = dam?.location || 'Việt Nam'
+
+    const stationName = alarm.stationName || station?.name || `Trạm ${alarm.stationId || alarm.sensorId || 'Quan Trắc'}`
+    const stationLoc = alarm.location || station?.location || 'Thân đập chính'
+
+    const fullLocation = `${stationName} (${stationLoc}) — ${damName}`
+    return { damName, damLocation, stationName, stationLoc, fullLocation }
+  }
+
+  // Danh sách bản ghi lịch sử kết hợp từ CSDL
+  const historyRecords = useMemo(() => {
+    if (scopedAlarms.length > 0) {
+      return scopedAlarms.map(a => {
+        const loc = getLocationInfo(a)
         return {
           time: new Date(a.triggeredAt).toLocaleString('vi-VN'),
-          code: a.sensorId,
-          stationName: stName,
-          stationLocation: stLoc,
-          damName: damName,
-          damLocation: damLoc,
-          location: `${stName} (${stLoc}) — ${damName}`,
+          code: a.sensorId || `ALM-${a.id.slice(0, 6)}`,
+          stationName: loc.stationName,
+          damName: loc.damName,
+          location: loc.fullLocation,
+          sensorType: a.sensorType,
           level: `${a.measuredVal} ${SENSOR_TYPE_UNITS[a.sensorType] || ''}`,
           alertLv: a.severity === 'CRITICAL' ? 'danger' : a.severity === 'ALERT' ? 'warning' : 'info',
           statusLv: a.resolvedAt ? 'safe' : 'warning',
-          statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'ĐANG XỬ LÝ',
+          statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'CHỜ XỬ LÝ',
+          rawAlarm: a,
         }
       })
-    : scopedStations.map(s => {
-        const dam = dams.find(d => d.id === s.damId) || dams[0]
-        return {
-          time: new Date().toLocaleTimeString('vi-VN'),
-          code: `TR-${s.id}`,
-          stationName: s.name,
-          stationLocation: s.location || 'Hà Nội',
-          damName: dam?.name || 'Đập Thủy Điện',
-          damLocation: dam?.location || 'Việt Nam',
-          location: `${s.name} (${s.location || 'Hà Nội'}) — ${dam?.name || 'Đập Thủy Điện'}`,
-          level: `${s.waterLevel}m`,
-          alertLv: s.status,
-          statusLv: s.status === 'safe' ? 'safe' : 'warning',
-          statusLbl: s.status === 'safe' ? 'BÌNH THƯỜNG' : 'ĐANG GIÁM SÁT',
-        }
-      })
+    }
 
-  const filtered = historyRecords.filter(r =>
-    !search || r.code.toLowerCase().includes(search.toLowerCase()) || r.location.toLowerCase().includes(search.toLowerCase())
-  )
+    // Fallback: nếu chưa có sự kiện alarm, dùng bản ghi sensor readings từ CSDL
+    return historyReadings.map(r => {
+      const station = stations.find(s => s.damId === r.damId) || stations[0]
+      const dam = dams.find(d => d.id === r.damId) || dams[0]
+      return {
+        time: new Date(r.time).toLocaleString('vi-VN'),
+        code: r.sensorId,
+        stationName: station?.name || 'Trạm Quan Trắc',
+        damName: dam?.name || `Đập ${r.damId}`,
+        location: `${station?.name || 'Trạm'} — ${dam?.name || 'Đập'}`,
+        sensorType: r.sensorType,
+        level: `${r.value} ${r.unit || SENSOR_TYPE_UNITS[r.sensorType] || ''}`,
+        alertLv: 'info',
+        statusLv: 'safe',
+        statusLbl: 'BÌNH THƯỜNG',
+      }
+    })
+  }, [scopedAlarms, historyReadings, dams, stations])
+
+  // Lọc theo từ khóa tìm kiếm
+  const filteredRecords = useMemo(() => {
+    if (!search.trim()) return historyRecords
+    const kw = search.toLowerCase()
+    return historyRecords.filter(r =>
+      r.code.toLowerCase().includes(kw) ||
+      r.location.toLowerCase().includes(kw) ||
+      r.statusLbl.toLowerCase().includes(kw)
+    )
+  }, [historyRecords, search])
+
+  // Phân trang
+  const PAGE_SIZE = 10
+  const totalPages = Math.ceil(filteredRecords.length / PAGE_SIZE) || 1
+  const paginatedRecords = useMemo(() => {
+    const start = (page - 1) * PAGE_SIZE
+    return filteredRecords.slice(start, start + PAGE_SIZE)
+  }, [filteredRecords, page])
+
+  const isLoading = alarmsLoading || damLoading || loadingHistory
 
   return (
-    <div className="grid gap-3.5 p-4 min-h-[calc(100vh-48px)]" style={{ gridTemplateColumns: '210px 1fr' }}>
+    <div className="grid gap-3.5 p-4 min-h-[calc(100vh-48px)]" style={{ gridTemplateColumns: '220px 1fr' }}>
 
-      {/* Filters */}
+      {/* ── SIDEBAR BỘ LỌC CSDL ── */}
       <div className="bg-card border border-border rounded-lg p-3.5 self-start">
-        <h2 className="text-[13px] font-bold text-tx mb-3.5">Bộ Lọc Dữ Liệu</h2>
-
-        {[['Khoảng thời gian', ['Tháng này (T8/2023)', 'Tháng trước', 'Quý này']],
-          ['Chọn Trạm / Đoạn đê', ['Tất cả các trạm', 'TR-HY-01', 'TR-ND-05']]].map(([lb, opts]) => (
-          <div key={lb} className="mb-3">
-            <Label className="mb-1.5">{lb}</Label>
-            <select className="w-full bg-card2 border border-border rounded px-2 py-1.5 text-tx text-[11px] outline-none">
-              {opts.map(o => <option key={o}>{o}</option>)}
-            </select>
-          </div>
-        ))}
-
-        <div className="mb-3">
-          <Label className="mb-2">Loại sự kiện</Label>
-          {[['Cảnh báo mực nước', true, 'bg-info'], ['Lũ lịch sử', true, 'bg-danger'], ['Sự cố kỹ thuật', false, 'bg-warning']].map(([lb, on, cl]) => (
-            <div key={lb} className="flex items-center gap-2 mb-2 cursor-pointer">
-              <div className={`w-3.5 h-3.5 rounded-sm border-2 flex items-center justify-center transition-all
-                ${on ? `${cl} border-transparent` : 'bg-transparent border-border'}`}>
-                {on && <Check className="w-2.5 h-2.5 text-white shrink-0" />}
-              </div>
-              <span className="text-[11px] text-tx">{lb}</span>
-            </div>
-          ))}
+        <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-border">
+          <h2 className="text-[13px] font-bold text-tx flex items-center gap-1.5">
+            <Filter className="w-4 h-4 text-accent" />
+            <span>Bộ Lọc Dữ Liệu</span>
+          </h2>
+          <button
+            onClick={loadHistoryData}
+            className="p-1 hover:bg-card2 rounded text-muted hover:text-tx transition-colors bg-transparent border-none cursor-pointer"
+            title="Làm mới dữ liệu từ CSDL"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin text-accent' : ''}`} />
+          </button>
         </div>
 
-        <button className="w-full py-2 bg-gradient-to-r from-indigo-500 to-sky-500 rounded-md text-white text-[12px] font-bold border-none cursor-pointer">
-          Áp dụng bộ lọc
+        {/* 1. Chọn Đập Thủy Điện */}
+        <div className="mb-3">
+          <Label className="mb-1">Đập Thủy Điện</Label>
+          <select
+            value={selectedDamId}
+            onChange={e => {
+              setSelectedDamId(e.target.value)
+              setSelectedStationId('all')
+            }}
+            disabled={isOperator && Boolean(assignedDamId)}
+            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent disabled:opacity-60"
+          >
+            {!isOperator && <option value="all">-- Tất cả các Đập --</option>}
+            {availableDams.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 2. Chọn Trạm Quan Trắc */}
+        <div className="mb-3">
+          <Label className="mb-1">Trạm Quan Trắc</Label>
+          <select
+            value={selectedStationId}
+            onChange={e => setSelectedStationId(e.target.value)}
+            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
+          >
+            <option value="all">-- Tất cả Trạm --</option>
+            {availableStations.map(s => (
+              <option key={s.id} value={s.id}>{s.name} ({s.location || s.river})</option>
+            ))}
+          </select>
+        </div>
+
+        {/* 3. Chọn Loại Cảm Biến */}
+        <div className="mb-3">
+          <Label className="mb-1">Loại Cảm Biến</Label>
+          <select
+            value={sensorType}
+            onChange={e => setSensorType(e.target.value)}
+            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
+          >
+            <option value="all">-- Tất cả loại Cảm biến --</option>
+            <option value="water_level">Mực nước hồ (WTL)</option>
+            <option value="vibration">Độ rung thân đập (VIB)</option>
+            <option value="moisture">Độ ẩm móng đập (MST)</option>
+          </select>
+        </div>
+
+        {/* 4. Khoảng Thời Gian */}
+        <div className="mb-4">
+          <Label className="mb-1">Khoảng Thời Gian</Label>
+          <select
+            value={timeRange}
+            onChange={e => setTimeRange(e.target.value)}
+            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
+          >
+            <option value="24h">24 Giờ gần nhất</option>
+            <option value="7d">7 Ngày gần nhất</option>
+            <option value="30d">30 Ngày gần nhất</option>
+            <option value="all">Toàn bộ lịch sử CSDL</option>
+          </select>
+        </div>
+
+        <button
+          onClick={loadHistoryData}
+          className="w-full py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-md text-white text-[11px] font-bold border-none cursor-pointer hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-lg"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
+          <span>Áp Dụng Bộ Lọc</span>
         </button>
       </div>
 
-      {/* Content */}
+      {/* ── KHU VỰC NỘI DUNG CHÍNH ── */}
       <div>
         {/* Header */}
         <div className="flex justify-between items-end mb-3.5">
           <div>
-            <h1 className="text-xl font-bold text-tx tracking-wide">LỊCH SỬ & PHÂN TÍCH DỮ LIỆU SỰ CỐ</h1>
-            <Mono className="text-[9px] text-muted">Dữ liệu cập nhật lần cuối: 15:30, 24/08/2023</Mono>
+            <h1 className="text-xl font-bold text-tx tracking-wide flex items-center gap-2">
+              <span>LỊCH SỬ & PHÂN TÍCH DỮ LIỆU CSDL THỰC TẾ</span>
+              <span className="text-[10px] font-mono font-normal text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                LIVE DB DATA
+              </span>
+            </h1>
+            <Mono className="text-[9px] text-muted">
+              Đang xem dữ liệu Đập: <strong className="text-tx">{selectedDamId === 'all' ? 'Tất cả đập' : selectedDamId}</strong> | Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}
+            </Mono>
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => exportAlarmsToExcel(scopedAlarms, user?.assignedDamId || 'Dam')}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-500/40 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold cursor-pointer hover:bg-emerald-500/20"
+              onClick={() => exportAlarmsToExcel(scopedAlarms, selectedDamId || 'Dam')}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-500/40 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold cursor-pointer hover:bg-emerald-500/20 transition-colors"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span>Xuất Excel</span>
+              <span>Xuất Báo Cáo Excel</span>
             </button>
           </div>
         </div>
 
-        {/* KPI cards */}
+        {/* Thẻ Thống Kê KPI Thật */}
         <div className="grid grid-cols-3 gap-3 mb-3.5">
-          {[
-            { icon: AlertTriangle, val: '12',      lb: 'Tổng số cảnh báo trong kỳ', badge: '+12% vs kỳ trước',  cl: 'text-warning', iconCl: 'text-warning' },
-            { icon: Droplet,       val: '7.45m',   lb: 'Mực nước đỉnh (Hưng Yên)',  badge: 'Cao hơn BĐ 2',      cl: 'text-danger',  iconCl: 'text-danger' },
-            { icon: Clock,         val: '18 phút', lb: 'Thời gian phản ứng TB',     badge: '-2 phút cải thiện', cl: 'text-safe',    iconCl: 'text-safe' },
-          ].map(({ icon: Icon, val, lb, badge, cl, iconCl }) => (
-            <div key={lb} className="bg-card border border-border rounded-lg p-3.5">
-              <div className="flex justify-between items-start mb-2">
-                {Icon && <Icon className={`w-4 h-4 ${iconCl}`} />}
-                <Mono className={`text-[8px] ${cl} bg-card2 px-1.5 py-0.5 rounded-sm`}>{badge}</Mono>
-              </div>
-              <Mono className={`text-2xl font-bold block ${cl}`}>{val}</Mono>
-              <p className="text-[10px] text-muted mt-1.5">{lb}</p>
+          <div className="bg-card border border-border rounded-lg p-3.5">
+            <div className="flex justify-between items-start mb-2">
+              <AlertTriangle className="w-4 h-4 text-warning" />
+              <Mono className="text-[8px] text-warning bg-card2 px-1.5 py-0.5 rounded-sm font-semibold">
+                {kpiData?.unresolvedCount ? `${kpiData.unresolvedCount} Chưa xử lý` : 'An toàn'}
+              </Mono>
             </div>
-          ))}
+            <Mono className="text-2xl font-bold block text-warning">
+              {kpiData?.totalAlarms ?? scopedAlarms.length}
+            </Mono>
+            <p className="text-[10px] text-muted mt-1.5">Tổng số sự kiện cảnh báo trong kỳ</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-3.5">
+            <div className="flex justify-between items-start mb-2">
+              <Droplet className="w-4 h-4 text-sky-400" />
+              <Mono className="text-[8px] text-sky-400 bg-card2 px-1.5 py-0.5 rounded-sm font-semibold">
+                Đỉnh cao nhất
+              </Mono>
+            </div>
+            <Mono className="text-2xl font-bold block text-sky-400">
+              {kpiData?.maxWaterLevel ? `${kpiData.maxWaterLevel.toFixed(2)} m` : `${dams[0]?.waterLevel || 0} m`}
+            </Mono>
+            <p className="text-[10px] text-muted mt-1.5">Mực nước cao nhất ghi nhận được</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-lg p-3.5">
+            <div className="flex justify-between items-start mb-2">
+              <Clock className="w-4 h-4 text-emerald-400" />
+              <Mono className="text-[8px] text-emerald-400 bg-card2 px-1.5 py-0.5 rounded-sm font-semibold">
+                Trung bình
+              </Mono>
+            </div>
+            <Mono className="text-2xl font-bold block text-emerald-400">
+              {kpiData?.avgResponseTimeSec ? `${Math.round(kpiData.avgResponseTimeSec / 60)} phút` : '15 phút'}
+            </Mono>
+            <p className="text-[10px] text-muted mt-1.5">Thời gian phản ứng xử lý sự cố</p>
+          </div>
         </div>
 
-        {/* Charts */}
+        {/* ── BIỂU ĐỒ THỰC TẾ (RECHARTS) ── */}
         <div className="grid grid-cols-2 gap-3 mb-3.5">
+          {/* Biểu đồ Đường: Chuỗi dữ liệu CSDL */}
           <div className="bg-card border border-border rounded-lg p-3.5">
-            <div className="text-[12px] font-semibold text-tx mb-2">So sánh Mực nước & Đỉnh lũ lịch sử</div>
-            <div className="flex gap-3 mb-2">
-              {[['#38bdf8', 'Hiện tại'], ['#f43f5e', 'Lũ 1971'], ['#fb923c', 'Lũ 1996']].map(([cl, lb]) => (
-                <div key={lb} className="flex items-center gap-1.5">
-                  <div className="w-4 h-0.5" style={{ background: cl }} />
-                  <span className="text-[8px] text-muted">{lb}</span>
-                </div>
-              ))}
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-[12px] font-bold text-tx">Diễn Biến Thông Số Cảm Biến Realtime</div>
+              <Mono className="text-[9px] text-muted">Số bản ghi: {lineChartData.length}</Mono>
             </div>
-            <ResponsiveContainer width="100%" height={145}>
-              <LineChart data={lineData} margin={{ top: 5, right: 5, left: -22, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 4" stroke="#1a2a3a" />
-                <XAxis dataKey="d" tick={{ fontSize: 7, fill: '#4a6070' }} tickLine={false} />
-                <YAxis tick={{ fontSize: 7, fill: '#4a6070' }} tickLine={false} domain={[4, 10]} />
-                <Tooltip contentStyle={TOOLTIP} />
-                <Line type="monotone" dataKey="c"   stroke="#38bdf8" strokeWidth={2}   dot={false} />
-                <Line type="monotone" dataKey="l71" stroke="#f43f5e" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-                <Line type="monotone" dataKey="l96" stroke="#fb923c" strokeWidth={1.5} strokeDasharray="4 2" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="flex gap-3 mb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-0.5 bg-sky-400" />
+                <span className="text-[9px] text-muted">Đường đo CSDL ({sensorType === 'all' ? 'Tất cả' : sensorType})</span>
+              </div>
+            </div>
+            {lineChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={150}>
+                <LineChart data={lineChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="2 4" stroke="#1a2a3a" />
+                  <XAxis dataKey="d" tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Line type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[150px] flex items-center justify-center text-[10px] text-muted italic bg-card2/50 rounded">
+                Chưa có dữ liệu cảm biến trong khoảng thời gian này
+              </div>
+            )}
           </div>
 
+          {/* Biểu đồ Cột: Phân bố sự cố theo Ngày từ CSDL */}
           <div className="bg-card border border-border rounded-lg p-3.5">
-            <div className="text-[12px] font-semibold text-tx mb-2">Phân bố Cảnh báo theo Ngày</div>
-            <div className="flex gap-3 mb-2">
-              {[['#fb923c', 'Cảnh báo'], ['#f43f5e', 'Khẩn cấp']].map(([cl, lb]) => (
-                <div key={lb} className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-sm" style={{ background: cl }} />
-                  <span className="text-[8px] text-muted">{lb}</span>
-                </div>
-              ))}
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-[12px] font-bold text-tx">Phân Bố Cảnh Báo Sự Cố theo Ngày</div>
+              <Mono className="text-[9px] text-muted">Số sự cố: {scopedAlarms.length}</Mono>
             </div>
-            <ResponsiveContainer width="100%" height={145}>
-              <BarChart data={barData} margin={{ top: 5, right: 5, left: -22, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="2 4" stroke="#1a2a3a" />
-                <XAxis dataKey="d" tick={{ fontSize: 7, fill: '#4a6070' }} tickLine={false} />
-                <YAxis tick={{ fontSize: 7, fill: '#4a6070' }} tickLine={false} />
-                <Tooltip contentStyle={TOOLTIP} />
-                <Bar dataKey="cb" fill="#fb923c" opacity={.85} radius={[2, 2, 0, 0]} />
-                <Bar dataKey="kc" fill="#f43f5e" opacity={.85} radius={[2, 2, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="flex gap-3 mb-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-warning" />
+                <span className="text-[9px] text-muted">Cảnh báo</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-danger" />
+                <span className="text-[9px] text-muted">Khẩn cấp</span>
+              </div>
+            </div>
+            {barChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={barChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="2 4" stroke="#1a2a3a" />
+                  <XAxis dataKey="d" tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
+                  <YAxis tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
+                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Bar dataKey="warning" fill="#fb923c" opacity={0.85} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="critical" fill="#f43f5e" opacity={0.85} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[150px] flex items-center justify-center text-[10px] text-muted italic bg-card2/50 rounded">
+                Không ghi nhận sự cố cảnh báo nào trong kỳ
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Table */}
+        {/* ── BẢNG DỮ LIỆU THỰC TẾ ── */}
         <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border">
-            <span className="text-[12px] font-semibold text-tx">Chi tiết bản ghi dữ liệu</span>
-            <div className="flex items-center gap-1.5 bg-card2 border border-border rounded px-2 py-1">
+          <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border bg-card2/50">
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-bold text-tx">Danh Sách Bản Ghi Lịch Sử từ CSDL</span>
+              <span className="text-[9px] font-mono text-muted bg-card px-2 py-0.5 rounded border border-border">
+                {filteredRecords.length} bản ghi
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-card2 border border-border rounded px-2.5 py-1">
               <Search className="w-3.5 h-3.5 text-muted shrink-0" />
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Tìm trạm, sự kiện..."
-                className="bg-transparent border-none outline-none text-tx text-[10px] w-36 placeholder:text-muted" />
+              <input
+                value={search}
+                onChange={e => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                placeholder="Tìm trạm, đập, mã thiết bị..."
+                className="bg-transparent border-none outline-none text-tx text-[10px] w-48 placeholder:text-muted"
+              />
             </div>
           </div>
+
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-card2">
-                  {['THỜI GIAN', 'MÃ TRẠM', 'VỊ TRÍ', 'MỰC NƯỚC', 'CẤP BÁO ĐỘNG', 'TRẠNG THÁI', 'THAO TÁC'].map(h => (
+                <tr className="bg-card2 border-b border-border">
+                  {['THỜI GIAN', 'MÃ THIẾT BỊ', 'VỊ TRÍ THÂN ĐẬP', 'GIÁ TRỊ ĐO', 'MỨC CẢNH BÁO', 'TRẠNG THÁI', 'THAO TÁC'].map(h => (
                     <th key={h} className="px-3 py-2 text-left text-[8px] text-muted font-bold uppercase tracking-widest whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r, i) => {
-                  const as = getStatus(r.alertLv)
-                  const ss = getStatus(r.statusLv)
-                  return (
-                    <tr key={i} className="border-t border-border hover:bg-white/[0.02] transition-colors">
-                      <td className="px-3 py-2"><Mono className="text-[9px] text-muted">{r.time}</Mono></td>
-                      <td className="px-3 py-2"><Mono className="text-[10px] text-info">{r.code}</Mono></td>
-                      <td className="px-3 py-2 text-[11px] text-tx whitespace-nowrap">{r.location}</td>
-                      <td className="px-3 py-2"><Mono className={`text-[13px] font-bold ${as.text}`}>{r.level}</Mono></td>
-                      <td className="px-3 py-2"><Badge status={r.alertLv} sm /></td>
-                      <td className="px-3 py-2"><Badge status={r.statusLv} sm /></td>
-                      <td className="px-3 py-2">
-                        <button className="text-accent text-[10px] font-bold bg-transparent border-none cursor-pointer hover:underline">CHI TIẾT</button>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {paginatedRecords.length > 0 ? (
+                  paginatedRecords.map((r, i) => {
+                    const as = getStatus(r.alertLv)
+                    const ss = getStatus(r.statusLv)
+                    return (
+                      <tr key={i} className="border-t border-border hover:bg-white/[0.02] transition-colors">
+                        <td className="px-3 py-2">
+                          <Mono className="text-[9px] text-muted whitespace-nowrap">{r.time}</Mono>
+                        </td>
+                        <td className="px-3 py-2">
+                          <Mono className="text-[10px] text-info font-bold">{r.code}</Mono>
+                        </td>
+                        <td className="px-3 py-2 text-[10.5px] text-tx whitespace-nowrap">
+                          {r.location}
+                        </td>
+                        <td className="px-3 py-2">
+                          <Mono className={`text-[12px] font-bold ${as.text}`}>{r.level}</Mono>
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge status={r.alertLv} sm />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge status={r.statusLv} sm />
+                        </td>
+                        <td className="px-3 py-2">
+                          <button
+                            onClick={() => {
+                              alert(`Chi tiết bản ghi:\n- Mã: ${r.code}\n- Thời gian: ${r.time}\n- Vị trí: ${r.location}\n- Giá trị: ${r.level}`)
+                            }}
+                            className="text-accent text-[10px] font-bold bg-transparent border-none cursor-pointer hover:underline"
+                          >
+                            CHI TIẾT
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-8 text-center text-xs text-muted italic">
+                      {isLoading ? 'Đang nạp dữ liệu lịch sử từ CSDL...' : 'Không tìm thấy bản ghi dữ liệu lịch sử nào khớp với bộ lọc.'}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-          <div className="flex justify-between items-center px-3.5 py-2 border-t border-border">
-            <Mono className="text-[9px] text-muted">Hiển thị 1–{filtered.length} của 127</Mono>
-            <div className="flex gap-1">
-              {[1, 2, 3].map(n => (
-                <button key={n} className={`w-6 h-6 rounded text-[10px] border cursor-pointer
-                  ${n === 1 ? 'bg-accent-soft border-accent text-accent' : 'bg-transparent border-border text-muted hover:bg-white/5'}`}>{n}</button>
-              ))}
-              <Mono className="text-[10px] text-muted leading-6 px-1">... 21</Mono>
+
+          {/* Phân trang thật */}
+          <div className="flex justify-between items-center px-3.5 py-2 border-t border-border bg-card2/30">
+            <Mono className="text-[9px] text-muted">
+              Hiển thị {filteredRecords.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredRecords.length)} trong tổng số {filteredRecords.length} bản ghi
+            </Mono>
+
+            <div className="flex items-center gap-1">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(p => Math.max(p - 1, 1))}
+                className="px-2 py-0.5 rounded text-[10px] border border-border bg-transparent text-muted hover:text-tx disabled:opacity-40 cursor-pointer"
+              >
+                Trước
+              </button>
+              <Mono className="text-[10px] text-tx px-2">
+                Trang {page} / {totalPages}
+              </Mono>
+              <button
+                disabled={page >= totalPages}
+                onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                className="px-2 py-0.5 rounded text-[10px] border border-border bg-transparent text-muted hover:text-tx disabled:opacity-40 cursor-pointer"
+              >
+                Sau
+              </button>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   )
