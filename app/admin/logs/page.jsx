@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { fetchAuditLogs } from '@/lib/api'
-import { Mono, Panel, StatTile } from '@/components/ui'
+import { Mono, Panel, StatTile, Pagination } from '@/components/ui'
 import {
   FileText,
   KeyRound,
@@ -14,9 +14,7 @@ import {
   Search,
   Shield,
   Clock,
-  User,
   Activity,
-  Filter,
 } from 'lucide-react'
 
 const CATEGORY_MAP = {
@@ -27,30 +25,38 @@ const CATEGORY_MAP = {
   THRESHOLD: { label: 'Ngưỡng báo động', icon: Sliders, color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
 }
 
+const PAGE_SIZE = 20
+
 export default function AuditLogsPage() {
   const { user, token, isAdmin, loading: authLoading } = useAuth()
   const router = useRouter()
 
   const [logs, setLogs] = useState([])
+  const [total, setTotal] = useState(0)
+  const [categoryCounts, setCategoryCounts] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [selectedCategory, setSelectedCategory] = useState('ALL')
   const [search, setSearch] = useState('')
+  const [searchInput, setSearchInput] = useState('')
+  const [page, setPage] = useState(1)
 
   const loadLogs = useCallback(async () => {
     try {
       setLoading(true)
       const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
-      const res = await fetchAuditLogs(selectedCategory, 200, currentToken)
+      const res = await fetchAuditLogs(selectedCategory, PAGE_SIZE, currentToken, page, search || undefined)
       setLogs(res.logs || [])
+      setTotal(res.total || 0)
+      setCategoryCounts(res.categoryCounts || {})
       setError(null)
     } catch (err) {
       setError(err.message || 'Không thể tải danh sách nhật ký hệ thống')
     } finally {
       setLoading(false)
     }
-  }, [selectedCategory, token])
+  }, [selectedCategory, token, page, search])
 
   useEffect(() => {
     if (!authLoading) {
@@ -62,26 +68,28 @@ export default function AuditLogsPage() {
     }
   }, [authLoading, isAdmin, loadLogs, router])
 
-  // Lọc theo từ khóa tìm kiếm
-  const filteredLogs = useMemo(() => {
-    if (!search.trim()) return logs
-    const q = search.toLowerCase().trim()
-    return logs.filter(log =>
-      log.description?.toLowerCase().includes(q) ||
-      log.username?.toLowerCase().includes(q) ||
-      log.action?.toLowerCase().includes(q) ||
-      log.category?.toLowerCase().includes(q)
-    )
-  }, [logs, search])
+  // Debounce ô tìm kiếm — tìm kiếm chạy ở backend nên chờ người dùng gõ xong mới gọi API
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput)
+      setPage(1)
+    }, 400)
+    return () => clearTimeout(t)
+  }, [searchInput])
 
-  // Thống kê counts
+  // Reset về trang 1 khi đổi tab category
+  const handleCategoryChange = (cat) => {
+    setSelectedCategory(cat)
+    setPage(1)
+  }
+
+  // Thống kê counts — luôn phản ánh toàn bộ dữ liệu khớp tìm kiếm, không phụ thuộc tab đang chọn
   const stats = useMemo(() => {
-    const total = logs.length
-    const authCount = logs.filter(l => l.category === 'AUTH').length
-    const damCount = logs.filter(l => l.category === 'DAM' || l.category === 'STATION').length
-    const thresholdCount = logs.filter(l => l.category === 'THRESHOLD').length
+    const authCount = categoryCounts.AUTH || 0
+    const damCount = (categoryCounts.DAM || 0) + (categoryCounts.STATION || 0)
+    const thresholdCount = categoryCounts.THRESHOLD || 0
     return { total, authCount, damCount, thresholdCount }
-  }, [logs])
+  }, [categoryCounts, total])
 
   if (authLoading) {
     return (
@@ -126,8 +134,8 @@ export default function AuditLogsPage() {
           <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 flex-1 sm:w-64 focus-within:border-accent">
             <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               placeholder="Tìm kiếm người dùng, thao tác..."
               className="bg-transparent border-none outline-none text-tx text-[11px] w-full placeholder:text-muted"
             />
@@ -160,7 +168,7 @@ export default function AuditLogsPage() {
           return (
             <button
               key={catKey}
-              onClick={() => setSelectedCategory(catKey)}
+              onClick={() => handleCategoryChange(catKey)}
               className={`flex items-center gap-2 px-3.5 py-2 text-[11px] font-bold rounded-xl cursor-pointer transition-all whitespace-nowrap border ${
                 active
                   ? `${catMeta.color} shadow-sm`
@@ -177,7 +185,7 @@ export default function AuditLogsPage() {
       {/* Main Table */}
       <Panel
         title="Nhật Ký Chi Tiết"
-        right={<Mono className="text-[10px] text-muted">{filteredLogs.length} bản ghi</Mono>}
+        right={<Mono className="text-[10px] text-muted">{total} bản ghi</Mono>}
         bodyClassName="p-0"
         className="overflow-hidden"
       >
@@ -188,16 +196,16 @@ export default function AuditLogsPage() {
           </div>
         ) : error ? (
           <div className="py-16 text-center text-danger text-xs font-bold">{error}</div>
-        ) : filteredLogs.length === 0 ? (
+        ) : logs.length === 0 ? (
           <div className="py-20 text-center text-muted space-y-2">
             <FileText className="w-10 h-10 mx-auto text-muted/40" />
             <div className="text-xs">Chưa có nhật ký nào phù hợp trong danh sách.</div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[560px]">
             <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-card2/80 backdrop-blur border-b border-border/60 text-[10px] text-muted uppercase font-bold tracking-wider">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-card2 backdrop-blur border-b border-border/60 text-[10px] text-muted uppercase font-bold tracking-wider">
                   <th className="py-3 px-4 w-44">Thời Gian</th>
                   <th className="py-3 px-4 w-36">Người Thực Hiện</th>
                   <th className="py-3 px-4 w-36">Loại Thao Tác</th>
@@ -205,7 +213,7 @@ export default function AuditLogsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/30">
-                {filteredLogs.map(log => {
+                {logs.map(log => {
                   const catMeta = CATEGORY_MAP[log.category] || CATEGORY_MAP.ALL
                   const formattedTime = new Date(log.timestamp).toLocaleString('vi-VN', {
                     day: '2-digit',
@@ -258,6 +266,9 @@ export default function AuditLogsPage() {
               </tbody>
             </table>
           </div>
+        )}
+        {!loading && !error && (
+          <Pagination page={page} pageSize={PAGE_SIZE} totalItems={total} onPageChange={setPage} itemLabel="bản ghi" />
         )}
       </Panel>
     </div>

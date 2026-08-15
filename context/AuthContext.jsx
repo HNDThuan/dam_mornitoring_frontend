@@ -92,7 +92,7 @@ export function AuthProvider({ children }) {
     if (loading) return
 
     const publicPage = isPublicRoute(pathname)
-    const isPrivateForAdminOrOperator = ['/alerts', '/history', '/users'].includes(pathname) || pathname.startsWith('/admin')
+    const isPrivateForAdminOrOperator = ['/alerts', '/history', '/users', '/profile'].includes(pathname) || pathname.startsWith('/admin')
 
     if (!user && isPrivateForAdminOrOperator) {
       // Khách chưa đăng nhập cố truy cập trang riêng tư -> Redirect về /login

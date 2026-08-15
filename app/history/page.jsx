@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Card, Panel, LiveDot } from '@/components/ui'
+import { Mono, Badge, Divider, Card, Panel, LiveDot, Pagination } from '@/components/ui'
 import { Field, Select, Button } from '@/components/form'
 import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert } from 'lucide-react'
 import { useAlarmData } from '@/hooks/useAlarmData'
@@ -84,6 +84,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     loadHistoryData()
+    setPage(1)
   }, [selectedDamId, selectedStationId, sensorType, dateParams])
 
   // Lọc dữ liệu Đập và Trạm phù hợp với phân quyền
@@ -227,7 +228,6 @@ export default function HistoryPage() {
 
   // Phân trang
   const PAGE_SIZE = 10
-  const totalPages = Math.ceil(filteredRecords.length / PAGE_SIZE) || 1
   const paginatedRecords = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE
     return filteredRecords.slice(start, start + PAGE_SIZE)
@@ -544,32 +544,7 @@ export default function HistoryPage() {
             </table>
           </div>
 
-          {/* Phân trang thật */}
-          <div className="flex justify-between items-center px-3.5 py-2 border-t border-border/70 bg-card2/30">
-            <Mono className="text-[9px] text-muted">
-              Hiển thị {filteredRecords.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredRecords.length)} trong tổng số {filteredRecords.length} bản ghi
-            </Mono>
-
-            <div className="flex items-center gap-1">
-              <button
-                disabled={page === 1}
-                onClick={() => setPage(p => Math.max(p - 1, 1))}
-                className="px-2 py-0.5 rounded-lg text-[10px] border border-border bg-transparent text-muted hover:text-tx hover:bg-card2 disabled:opacity-40 cursor-pointer transition-colors"
-              >
-                Trước
-              </button>
-              <Mono className="text-[10px] text-tx px-2">
-                Trang {page} / {totalPages}
-              </Mono>
-              <button
-                disabled={page >= totalPages}
-                onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                className="px-2 py-0.5 rounded-lg text-[10px] border border-border bg-transparent text-muted hover:text-tx hover:bg-card2 disabled:opacity-40 cursor-pointer transition-colors"
-              >
-                Sau
-              </button>
-            </div>
-          </div>
+          <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredRecords.length} onPageChange={setPage} />
         </Card>
 
       </div>

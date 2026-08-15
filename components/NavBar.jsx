@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
-import { Home, TrendingUp, AlertTriangle, Calendar, Database, Globe, Cpu, Users, LogOut, ShieldCheck, User, FileText, Eye, ChevronDown } from 'lucide-react'
+import { Home, TrendingUp, AlertTriangle, Calendar, Database, Globe, Cpu, Users, LogOut, ShieldCheck, User, FileText, Eye, ChevronDown, UserCircle } from 'lucide-react'
 
 export default function NavBar() {
   const pathname = usePathname()
@@ -133,6 +133,17 @@ export default function NavBar() {
                     <span className="font-mono font-bold text-tx uppercase">{user.assignedDamId}</span>
                   </div>
                 )}
+
+                {/* Hồ sơ cá nhân */}
+                <div className="py-2 border-b border-border">
+                  <Link
+                    href="/profile"
+                    className="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-[11px] font-semibold text-tx hover:bg-white/5 no-underline transition-colors cursor-pointer"
+                  >
+                    <UserCircle className="w-3.5 h-3.5 text-accent shrink-0" />
+                    <span>Hồ sơ cá nhân</span>
+                  </Link>
+                </div>
 
                 {/* Nút Logout */}
                 <div className="pt-2">

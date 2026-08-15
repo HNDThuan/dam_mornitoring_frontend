@@ -14,7 +14,7 @@ import {
   fetchThresholdConfigs,
   updateThresholdConfig,
 } from '@/lib/api'
-import { Mono, Panel, StatTile } from '@/components/ui'
+import { Mono, Panel, StatTile, Pagination } from '@/components/ui'
 import { Field, TextInput, Select, Modal, FormActions, Button, Toast } from '@/components/form'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -82,6 +82,10 @@ export default function NodesPage() {
   const [search, setSearch] = useState('')
   const [filterDamId, setFilterDamId] = useState('')
   const [filterStationId, setFilterStationId] = useState('')
+
+  // Phân trang
+  const PAGE_SIZE = 10
+  const [page, setPage] = useState(1)
 
   // Expanded rows
   const [expandedRows, setExpandedRows] = useState(new Set())
@@ -171,6 +175,14 @@ export default function NodesPage() {
       (n.installLocation && n.installLocation.toLowerCase().includes(q))
     )
   })
+
+  // Giữ page trong giới hạn hợp lệ khi danh sách/bộ lọc thay đổi
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(filteredNodes.length / PAGE_SIZE))
+    if (page > totalPages) setPage(totalPages)
+  }, [filteredNodes.length, page])
+
+  const paginatedNodes = filteredNodes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // Toggle expanded row
   const toggleExpanded = (id) => {
@@ -493,7 +505,7 @@ export default function NodesPage() {
               <tr><td colSpan={10} className="text-center py-12 text-muted">Không tìm thấy Sensor Node nào.</td></tr>
             )}
 
-            {!loading && filteredNodes.map(node => {
+            {!loading && paginatedNodes.map(node => {
               const st = STATUS_CONFIG[node.status] || STATUS_CONFIG.offline
               const isExpanded = expandedRows.has(node.id)
               const sensors = node.sensors || []
@@ -666,6 +678,7 @@ export default function NodesPage() {
             })}
           </tbody>
         </table>
+        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredNodes.length} onPageChange={setPage} itemLabel="node" />
       </Panel>
 
       {/* ── TOAST NOTIFICATION ── */}

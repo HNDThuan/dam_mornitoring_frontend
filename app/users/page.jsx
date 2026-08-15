@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { fetchUsers, approveUser as apiApproveUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser, fetchDams } from '@/lib/api'
-import { Mono, Panel, StatTile } from '@/components/ui'
+import { Mono, Panel, StatTile, Pagination } from '@/components/ui'
 import { Field, Select, Modal, FormActions, Button, FormAlert } from '@/components/form'
 import { Users, CheckCircle, XCircle, Shield, Building2, Trash2, Edit2, RefreshCw, AlertTriangle, UserCheck, Clock, Ban } from 'lucide-react'
 
@@ -19,6 +19,10 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState(null)
   const [editForm, setEditForm] = useState({ role: 'OPERATOR', assignedDamId: '', status: 'ACTIVE' })
   const [savingEdit, setSavingEdit] = useState(false)
+
+  // Phân trang
+  const PAGE_SIZE = 10
+  const [page, setPage] = useState(1)
 
   const loadData = useCallback(async () => {
     try {
@@ -40,6 +44,14 @@ export default function UsersPage() {
       loadData()
     }
   }, [isAdmin, loadData])
+
+  // Giữ page trong giới hạn hợp lệ khi danh sách thay đổi (vd: sau khi xóa tài khoản)
+  useEffect(() => {
+    const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
+    if (page > totalPages) setPage(totalPages)
+  }, [users, page])
+
+  const paginatedUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const handleApproveQuick = async (user) => {
     try {
@@ -149,7 +161,7 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {users.map((u) => {
+                {paginatedUsers.map((u) => {
                   const damObj = dams.find((d) => d.id === u.assignedDamId)
                   const isPending = u.status === 'PENDING_APPROVAL'
 
@@ -248,6 +260,7 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={users.length} onPageChange={setPage} itemLabel="tài khoản" />
       </Panel>
 
       {/* Edit User Modal */}

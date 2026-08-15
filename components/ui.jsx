@@ -139,6 +139,47 @@ export function RadialGauge({ value = 0, size = 96, stroke = 8, status = 'info',
   )
 }
 
+/**
+ * Standard pagination footer: "Hiển thị X–Y trong tổng số Z" + Trước/Sau controls.
+ * Controlled — pass current `page` (1-indexed) and `onPageChange`. Renders nothing
+ * when there's nothing to paginate (totalItems <= pageSize).
+ */
+export function Pagination({ page, pageSize, totalItems, onPageChange, itemLabel = 'bản ghi', className = '' }) {
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  if (totalItems <= pageSize) return null
+
+  const start = totalItems > 0 ? (page - 1) * pageSize + 1 : 0
+  const end = Math.min(page * pageSize, totalItems)
+
+  return (
+    <div className={`flex flex-col sm:flex-row justify-between items-center gap-2 px-3.5 py-2.5 border-t border-border/70 bg-card2/30 ${className}`}>
+      <Mono className="text-[9px] text-muted">
+        Hiển thị {start}–{end} trong tổng số {totalItems} {itemLabel}
+      </Mono>
+
+      <div className="flex items-center gap-1">
+        <button
+          disabled={page <= 1}
+          onClick={() => onPageChange(Math.max(page - 1, 1))}
+          className="px-2 py-0.5 rounded-lg text-[10px] border border-border bg-transparent text-muted hover:text-tx hover:bg-card2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+        >
+          Trước
+        </button>
+        <Mono className="text-[10px] text-tx px-2">
+          Trang {page} / {totalPages}
+        </Mono>
+        <button
+          disabled={page >= totalPages}
+          onClick={() => onPageChange(Math.min(page + 1, totalPages))}
+          className="px-2 py-0.5 rounded-lg text-[10px] border border-border bg-transparent text-muted hover:text-tx hover:bg-card2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+        >
+          Sau
+        </button>
+      </div>
+    </div>
+  )
+}
+
 /** Inline mini trend line for a series of numbers */
 export function Sparkline({ data = [], width = 72, height = 24, status = 'info', strokeWidth = 1.5 }) {
   const colorVar = {
