@@ -91,15 +91,13 @@ export default function DamDetailPage() {
   const [deleteDamConfirm, setDeleteDamConfirm] = useState(false)
   const [savingDam, setSavingDam] = useState(false)
   const [deletingDam, setDeletingDam] = useState(false)
+  // Chỉ chứa thông tin tĩnh do người dùng nhập. Mực nước / mức chứa / trạng thái an toàn
+  // đều do backend tự tính từ cảm biến nên không đưa vào form (sửa tay sẽ bị ghi đè ngay).
   const [damForm, setDamForm] = useState({
     name: '',
     location: '',
     latitude: 20.8167,
     longitude: 105.3265,
-    waterLevel: 0,
-    flow: 0,
-    fillPct: 50,
-    status: 'safe',
     cameraUrl: '',
   })
 
@@ -175,6 +173,13 @@ export default function DamDetailPage() {
       showToast(validationError, 'error')
       return
     }
+    // Không có bản ghi ngưỡng nào thì mọi lệnh update bên dưới sẽ bị bỏ qua và người dùng
+    // vẫn thấy thông báo "thành công" dù chẳng lưu được gì — phải báo lỗi rõ ràng.
+    if (!thresholdConfigs || thresholdConfigs.length === 0) {
+      showToast('Đập này chưa có bản ghi cấu hình ngưỡng. Khởi động lại backend để hệ thống tự tạo ngưỡng mặc định, rồi thử lại.', 'error')
+      return
+    }
+
     try {
       setSavingThresholds(true)
       const waterCfg = thresholdConfigs.find(c => c.sensorType === 'water_level')
@@ -247,14 +252,15 @@ export default function DamDetailPage() {
   const [deletingStation, setDeletingStation] = useState(false)
 
   const damId = String(id)
+  // Fallback khi chưa tải xong / không tìm thấy: KHÔNG bịa số đo, để 0 + trạng thái 'unknown'
+  // thay vì hiển thị số liệu giả trông như thật.
   const dam = dams.find(d => d.id === damId) || {
     id: damId,
     name: `Đập ${damId}`,
-    location: 'Hòa Bình',
-    waterLevel: 105.2,
-    flow: 1200,
-    fillPct: 78,
-    status: 'safe',
+    location: '',
+    waterLevel: 0,
+    fillPct: 0,
+    status: 'unknown',
     cameraUrl: '',
   }
   const damStatus = getStatus(dam.status)
@@ -273,10 +279,6 @@ export default function DamDetailPage() {
       location: dam.location || '',
       latitude: dam.latitude ?? 20.8167,
       longitude: dam.longitude ?? 105.3265,
-      waterLevel: dam.waterLevel || 0,
-      flow: dam.flow || 0,
-      fillPct: dam.fillPct || 0,
-      status: dam.status || 'safe',
       cameraUrl: dam.cameraUrl || '',
     })
     setDamModalOpen(true)
@@ -291,10 +293,6 @@ export default function DamDetailPage() {
         location: damForm.location,
         latitude: Number(damForm.latitude),
         longitude: Number(damForm.longitude),
-        waterLevel: Number(damForm.waterLevel),
-        flow: Number(damForm.flow),
-        fillPct: Number(damForm.fillPct),
-        status: damForm.status,
         cameraUrl: damForm.cameraUrl,
       })
       showToast('Cập nhật thông tin đập thành công!', 'success')
@@ -339,12 +337,6 @@ export default function DamDetailPage() {
     longitude: 105.8492,
     river: '',
     km: '',
-    status: 'safe',
-    waterLevel: 0,
-    change: 0,
-    pressure: 0,
-    flow: 0,
-    humidity: 50,
     damId: damId,
   })
 
@@ -357,12 +349,6 @@ export default function DamDetailPage() {
       longitude: dam.longitude || 105.8492,
       river: 'Sông Hồng',
       km: 'K10+000',
-      status: 'safe',
-      waterLevel: 5.0,
-      change: 0,
-      pressure: 150,
-      flow: 1200,
-      humidity: 50,
       damId: damId,
     })
     setStationModalOpen(true)
@@ -377,12 +363,6 @@ export default function DamDetailPage() {
       longitude: st.longitude ?? 105.8492,
       river: st.river || '',
       km: st.km || '',
-      status: st.status || 'safe',
-      waterLevel: st.waterLevel || 0,
-      change: st.change || 0,
-      pressure: st.pressure || 0,
-      flow: st.flow || 0,
-      humidity: st.humidity || 0,
       damId: st.damId || damId,
     })
     setStationModalOpen(true)
@@ -400,12 +380,6 @@ export default function DamDetailPage() {
           longitude: Number(stationForm.longitude),
           river: stationForm.river,
           km: stationForm.km,
-          status: stationForm.status,
-          waterLevel: Number(stationForm.waterLevel),
-          change: Number(stationForm.change),
-          pressure: Number(stationForm.pressure),
-          flow: Number(stationForm.flow),
-          humidity: Number(stationForm.humidity),
           damId: damId,
         })
         showToast('Cập nhật trạm quan trắc thành công!', 'success')
@@ -414,11 +388,6 @@ export default function DamDetailPage() {
           ...stationForm,
           latitude: Number(stationForm.latitude),
           longitude: Number(stationForm.longitude),
-          waterLevel: Number(stationForm.waterLevel),
-          change: Number(stationForm.change),
-          pressure: Number(stationForm.pressure),
-          flow: Number(stationForm.flow),
-          humidity: Number(stationForm.humidity),
           damId: damId,
         })
         showToast(`Tạo trạm "${stationForm.name}" thành công!`, 'success')
@@ -544,11 +513,6 @@ export default function DamDetailPage() {
                 <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
                 <Mono className={`text-base font-bold ${damStatus.text}`}>{dam.waterLevel} m</Mono>
               </div>
-              <Divider vertical />
-              <div>
-                <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.flow')}</div>
-                <Mono className="text-sm font-semibold text-tx">{dam.flow ? dam.flow.toLocaleString() : 0} m³/s</Mono>
-              </div>
             </div>
           </div>
         </div>
@@ -641,7 +605,8 @@ export default function DamDetailPage() {
 
             const currentWater = live.waterLevel ?? st.waterLevel ?? 0
             const currentHumidity = live.humidity ?? st.humidity ?? 0
-            const currentVibration = live.vibration ?? (st.bd3 != null && st.bd3 > 0 ? st.bd3 : (st.vibration ?? 0))
+            // Biên độ rung thật (Station.vibration) — trước đây đọc nhầm st.bd3 (cột NGƯỠNG báo động).
+            const currentVibration = live.vibration ?? st.vibration ?? null
 
             return (
               <div
@@ -856,53 +821,10 @@ export default function DamDetailPage() {
               />
             </Field>
 
-            <Field label={t('admin.form.waterLevelLabel')} htmlFor="station-waterlevel">
-              <TextInput
-                id="station-waterlevel"
-                type="number"
-                step="0.01"
-                value={stationForm.waterLevel}
-                onChange={e => setStationForm(p => ({ ...p, waterLevel: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label={t('admin.form.changeLabel')} htmlFor="station-change">
-              <TextInput
-                id="station-change"
-                type="number"
-                step="0.01"
-                value={stationForm.change}
-                onChange={e => setStationForm(p => ({ ...p, change: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <Field label={t('admin.form.pressureLabel')} htmlFor="station-pressure">
-              <TextInput
-                id="station-pressure"
-                type="number"
-                step="1"
-                value={stationForm.pressure}
-                onChange={e => setStationForm(p => ({ ...p, pressure: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label={t('admin.form.statusLabel')} htmlFor="station-status">
-              <Select
-                id="station-status"
-                value={stationForm.status}
-                onChange={e => setStationForm(p => ({ ...p, status: e.target.value }))}
-              >
-                <option value="safe">{t('status.safe')}</option>
-                <option value="warning">{t('status.warning')}</option>
-                <option value="danger">{t('status.danger')}</option>
-                <option value="critical">{t('status.critical')}</option>
-              </Select>
-            </Field>
+          <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
+            Mực nước, độ ẩm, độ rung và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
           </div>
         </form>
       </Modal>
@@ -1002,37 +924,8 @@ export default function DamDetailPage() {
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5">
-            <Field label="Mực nước (m)" htmlFor="dam-edit-waterlevel">
-              <TextInput
-                id="dam-edit-waterlevel"
-                type="number"
-                step="0.1"
-                value={damForm.waterLevel}
-                onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-            <Field label="Lưu lượng (m3/s)" htmlFor="dam-edit-flow">
-              <TextInput
-                id="dam-edit-flow"
-                type="number"
-                value={damForm.flow}
-                onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-            <Field label="Dung tích (%)" htmlFor="dam-edit-fillpct">
-              <TextInput
-                id="dam-edit-fillpct"
-                type="number"
-                min="0"
-                max="100"
-                value={damForm.fillPct}
-                onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
+          <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
+            Mực nước, mức chứa và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
           </div>
         </form>
       </Modal>

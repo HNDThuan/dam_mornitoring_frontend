@@ -11,8 +11,6 @@ import {
   addNodeSensor,
   updateNodeSensor,
   deleteNodeSensor,
-  fetchThresholdConfigs,
-  updateThresholdConfig,
 } from '@/lib/api'
 import { Mono, Panel, StatTile, Pagination } from '@/components/ui'
 import { Field, TextInput, Select, Modal, FormActions, Button, Toast } from '@/components/form'
@@ -208,9 +206,6 @@ export default function NodesPage() {
       firmwareVersion: 'v1.0.0',
       installLocation: '',
       stationId: filteredStations[0]?.id || stations[0]?.id || '',
-      vibrationThreshold: 15.0,
-      warnHigh: 2.5,
-      criticalHigh: 25.0,
       alertMinCount: 4,
       alertMinDurationSec: 6.0,
     })
@@ -228,9 +223,6 @@ export default function NodesPage() {
       firmwareVersion: node.firmwareVersion || '',
       installLocation: node.installLocation || '',
       stationId: node.gateway?.stationId || '',
-      vibrationThreshold: node.vibrationThreshold ?? 15.0,
-      warnHigh: node.warnHigh ?? 2.5,
-      criticalHigh: node.criticalHigh ?? 25.0,
       alertMinCount: node.alertMinCount ?? 4,
       alertMinDurationSec: node.alertMinDurationSec ?? 6.0,
     })
@@ -248,35 +240,15 @@ export default function NodesPage() {
         firmwareVersion: nodeForm.firmwareVersion,
         installLocation: nodeForm.installLocation,
         stationId: nodeForm.stationId ? Number(nodeForm.stationId) : undefined,
-        vibrationThreshold: Number(nodeForm.vibrationThreshold),
-        warnHigh: Number(nodeForm.warnHigh),
-        criticalHigh: Number(nodeForm.criticalHigh),
+        // Ngưỡng rung (warnHigh/vibrationThreshold/criticalHigh) KHÔNG gửi từ đây: đó là giá trị
+        // cấp Đập, chỉ sửa ở trang Đập rồi tự đẩy xuống mọi node. Ở đây chỉ còn tham số phát hiện
+        // "đợt rung" của riêng từng node.
         alertMinCount: Number(nodeForm.alertMinCount),
         alertMinDurationSec: Number(nodeForm.alertMinDurationSec),
       }
       if (editingNode) {
         await updateNode(editingNode.id, payload)
-
-        // Đồng bộ 2 chiều: Cập nhật luôn ThresholdConfig của Đập chứa Station này
-        const targetStation = stations.find(s => String(s.id) === String(payload.stationId || editingNode.gateway?.stationId))
-        if (targetStation?.damId) {
-          try {
-            const res = await fetchThresholdConfigs(targetStation.damId)
-            const configs = res?.configs || []
-            const vibCfg = configs.find(c => c.sensorType === 'vibration')
-            if (vibCfg) {
-              await updateThresholdConfig(vibCfg.id, {
-                warnHigh: payload.warnHigh,
-                alertHigh: payload.vibrationThreshold,
-                criticalHigh: payload.criticalHigh,
-              })
-            }
-          } catch (e) {
-            console.warn('[Nodes] Không thể đồng bộ ngược ThresholdConfig:', e)
-          }
-        }
-
-        showToast('Cập nhật Node & đồng bộ 2 chiều với Đập/Trạm & Node thành công!', 'success')
+        showToast('Cập nhật Sensor Node thành công!', 'success')
       } else {
         const res = await createNode(payload)
         showToast(`Tạo node thành công! (Mã: ${res?.node?.id || ''})`, 'success')
@@ -744,9 +716,11 @@ export default function NodesPage() {
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
-            <Field label="MAC Address ESP32" htmlFor="node-mac">
+            {/* MAC có ràng buộc UNIQUE trong DB — bắt buộc nhập để không hai node trùng nhau. */}
+            <Field label="MAC Address ESP32" required htmlFor="node-mac">
               <TextInput
                 id="node-mac"
+                required
                 value={nodeForm.macAddress}
                 onChange={e => setNodeForm(p => ({ ...p, macAddress: e.target.value }))}
                 placeholder="AA:BB:CC:DD:EE:FF"
@@ -782,48 +756,23 @@ export default function NodesPage() {
             </Field>
           </div>
 
-          {/* ⚡ Cấu Hình Ngưỡng Cảnh Báo Độ Rung AI Jetson TX2 */}
+          {/* ⚡ Tham số phát hiện "đợt rung" của Jetson TX2 — riêng từng node.
+              Ngưỡng mm/s (Chú ý/Cảnh báo/Nguy cấp) KHÔNG đặt ở đây: đó là giá trị dùng chung
+              cấp Đập, sửa tại trang Đập rồi tự đồng bộ xuống mọi node. */}
           <div className="bg-card2 border border-amber-500/30 rounded-lg p-2.5 space-y-2 mt-2.5">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[10px] uppercase tracking-wide">
                 <Zap className="w-3.5 h-3.5 shrink-0" />
-                <span>Ngưỡng độ rung AI Jetson TX2 (mm/s)</span>
+                <span>Tham số phát hiện đợt rung (Jetson TX2)</span>
               </div>
               <span className="text-[9px] text-safe font-semibold bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded shrink-0">
                 Tự động đồng bộ MQTT
               </span>
             </div>
-            <div className="grid grid-cols-5 gap-2">
-              <Field label="Chú ý" required htmlFor="node-warn-high">
-                <TextInput
-                  id="node-warn-high"
-                  type="number" step="0.1" required
-                  value={nodeForm.warnHigh}
-                  onChange={e => setNodeForm(p => ({ ...p, warnHigh: e.target.value }))}
-                  placeholder="2.5"
-                  className="font-mono"
-                />
-              </Field>
-              <Field label="Cảnh báo" required htmlFor="node-alert-high">
-                <TextInput
-                  id="node-alert-high"
-                  type="number" step="0.1" required
-                  value={nodeForm.vibrationThreshold}
-                  onChange={e => setNodeForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
-                  placeholder="15.0"
-                  className="font-mono"
-                />
-              </Field>
-              <Field label="Nguy cấp" required htmlFor="node-critical-high">
-                <TextInput
-                  id="node-critical-high"
-                  type="number" step="0.1" required
-                  value={nodeForm.criticalHigh}
-                  onChange={e => setNodeForm(p => ({ ...p, criticalHigh: e.target.value }))}
-                  placeholder="25.0"
-                  className="font-mono"
-                />
-              </Field>
+            <div className="text-[9px] text-muted">
+              Ngưỡng độ rung (mm/s) dùng chung cho cả đập — chỉnh tại trang Đập, mục “Cấu hình Ngưỡng Cảnh Báo”.
+            </div>
+            <div className="grid grid-cols-2 gap-2">
               <Field label="Số lần liên tiếp" required htmlFor="node-alert-count">
                 <TextInput
                   id="node-alert-count"

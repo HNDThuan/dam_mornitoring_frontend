@@ -200,7 +200,8 @@ export default function StationDetailPage() {
   const { user, isAdmin, isOperator, isViewer, assignedDamId } = useAuth();
   const { dams, stations, refetch, updateStation, deleteStation } = useDamData();
   const { t, locale } = useLanguage();
-  const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', latitude: 21.0381, longitude: 105.8492, river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
+  // Fallback khi chưa tải xong / không tìm thấy: KHÔNG bịa số đo, để 0 + trạng thái 'unknown'.
+  const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: '', latitude: 21.0381, longitude: 105.8492, river: '', km: '', status: 'unknown', waterLevel: 0, humidity: 0, vibration: 0 };
   const st = stations.find((s) => s.id === Number(id)) || defaultSt;
   const stStatus = getStatus(st.status);
 
@@ -286,12 +287,13 @@ export default function StationDetailPage() {
   const { latest, history, connected, error } = useSensorData(Number(id));
   const { alarms, thresholds } = useAlarmData(st.damId)
 
-  // Dùng real data nếu có, fallback về station data
-  const waterLevel = latest?.waterLevel ?? st.waterLevel;
-  const moisture = latest?.moisture ?? st.humidity;
-  const freq = latest?.freq ?? 3.2;
-  const amp = latest?.amp ?? 1.8;
-  const percent = latest?.percent ?? (st.fillPct || 78);
+  // Ưu tiên số đo sống từ WebSocket, fallback về giá trị mới nhất backend đã ghi vào Station.
+  // Không bịa số mặc định khi chưa có dữ liệu — để 0 và UI hiển thị theo trạng thái 'unknown'.
+  const waterLevel = latest?.waterLevel ?? st.waterLevel ?? 0;
+  const moisture = latest?.moisture ?? st.humidity ?? 0;
+  const freq = latest?.freq ?? 0;
+  const amp = latest?.amp ?? st.vibration ?? 0;
+  const percent = latest?.percent ?? 0;
 
   // Build chart data từ history backend hoặc fallback mock
   const waterChartData = useMemo(() => {
@@ -342,16 +344,16 @@ export default function StationDetailPage() {
   const ampDelta = useMemo(() => calcDelta(history?.amp), [history]);
 
 
-  // Status — dùng thresholds từ backend nếu có, giữ bd1/bd2/bd3 cho hiển thị
-  const waterSt = getWaterStatus(waterLevel, st.bd3, st.bd2, st.bd1, thresholds?.water_level)
+  // Status — ngưỡng lấy từ ThresholdConfig của Đập (nguồn duy nhất, xem modal Ngưỡng Cảnh Báo).
+  const waterSt = getWaterStatus(waterLevel, undefined, undefined, undefined, thresholds?.water_level)
   const humidSt = getMoistureStatus(moisture, thresholds?.humidity)
   const vibSt = getVibrationStatus(amp, thresholds?.vibration)
   // Threshold values từ backend cho MetricCard
-  const waterThreshold = thresholds?.water_level?.alertHigh ?? st.bd3
-  const humThreshold = thresholds?.humidity?.alertHigh ?? 85
-  const vibThreshold = thresholds?.vibration?.alertHigh ?? 15
-
-  console.log("water threshold: ", waterThreshold)
+  const waterThreshold = thresholds?.water_level?.alertHigh ?? null
+  const humThreshold = thresholds?.humidity?.alertHigh ?? null
+  const vibThreshold = thresholds?.vibration?.alertHigh ?? null
+  // Hiển thị '—' khi đập chưa có cấu hình ngưỡng, thay vì nội suy chuỗi ra "nullm".
+  const fmtThreshold = (v, unit) => (v == null ? '—' : `${v}${unit}`)
 
   const mainColor = STATUS_HEX[waterSt.level] || "#f59e0b";
 
@@ -507,7 +509,7 @@ export default function StationDetailPage() {
               val: `${waterStats.max}m`,
               cl: `text-${waterSt.level === "danger" ? "danger" : "warning"}`,
             },
-            { lb: "BĐ3", val: `${waterThreshold}m`, cl: "text-danger" },
+            { lb: "BĐ3", val: fmtThreshold(waterThreshold, 'm'), cl: "text-danger" },
           ]}
         />
 
@@ -526,11 +528,12 @@ export default function StationDetailPage() {
           stats={[
             { lb: t('stationDetail.average'), val: `${humidStats.avg}%`, cl: "text-tx" },
             { lb: t('stationDetail.maxHigh'), val: `${humidStats.max}%`, cl: "text-info" },
-            { lb: t('stationDetail.threshold'), val: `${humThreshold}%`, cl: "text-warning" },
+            { lb: t('stationDetail.threshold'), val: fmtThreshold(humThreshold, '%'), cl: "text-warning" },
           ]}
         />
 
-        {/* Độ rung */}
+        {/* Tần số rung (Hz) — ThresholdConfig chỉ có ngưỡng cho BIÊN ĐỘ (mm/s), không có ngưỡng
+            cho tần số, nên card này không gắn ngưỡng thay vì mượn nhầm ngưỡng khác đơn vị. */}
         <MetricCard
           label={t('stationDetail.vibFreq')}
           value={freq.toFixed(2)}
@@ -541,11 +544,9 @@ export default function StationDetailPage() {
           statusCl={STATUS_CL[vibSt.level]}
           color="#818cf8"
           data={vibChartData}
-          threshold={vibThreshold}
           stats={[
             { lb: t('stationDetail.average'), val: `${vibStats.avg} Hz`, cl: "text-tx" },
             { lb: t('stationDetail.peak24h'), val: `${vibStats.max} Hz`, cl: "text-warning" },
-            { lb: t('stationDetail.threshold'), val: `${vibThreshold} Hz`, cl: "text-muted" },
           ]}
         />
 
@@ -562,7 +563,7 @@ export default function StationDetailPage() {
           stats={[
             { lb: t('stationDetail.average'), val: `${ampStats.avg} mm/s`, cl: 'text-tx' },
             { lb: t('stationDetail.peak24h'), val: `${ampStats.max} mm/s`, cl: 'text-warning' },
-            { lb: `BĐ (${vibThreshold} mm/s)`, val: `${vibThreshold} mm/s`, cl: 'text-danger' },
+            { lb: 'BĐ', val: fmtThreshold(vibThreshold, ' mm/s'), cl: 'text-danger' },
           ]}
         />
       </div>
@@ -579,7 +580,7 @@ export default function StationDetailPage() {
             title={
               <span className="normal-case tracking-normal">
                 <div className="text-[12px] font-semibold text-tx">
-                  Biên độ rung & Lưu lượng
+                  Biên độ rung & Mức chứa
                 </div>
                 <div className="text-[9px] text-muted mt-0.5 font-normal">
                   Dữ liệu cảm biến thời gian thực
@@ -614,12 +615,6 @@ export default function StationDetailPage() {
                   val: `${freq.toFixed(2)} Hz`,
                   sub: "Vibration frequency",
                   cl: "text-accent",
-                },
-                {
-                  lb: "Lưu lượng TK",
-                  val: `${st.flow.toLocaleString()} m³/s`,
-                  sub: "Mock — chưa có sensor",
-                  cl: "text-muted",
                 },
               ].map(({ lb, val, sub, cl }) => (
                 <div key={lb} className="bg-card2/70 rounded-lg px-3 py-2 border border-border/50">

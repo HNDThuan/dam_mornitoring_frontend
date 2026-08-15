@@ -111,7 +111,6 @@ function damMapPropsAreEqual(prevProps, nextProps) {
       pDams[i].longitude !== nDams[i].longitude ||
       pDams[i].status !== nDams[i].status ||
       pDams[i].waterLevel !== nDams[i].waterLevel ||
-      pDams[i].flow !== nDams[i].flow ||
       pDams[i].fillPct !== nDams[i].fillPct
     ) {
       return false
@@ -265,14 +264,10 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   </div>
 
                   {/* Dam Metrics Box */}
-                  <div className="grid grid-cols-3 gap-1.5 bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80 text-center mb-3 shadow-inner">
+                  <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80 text-center mb-3 shadow-inner">
                     <div>
                       <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Mực nước</div>
                       <div className="font-extrabold text-emerald-400 font-mono text-xs">{dam.waterLevel}m</div>
-                    </div>
-                    <div>
-                      <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Lưu lượng</div>
-                      <div className="font-extrabold text-sky-400 font-mono text-xs">{dam.flow ? dam.flow.toLocaleString() : 0}</div>
                     </div>
                     <div>
                       <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Dung tích</div>

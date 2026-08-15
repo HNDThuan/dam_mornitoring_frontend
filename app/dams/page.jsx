@@ -58,16 +58,14 @@ export default function DamsPage() {
   }
 
   // Form states
+  // Chỉ chứa thông tin tĩnh do người dùng nhập. Mực nước / mức chứa / trạng thái an toàn
+  // đều do backend tự tính từ cảm biến nên không đưa vào form (sửa tay sẽ bị ghi đè ngay).
   const [damForm, setDamForm] = useState({
     id: '',
     name: '',
     location: '',
     latitude: 20.8167,
     longitude: 105.3265,
-    waterLevel: 0,
-    flow: 0,
-    fillPct: 50,
-    status: 'safe',
     cameraUrl: '',
   })
 
@@ -80,10 +78,6 @@ export default function DamsPage() {
       location: '',
       latitude: 20.8167,
       longitude: 105.3265,
-      waterLevel: 100,
-      flow: 1000,
-      fillPct: 70,
-      status: 'safe',
       cameraUrl: '',
     })
     setDamModalOpen(true)
@@ -98,10 +92,6 @@ export default function DamsPage() {
       location: dam.location || '',
       latitude: dam.latitude ?? 20.8167,
       longitude: dam.longitude ?? 105.3265,
-      waterLevel: dam.waterLevel || 0,
-      flow: dam.flow || 0,
-      fillPct: dam.fillPct || 0,
-      status: dam.status || 'safe',
       cameraUrl: dam.cameraUrl || '',
     })
     setDamModalOpen(true)
@@ -117,10 +107,6 @@ export default function DamsPage() {
           location: damForm.location,
           latitude: Number(damForm.latitude),
           longitude: Number(damForm.longitude),
-          waterLevel: Number(damForm.waterLevel),
-          flow: Number(damForm.flow),
-          fillPct: Number(damForm.fillPct),
-          status: damForm.status,
           cameraUrl: damForm.cameraUrl,
         })
         showToast('Cập nhật đập thủy điện thành công!', 'success')
@@ -130,10 +116,6 @@ export default function DamsPage() {
           location: damForm.location,
           latitude: Number(damForm.latitude),
           longitude: Number(damForm.longitude),
-          waterLevel: Number(damForm.waterLevel),
-          flow: Number(damForm.flow),
-          fillPct: Number(damForm.fillPct),
-          status: damForm.status,
           cameraUrl: damForm.cameraUrl,
         }
         const res = await createDam(payload)
@@ -297,15 +279,10 @@ export default function DamsPage() {
               {/* Metrics */}
               <div className="flex items-center gap-3 bg-card2 p-2.5 rounded-lg my-3 border border-border/40">
                 <RadialGauge value={dam.fillPct} size={65} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
-                <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 text-[10px]">
+                <div className="flex-1 min-w-0 text-[10px]">
                   <div>
                     <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
                     <Mono className={`text-[14px] font-bold ${s.text}`}>{dam.waterLevel} m</Mono>
-                  </div>
-
-                  <div>
-                    <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.flow')}</div>
-                    <Mono className="text-[13px] text-tx">{dam.flow ? dam.flow.toLocaleString() : 0} m³/s</Mono>
                   </div>
                 </div>
               </div>
@@ -414,53 +391,8 @@ export default function DamsPage() {
             </Field>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5">
-            <Field label={t('admin.form.waterLevelLabel')} htmlFor="dam-waterlevel">
-              <TextInput
-                id="dam-waterlevel"
-                type="number"
-                step="0.1"
-                value={damForm.waterLevel}
-                onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label={t('admin.form.flowLabel')} htmlFor="dam-flow">
-              <TextInput
-                id="dam-flow"
-                type="number"
-                value={damForm.flow}
-                onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label={t('admin.form.fillPctLabel')} htmlFor="dam-fillpct">
-              <TextInput
-                id="dam-fillpct"
-                type="number"
-                step="1"
-                min="0"
-                max="100"
-                value={damForm.fillPct}
-                onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label={t('admin.form.statusLabel')} htmlFor="dam-status">
-              <Select
-                id="dam-status"
-                value={damForm.status}
-                onChange={e => setDamForm(p => ({ ...p, status: e.target.value }))}
-              >
-                <option value="safe">{t('status.safe')}</option>
-                <option value="warning">{t('status.warning')}</option>
-                <option value="danger">{t('status.danger')}</option>
-                <option value="critical">{t('status.critical')}</option>
-              </Select>
-            </Field>
+          <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
+            Mực nước, mức chứa và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
           </div>
         </form>
       </Modal>

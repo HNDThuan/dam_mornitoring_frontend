@@ -71,8 +71,8 @@ export default function DashboardPage() {
                           <Mono className={`text-[12px] font-bold ${s.text}`}>{d.waterLevel}m</Mono>
                         </div>
                         <div className="flex justify-between items-baseline">
-                          <span className="text-[8px] text-muted uppercase tracking-wide">{t('dashboard.flow')}</span>
-                          <Mono className="text-[11px] text-tx">{d.flow ? d.flow.toLocaleString() : 0} m³/s</Mono>
+                          <span className="text-[8px] text-muted uppercase tracking-wide">{t('damsPage.fillCapacity')}</span>
+                          <Mono className="text-[11px] text-tx">{d.fillPct}%</Mono>
                         </div>
                       </div>
                     </div>
@@ -163,7 +163,8 @@ export default function DashboardPage() {
             {featured ? (
               <>
                 <div className="flex items-center gap-3 mb-3">
-                  <RadialGauge value={featured.fillPct ?? Math.min(100, (featured.waterLevel ?? 0) * 10)} size={72} stroke={7} status={featured.status} label={`${featured.waterLevel}`} sublabel="mét" />
+                  {/* Station không có fillPct riêng — lấy mức chứa của Đập chứa nó (backend tự tính) */}
+                  <RadialGauge value={visibleDams.find(d => d.id === featured.damId)?.fillPct ?? 0} size={72} stroke={7} status={featured.status} label={`${featured.waterLevel}`} sublabel="mét" />
                   <div className="min-w-0">
                     <div className="text-base font-bold text-tx truncate">{featured.name}</div>
                     <div className="text-[10px] text-muted flex items-center gap-1 mt-0.5 truncate">
@@ -172,12 +173,15 @@ export default function DashboardPage() {
                     </div>
                     <p className={`text-[10px] mt-1.5 flex items-center gap-1 ${featured.change > 0 ? 'text-danger' : featured.change < 0 ? 'text-safe' : 'text-muted'}`}>
                       {featured.change > 0 ? <ChevronUp className="w-3 h-3 shrink-0" /> : featured.change < 0 ? <ChevronDown className="w-3 h-3 shrink-0" /> : <Minus className="w-3 h-3 shrink-0" />}
-                      <span>{featured.change > 0 ? 'Tăng' : featured.change < 0 ? 'Giảm' : 'Ổn định'} {Math.abs(featured.change ?? 0)}m/h</span>
+                      <span>{featured.change > 0 ? 'Tăng' : featured.change < 0 ? 'Giảm' : 'Ổn định'} {Math.abs(featured.change ?? 0)}m</span>
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  {[['Áp lực', '1.2 atm'], ['Lưu lượng', '2,450 m³/s']].map(([lb, val]) => (
+                  {[
+                    ['Độ ẩm', featured.humidity != null ? `${featured.humidity}%` : '—'],
+                    ['Độ rung', featured.vibration != null ? `${featured.vibration} mm/s` : '—'],
+                  ].map(([lb, val]) => (
                     <div key={lb} className="bg-card2/70 rounded-lg px-2.5 py-2 border border-border/50">
                       <div className="text-[8px] text-muted uppercase tracking-wide mb-1">{lb}</div>
                       <Mono className="text-[12px] text-tx font-semibold">{val}</Mono>

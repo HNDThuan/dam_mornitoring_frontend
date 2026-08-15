@@ -13,12 +13,16 @@ import {
 } from '@/lib/api'
 import { getSocket } from '@/lib/socket'
 
+// Hạ nhịp cập nhật số đo sống của mỗi Trạm xuống tối đa 1 lần/giây (nguồn phát ~20 lần/giây).
+const STATION_PATCH_THROTTLE_MS = 1000
+
 export function useDamData() {
   const [dams, setDams] = useState([])
   const [stations, setStations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const mountedRef = useRef(true)
+  const lastStationPatchRef = useRef(new Map())
 
   const loadData = useCallback(async (silent = false) => {
     try {
@@ -57,17 +61,46 @@ export function useDamData() {
         setDams(prev => prev.map(d => d.id === evt.damId ? { ...d, status: evt.status } : d))
       }
     }
-    // Dam.waterLevel = MAX(waterLevel) trong các Station thuộc Dam — backend tự tính, đẩy real-time.
+    // Dam.waterLevel = MAX(waterLevel) trong các Station thuộc Dam, fillPct suy ra từ đó
+    // — backend tự tính, đẩy real-time.
     const onDamMetricsChanged = (evt) => {
       if (!mountedRef.current || !evt?.damId) return
-      setDams(prev => prev.map(d => d.id === evt.damId ? { ...d, waterLevel: evt.waterLevel } : d))
+      setDams(prev => prev.map(d =>
+        d.id === evt.damId ? { ...d, waterLevel: evt.waterLevel, fillPct: evt.fillPct ?? d.fillPct } : d
+      ))
+    }
+    // Số đo sống của từng Trạm (mực nước / độ ẩm / biên độ rung) để thẻ trạm ở mọi trang
+    // tự cập nhật mà không cần tải lại. Sự kiện `update` phát tới ~20 lần/giây nên phải
+    // hạ nhịp, nếu không cả danh sách trạm sẽ re-render liên tục.
+    const onSensorUpdate = (snapshot) => {
+      if (!mountedRef.current || !snapshot?.stationId) return
+      const stId = snapshot.stationId
+      const now = Date.now()
+      if (now - (lastStationPatchRef.current.get(stId) || 0) < STATION_PATCH_THROTTLE_MS) return
+      lastStationPatchRef.current.set(stId, now)
+
+      setStations(prev => prev.map(s => {
+        if (s.id !== stId) return s
+        const next = {
+          waterLevel: snapshot.waterLevel,
+          humidity: snapshot.moisture,
+          vibration: snapshot.amp,
+        }
+        // Bỏ qua nếu không có gì thực sự đổi — tránh tạo object mới gây re-render thừa.
+        if (s.waterLevel === next.waterLevel && s.humidity === next.humidity && s.vibration === next.vibration) {
+          return s
+        }
+        return { ...s, ...next }
+      }))
     }
     socket.on('station_status_changed', onStatusChanged)
     socket.on('dam_metrics_changed', onDamMetricsChanged)
+    socket.on('update', onSensorUpdate)
     if (!socket.connected) socket.connect()
     return () => {
       socket.off('station_status_changed', onStatusChanged)
       socket.off('dam_metrics_changed', onDamMetricsChanged)
+      socket.off('update', onSensorUpdate)
     }
   }, [])
 
