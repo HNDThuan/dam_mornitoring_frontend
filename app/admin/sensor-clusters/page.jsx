@@ -56,7 +56,7 @@ const DEVICE_STATUS_CONFIG = {
 }
 
 export default function SensorClustersPage() {
-  const { user, isAdmin, isOperator, assignedDamId } = useAuth()
+  const { user, isAdmin, isOperator, isViewer, assignedDamId } = useAuth()
   const [clusters, setClusters] = useState([])
   const [dams, setDams] = useState([])
   const [stations, setStations] = useState([])
@@ -374,13 +374,15 @@ export default function SensorClustersPage() {
             <span>Làm mới</span>
           </button>
 
-          <button
-            onClick={openCreateClusterModal}
-            className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-indigo-500/20 shrink-0 whitespace-nowrap transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm Sensor Node</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={openCreateClusterModal}
+              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-indigo-500/20 shrink-0 whitespace-nowrap transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm Sensor Node</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -526,20 +528,24 @@ export default function SensorClustersPage() {
                         >
                           <ExternalLink className="w-3 h-3" />
                         </Link>
-                        <button
-                          onClick={(e) => openEditClusterModal(cluster, e)}
-                          className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent transition-colors cursor-pointer"
-                          title="Sửa cụm"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: cluster.id, name: cluster.name }) }}
-                          className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger transition-colors cursor-pointer"
-                          title="Xóa cụm"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        {!isViewer && (
+                          <>
+                            <button
+                              onClick={(e) => openEditClusterModal(cluster, e)}
+                              className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent transition-colors cursor-pointer"
+                              title="Sửa cụm"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: cluster.id, name: cluster.name }) }}
+                              className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger transition-colors cursor-pointer"
+                              title="Xóa cụm"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -552,13 +558,15 @@ export default function SensorClustersPage() {
                           <span className="text-[10px] text-muted uppercase tracking-wider font-semibold">
                             Danh sách cảm biến ({devices.length})
                           </span>
-                          <button
-                            onClick={(e) => openAddDeviceModal(cluster.id, e)}
-                            className="flex items-center gap-1 px-2 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded text-indigo-400 text-[9px] font-bold cursor-pointer hover:bg-indigo-500/20 transition-colors"
-                          >
-                            <Plus className="w-3 h-3" />
-                            Thêm cảm biến
-                          </button>
+                          {!isViewer && (
+                            <button
+                              onClick={(e) => openAddDeviceModal(cluster.id, e)}
+                              className="flex items-center gap-1 px-2 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded text-indigo-400 text-[9px] font-bold cursor-pointer hover:bg-indigo-500/20 transition-colors"
+                            >
+                              <Plus className="w-3 h-3" />
+                              Thêm cảm biến
+                            </button>
+                          )}
                         </div>
 
                         {devices.length === 0 ? (
@@ -594,22 +602,24 @@ export default function SensorClustersPage() {
                                       )}
                                     </div>
                                   </div>
-                                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      onClick={(e) => openEditDeviceModal(cluster.id, device, e)}
-                                      className="p-1 bg-card2 border border-border rounded text-accent hover:border-accent transition-colors cursor-pointer"
-                                      title="Sửa"
-                                    >
-                                      <Pencil className="w-2.5 h-2.5" />
-                                    </button>
-                                    <button
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteDevice(cluster.id, device.id) }}
-                                      className="p-1 bg-card2 border border-border rounded text-danger hover:border-danger transition-colors cursor-pointer"
-                                      title="Xóa"
-                                    >
-                                      <Trash2 className="w-2.5 h-2.5" />
-                                    </button>
-                                  </div>
+                                  {!isViewer && (
+                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={(e) => openEditDeviceModal(cluster.id, device, e)}
+                                        className="p-1 bg-card2 border border-border rounded text-accent hover:border-accent transition-colors cursor-pointer"
+                                        title="Sửa"
+                                      >
+                                        <Pencil className="w-2.5 h-2.5" />
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteDevice(cluster.id, device.id) }}
+                                        className="p-1 bg-card2 border border-border rounded text-danger hover:border-danger transition-colors cursor-pointer"
+                                        title="Xóa"
+                                      >
+                                        <Trash2 className="w-2.5 h-2.5" />
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               )
                             })}

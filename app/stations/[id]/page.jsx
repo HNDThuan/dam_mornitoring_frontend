@@ -195,7 +195,7 @@ function MetricCard({
 export default function StationDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user, isAdmin, isOperator, assignedDamId } = useAuth();
+  const { user, isAdmin, isOperator, isViewer, assignedDamId } = useAuth();
   const { dams, stations, refetch, updateStation, deleteStation } = useDamData();
   const { t, locale } = useLanguage();
   const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: 'Hà Nội', latitude: 21.0381, longitude: 105.8492, river: 'Sông Hồng', km: 'K25+500', status: 'safe', waterLevel: 6.12, flow: 1800, fillPct: 78, bd1: 6.0, bd2: 7.0, bd3: 8.5, humidity: 50 };
@@ -437,22 +437,26 @@ export default function StationDetailPage() {
 
         {/* Action Buttons: Sửa, Xóa, Xuất báo cáo */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={openEditModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
-            title="Chỉnh sửa thông tin Trạm"
-          >
-            <Pencil className="w-3.5 h-3.5 shrink-0" />
-            <span>Sửa thông tin</span>
-          </button>
-          <button
-            onClick={() => setDeleteConfirm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-danger/30 rounded-lg text-danger text-[11px] font-bold bg-danger/10 hover:bg-danger/20 transition-colors cursor-pointer"
-            title="Xóa Trạm quan trắc"
-          >
-            <Trash2 className="w-3.5 h-3.5 shrink-0" />
-            <span>Xóa trạm</span>
-          </button>
+          {!isViewer && (
+            <>
+              <button
+                onClick={openEditModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
+                title="Chỉnh sửa thông tin Trạm"
+              >
+                <Pencil className="w-3.5 h-3.5 shrink-0" />
+                <span>Sửa thông tin</span>
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-danger/30 rounded-lg text-danger text-[11px] font-bold bg-danger/10 hover:bg-danger/20 transition-colors cursor-pointer"
+                title="Xóa Trạm quan trắc"
+              >
+                <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                <span>Xóa trạm</span>
+              </button>
+            </>
+          )}
           <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-500">
             <Download className="w-3.5 h-3.5 shrink-0" />
             <span>{t('stationDetail.exportReport')}</span>

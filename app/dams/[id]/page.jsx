@@ -46,7 +46,7 @@ export default function DamDetailPage() {
     deleteStation,
   } = useDamData()
   const { t, locale } = useLanguage()
-  const { isAdmin, isOperator, assignedDamId } = useAuth()
+  const { isAdmin, isOperator, isViewer, assignedDamId } = useAuth()
 
   const [search, setSearch] = useState('')
 
@@ -363,24 +363,26 @@ export default function DamDetailPage() {
 
           <div className="flex items-center gap-3">
             {/* Dam Action Buttons: Sửa, Xóa */}
-            <div className="flex items-center gap-1.5 border-r border-border/60 pr-3">
-              <button
-                onClick={openEditDamModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
-                title="Sửa thông tin Đập"
-              >
-                <Pencil className="w-3.5 h-3.5 shrink-0" />
-                <span>Sửa đập</span>
-              </button>
-              <button
-                onClick={() => setDeleteDamConfirm(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-danger/30 rounded-lg text-danger text-[11px] font-bold bg-danger/10 hover:bg-danger/20 transition-colors cursor-pointer"
-                title="Xóa Đập Thủy Điện"
-              >
-                <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                <span>Xóa đập</span>
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-1.5 border-r border-border/60 pr-3">
+                <button
+                  onClick={openEditDamModal}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
+                  title="Sửa thông tin Đập"
+                >
+                  <Pencil className="w-3.5 h-3.5 shrink-0" />
+                  <span>Sửa đập</span>
+                </button>
+                <button
+                  onClick={() => setDeleteDamConfirm(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-danger/30 rounded-lg text-danger text-[11px] font-bold bg-danger/10 hover:bg-danger/20 transition-colors cursor-pointer"
+                  title="Xóa Đập Thủy Điện"
+                >
+                  <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Xóa đập</span>
+                </button>
+              </div>
+            )}
 
             <div className="flex gap-4 bg-card2 border border-border rounded-xl p-3">
             <div>
@@ -431,13 +433,15 @@ export default function DamDetailPage() {
             <span>{t('stationsPage.refresh')}</span>
           </button>
 
-          <button
-            onClick={openCreateStationModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
-          >
-            <Plus className="w-4 h-4" />
-            <span>{t('damDetail.addStation')}</span>
-          </button>
+          {!isViewer && (
+            <button
+              onClick={openCreateStationModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{t('damDetail.addStation')}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -567,7 +571,7 @@ export default function DamDetailPage() {
                     <ExternalLink className="w-3.5 h-3.5" />
                   </Link>
 
-                  {isAdmin && (
+                  {!isViewer && (
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => openEditStationModal(st)}
