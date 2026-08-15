@@ -11,6 +11,8 @@ import {
   addSensorDevice,
   updateSensorDevice,
   deleteSensorDevice,
+  fetchThresholdConfigs,
+  updateThresholdConfig,
 } from '@/lib/api'
 import { Label } from '@/components/ui'
 import Link from 'next/link'
@@ -197,10 +199,33 @@ export default function SensorClustersPage() {
     setClusterModalOpen(true)
   }
 
-  const openEditClusterModal = (cluster, e) => {
+  const openEditClusterModal = async (cluster, e) => {
     e?.stopPropagation()
     setEditingCluster(cluster)
     const effectiveStationId = cluster.stationId || cluster.gateway?.stationId || ''
+    
+    let warnHigh = cluster.warnHigh ?? 2.5
+    let vibrationThreshold = cluster.vibrationThreshold ?? 15.0
+    let criticalHigh = cluster.criticalHigh ?? 25.0
+
+    if (effectiveStationId) {
+      const st = stations.find(s => String(s.id) === String(effectiveStationId))
+      if (st && st.damId) {
+        try {
+          const res = await fetchThresholdConfigs(st.damId)
+          const configs = res?.configs || []
+          const vibCfg = configs.find(c => c.sensorType === 'vibration')
+          if (vibCfg) {
+            warnHigh = vibCfg.warnHigh ?? warnHigh
+            vibrationThreshold = vibCfg.alertHigh ?? vibrationThreshold
+            criticalHigh = vibCfg.criticalHigh ?? criticalHigh
+          }
+        } catch (err) {
+          console.warn('[SensorClusters] Lỗi nạp ngưỡng đồng bộ:', err)
+        }
+      }
+    }
+
     setClusterForm({
       id: cluster.id,
       name: cluster.name || '',
@@ -209,9 +234,9 @@ export default function SensorClustersPage() {
       firmwareVersion: cluster.firmwareVersion || '',
       installLocation: cluster.installLocation || '',
       stationId: effectiveStationId,
-      vibrationThreshold: cluster.vibrationThreshold ?? 15.0,
-      warnHigh: cluster.warnHigh ?? 2.5,
-      criticalHigh: cluster.criticalHigh ?? 25.0,
+      vibrationThreshold,
+      warnHigh,
+      criticalHigh,
       alertMinCount: cluster.alertMinCount ?? 4,
       alertMinDurationSec: cluster.alertMinDurationSec ?? 6.0,
     })
@@ -243,6 +268,29 @@ export default function SensorClustersPage() {
         const newId = res?.node?.id || res?.cluster?.id || ''
         showToast(`Tạo node thành công! (Mã: ${newId})`, 'success')
       }
+
+      // Đồng bộ 2 chiều sang ThresholdConfig của Đập & Trạm
+      if (clusterForm.stationId) {
+        const st = stations.find(s => String(s.id) === String(clusterForm.stationId))
+        if (st && st.damId) {
+          try {
+            const res = await fetchThresholdConfigs(st.damId)
+            const configs = res?.configs || []
+            const vibCfg = configs.find(c => c.sensorType === 'vibration')
+            if (vibCfg) {
+              await updateThresholdConfig(vibCfg.id, {
+                warnHigh: Number(clusterForm.warnHigh),
+                alertHigh: Number(clusterForm.vibrationThreshold),
+                criticalHigh: Number(clusterForm.criticalHigh),
+              })
+              console.log(`[SensorClusters] Đã đồng bộ ngược ngưỡng độ rung sang ThresholdConfig đập ${st.damId}`)
+            }
+          } catch (err) {
+            console.warn('[SensorClusters] Không thể đồng bộ ngược sang Đập:', err)
+          }
+        }
+      }
+
       setClusterModalOpen(false)
       loadData(true)
     } catch (err) {
