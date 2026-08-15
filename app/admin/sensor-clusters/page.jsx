@@ -35,12 +35,26 @@ import {
   Server,
   ExternalLink,
   MapPin,
+  Zap,
 } from 'lucide-react'
 
 const SENSOR_TYPE_CONFIG = {
   water_level: { label: 'Mực nước', icon: Droplets, color: 'text-sky-400', bgColor: 'bg-sky-400/10', defaultModel: 'HC-SR04', unit: 'cm' },
+  wtl: { label: 'Mực nước', icon: Droplets, color: 'text-sky-400', bgColor: 'bg-sky-400/10', defaultModel: 'HC-SR04', unit: 'cm' },
   humidity: { label: 'Độ ẩm', icon: Thermometer, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10', defaultModel: 'DHT22', unit: '%' },
-  vibration: { label: 'Độ rung', icon: Activity, color: 'text-orange-400', bgColor: 'bg-orange-400/10', defaultModel: 'SW-420', unit: 'mm/s' },
+  moisture: { label: 'Độ ẩm', icon: Thermometer, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10', defaultModel: 'Capacitive v1.2', unit: '%' },
+  mst: { label: 'Độ ẩm', icon: Thermometer, color: 'text-emerald-400', bgColor: 'bg-emerald-400/10', defaultModel: 'Capacitive v1.2', unit: '%' },
+  vibration: { label: 'Độ rung', icon: Activity, color: 'text-orange-400', bgColor: 'bg-orange-400/10', defaultModel: 'MPU6050', unit: 'mm/s' },
+  vib: { label: 'Độ rung', icon: Activity, color: 'text-orange-400', bgColor: 'bg-orange-400/10', defaultModel: 'MPU6050', unit: 'mm/s' },
+}
+
+const getSensorTypeConfig = (rawType) => {
+  if (!rawType) return SENSOR_TYPE_CONFIG.water_level
+  const t = String(rawType).toLowerCase()
+  if (t === 'vib' || t === 'vibration' || t.startsWith('vib')) return SENSOR_TYPE_CONFIG.vibration
+  if (t === 'wtl' || t === 'water_level' || t === 'water') return SENSOR_TYPE_CONFIG.water_level
+  if (t === 'mst' || t === 'moisture' || t === 'humidity') return SENSOR_TYPE_CONFIG.moisture
+  return SENSOR_TYPE_CONFIG[t] || SENSOR_TYPE_CONFIG.water_level
 }
 
 const STATUS_CONFIG = {
@@ -174,6 +188,11 @@ export default function SensorClustersPage() {
       firmwareVersion: 'v1.0.0',
       installLocation: '',
       stationId: filteredStations[0]?.id || stations[0]?.id || '',
+      vibrationThreshold: 15.0,
+      warnHigh: 2.5,
+      criticalHigh: 25.0,
+      alertMinCount: 4,
+      alertMinDurationSec: 6.0,
     })
     setClusterModalOpen(true)
   }
@@ -190,6 +209,11 @@ export default function SensorClustersPage() {
       firmwareVersion: cluster.firmwareVersion || '',
       installLocation: cluster.installLocation || '',
       stationId: effectiveStationId,
+      vibrationThreshold: cluster.vibrationThreshold ?? 15.0,
+      warnHigh: cluster.warnHigh ?? 2.5,
+      criticalHigh: cluster.criticalHigh ?? 25.0,
+      alertMinCount: cluster.alertMinCount ?? 4,
+      alertMinDurationSec: cluster.alertMinDurationSec ?? 6.0,
     })
     setClusterModalOpen(true)
   }
@@ -205,10 +229,15 @@ export default function SensorClustersPage() {
         firmwareVersion: clusterForm.firmwareVersion,
         installLocation: clusterForm.installLocation,
         stationId: clusterForm.stationId ? Number(clusterForm.stationId) : undefined,
+        vibrationThreshold: Number(clusterForm.vibrationThreshold),
+        warnHigh: Number(clusterForm.warnHigh),
+        criticalHigh: Number(clusterForm.criticalHigh),
+        alertMinCount: Number(clusterForm.alertMinCount),
+        alertMinDurationSec: Number(clusterForm.alertMinDurationSec),
       }
       if (editingCluster) {
         await updateSensorCluster(editingCluster.id, payload)
-        showToast('Cập nhật thông tin node thành công!', 'success')
+        showToast('Cập nhật node & phát tin nhắn MQTT đồng bộ Jetson TX2 thành công!', 'success')
       } else {
         const res = await createSensorCluster(payload)
         const newId = res?.node?.id || res?.cluster?.id || ''
@@ -574,7 +603,7 @@ export default function SensorClustersPage() {
                         ) : (
                           <div className="grid grid-cols-3 gap-2">
                             {devices.map(device => {
-                              const cfg = SENSOR_TYPE_CONFIG[device.sensorType] || SENSOR_TYPE_CONFIG.water_level
+                              const cfg = getSensorTypeConfig(device.sensorType)
                               const Icon = cfg.icon
                               const dCfg = DEVICE_STATUS_CONFIG[device.status] || DEVICE_STATUS_CONFIG.active
 
@@ -737,6 +766,76 @@ export default function SensorClustersPage() {
                     )
                   })}
                 </select>
+              </div>
+
+              {/* ⚡ Cấu Hình Ngưỡng Cảnh Báo AI Jetson TX2 */}
+              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-lg p-3 space-y-2 my-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
+                    <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>Cấu Hình Ngưỡng AI Jetson TX2 (MQTT Realtime Sync)</span>
+                  </div>
+                  <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
+                    🟢 Tự động đồng bộ MQTT
+                  </span>
+                </div>
+                <div className="text-[9px] text-muted">
+                  Khi lưu, hệ thống sẽ tự động phát tin nhắn MQTT <code className="text-amber-400">config/gateway/+/update</code> tới Jetson TX2.
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <div>
+                    <Label className="mb-1 text-warning">Chú ý (warn_high)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={clusterForm.warnHigh}
+                      onChange={e => setClusterForm(p => ({ ...p, warnHigh: e.target.value }))}
+                      placeholder="2.5"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Cảnh báo (alert_high)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={clusterForm.vibrationThreshold}
+                      onChange={e => setClusterForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
+                      placeholder="15.0"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Nguy cấp (critical_high)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={clusterForm.criticalHigh}
+                      onChange={e => setClusterForm(p => ({ ...p, criticalHigh: e.target.value }))}
+                      placeholder="25.0"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <Label className="mb-1">Số lần vượt ngưỡng liên tiếp</Label>
+                    <input
+                      type="number" required
+                      value={clusterForm.alertMinCount}
+                      onChange={e => setClusterForm(p => ({ ...p, alertMinCount: e.target.value }))}
+                      placeholder="4"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1">Thời gian duy trì tối thiểu (s)</Label>
+                    <input
+                      type="number" step="0.5" required
+                      value={clusterForm.alertMinDurationSec}
+                      onChange={e => setClusterForm(p => ({ ...p, alertMinDurationSec: e.target.value }))}
+                      placeholder="6.0"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                    />
+                  </div>
+                </div>
               </div>
 
               {!editingCluster && (

@@ -33,7 +33,8 @@ import CameraViewer from "@/components/CameraViewer";
 import DamMap from "@/components/DamMap";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
-import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, X, Radio } from "lucide-react";
+import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, X, Radio, Sliders, Droplet, Activity, Zap } from "lucide-react";
+import { fetchThresholdConfigs, updateThresholdConfig, updateStation, fetchSensorClusters, updateSensorCluster } from "@/lib/api";
 
 const CHART_STYLE = {
   background: "#0d1520",
@@ -207,6 +208,131 @@ export default function StationDetailPage() {
   const showToast = (message, type = 'success') => {
     setToast({ message, type })
     setTimeout(() => setToast(null), 4000)
+  }
+
+  // Threshold Modal State
+  const [thresholdModalOpen, setThresholdModalOpen] = useState(false)
+  const [thresholdConfigs, setThresholdConfigs] = useState([])
+  const [thresholdForm, setThresholdForm] = useState({
+    bd1: 6.0,
+    bd2: 8.0,
+    bd3: 10.0,
+    vibWarn: 2.5,
+    vibAlert: 15.0,
+    vibCritical: 25.0,
+    mstWarn: 75.0,
+    mstAlert: 85.0,
+    mstCritical: 95.0,
+  })
+
+  const openThresholdModal = async () => {
+    setThresholdForm({
+      bd1: st.bd1 ?? 6.0,
+      bd2: st.bd2 ?? 8.0,
+      bd3: st.bd3 ?? 10.0,
+      vibWarn: thresholds?.warnHigh ?? 2.5,
+      vibAlert: thresholds?.alertHigh ?? 15.0,
+      vibCritical: thresholds?.criticalHigh ?? 25.0,
+      mstWarn: 75.0,
+      mstAlert: 85.0,
+      mstCritical: 95.0,
+    })
+
+    if (st.damId) {
+      try {
+        const res = await fetchThresholdConfigs(st.damId)
+        const configs = res?.configs || []
+        setThresholdConfigs(configs)
+        const vibCfg = configs.find(c => c.sensorType === 'vibration')
+        const mstCfg = configs.find(c => c.sensorType === 'moisture')
+        if (vibCfg) {
+          setThresholdForm(p => ({
+            ...p,
+            vibWarn: vibCfg.warnHigh ?? 2.5,
+            vibAlert: vibCfg.alertHigh ?? 15.0,
+            vibCritical: vibCfg.criticalHigh ?? 25.0,
+          }))
+        }
+        if (mstCfg) {
+          setThresholdForm(p => ({
+            ...p,
+            mstWarn: mstCfg.warnHigh ?? 75.0,
+            mstAlert: mstCfg.alertHigh ?? 85.0,
+            mstCritical: mstCfg.criticalHigh ?? 95.0,
+          }))
+        }
+      } catch (err) {
+        console.warn('[StationDetail] Không thể nạp ngưỡng:', err)
+      }
+    }
+    setThresholdModalOpen(true)
+  }
+
+  const handleSaveThresholds = async (e) => {
+    e.preventDefault()
+    try {
+      await updateStation(st.id, {
+        bd1: Number(thresholdForm.bd1),
+        bd2: Number(thresholdForm.bd2),
+        bd3: Number(thresholdForm.bd3),
+      })
+
+      if (st.damId && thresholdConfigs.length > 0) {
+        const waterCfg = thresholdConfigs.find(c => c.sensorType === 'water_level')
+        const vibCfg = thresholdConfigs.find(c => c.sensorType === 'vibration')
+        const mstCfg = thresholdConfigs.find(c => c.sensorType === 'moisture')
+
+        const promises = []
+        if (waterCfg) {
+          promises.push(updateThresholdConfig(waterCfg.id, {
+            warnHigh: Number(thresholdForm.bd1),
+            alertHigh: Number(thresholdForm.bd2),
+            criticalHigh: Number(thresholdForm.bd3),
+          }))
+        }
+        if (vibCfg) {
+          promises.push(updateThresholdConfig(vibCfg.id, {
+            warnHigh: Number(thresholdForm.vibWarn),
+            alertHigh: Number(thresholdForm.vibAlert),
+            criticalHigh: Number(thresholdForm.vibCritical),
+          }))
+        }
+        if (mstCfg) {
+          promises.push(updateThresholdConfig(mstCfg.id, {
+            warnHigh: Number(thresholdForm.mstWarn),
+            alertHigh: Number(thresholdForm.mstAlert),
+            criticalHigh: Number(thresholdForm.mstCritical),
+          }))
+        }
+        await Promise.all(promises)
+      }
+
+      showToast('Cập nhật ngưỡng cảnh báo cho Trạm & tự động đồng bộ xuống Jetson TX2 thành công!')
+      setThresholdModalOpen(false)
+      refetch()
+
+      // Tự động đồng bộ ngưỡng độ rung sang các Node thuộc Trạm này để phát tin nhắn MQTT xuống Jetson TX2
+      try {
+        const clusterRes = await fetchSensorClusters(st.damId, st.id)
+        const nodeList = clusterRes?.clusters || clusterRes?.nodes || clusterRes || []
+        if (Array.isArray(nodeList) && nodeList.length > 0) {
+          const nodePromises = nodeList.map(node =>
+            updateSensorCluster(node.id, {
+              warnHigh: Number(thresholdForm.vibWarn),
+              vibrationThreshold: Number(thresholdForm.vibAlert),
+              criticalHigh: Number(thresholdForm.vibCritical),
+            }).catch(e => console.warn('[StationDetail] Không thể đồng bộ node:', node.id, e))
+          )
+          await Promise.all(nodePromises)
+          console.log(`[StationDetail] Đã đồng bộ ngưỡng độ rung sang ${nodeList.length} Node(s) Jetson TX2 thuộc Trạm ${st.name}`)
+        }
+      } catch (err) {
+        console.warn('[StationDetail] Lỗi đồng bộ Node Jetson TX2:', err)
+      }
+    } catch (err) {
+      console.error('[StationDetail] Lỗi lưu ngưỡng:', err)
+      showToast('Không thể cập nhật ngưỡng cảnh báo!', 'error')
+    }
   }
 
   // Edit / Delete Modal State
@@ -439,6 +565,14 @@ export default function StationDetailPage() {
         <div className="flex items-center gap-2">
           {!isViewer && (
             <>
+              <button
+                onClick={openThresholdModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/40 rounded-lg text-amber-400 text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                title="Cấu hình Ngưỡng Cảnh Báo cho Trạm"
+              >
+                <Sliders className="w-3.5 h-3.5 shrink-0" />
+                <span>Cấu hình Ngưỡng Cảnh Báo</span>
+              </button>
               <button
                 onClick={openEditModal}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-accent text-[11px] font-bold bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
@@ -851,6 +985,166 @@ export default function StationDetailPage() {
                 Xóa vĩnh viễn
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── MODAL: THRESHOLD CONFIG FOR STATION ── */}
+      {thresholdModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
+              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-amber-400" />
+                <span>Cấu Hình Ngưỡng Cảnh Báo ({st.name})</span>
+              </h3>
+              <button
+                onClick={() => setThresholdModalOpen(false)}
+                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveThresholds} className="p-5 space-y-4 text-[11px] max-h-[80vh] overflow-y-auto">
+              
+              {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-[10px] text-amber-300 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Ngưỡng độ rung sẽ <b>tự động đồng bộ Realtime qua MQTT</b> tới Edge Gateway Jetson TX2.</span>
+                </div>
+                <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0">
+                  🟢 MQTT Sync
+                </span>
+              </div>
+
+              {/* 1. Ngưỡng Mực Nước Báo Động (m) */}
+              <div className="bg-card2 border border-sky-500/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-sky-400 font-bold text-[12px] mb-1">
+                  <Droplet className="w-4 h-4" />
+                  <span>1. Ngưỡng Mực Nước Mức Báo Động (m)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="mb-1 text-warning">Báo Động 1 (BĐ1)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.bd1}
+                      onChange={e => setThresholdForm(p => ({ ...p, bd1: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Báo Động 2 (BĐ2)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.bd2}
+                      onChange={e => setThresholdForm(p => ({ ...p, bd2: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Báo Động 3 (BĐ3)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.bd3}
+                      onChange={e => setThresholdForm(p => ({ ...p, bd3: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Ngưỡng Độ Rung Cảnh Báo (mm/s) */}
+              <div className="bg-card2 border border-orange-500/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[12px] mb-1">
+                  <Activity className="w-4 h-4" />
+                  <span>2. Ngưỡng Độ Rung Báo Động (Vibration mm/s)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="mb-1 text-warning">Chú Ý (mm/s)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.vibWarn}
+                      onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Cảnh Báo (mm/s)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.vibAlert}
+                      onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Nguy Cấp (mm/s)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.vibCritical}
+                      onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Ngưỡng Độ Ẩm Móng (%) */}
+              <div className="bg-card2 border border-emerald-500/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[12px] mb-1">
+                  <Droplet className="w-4 h-4" />
+                  <span>3. Ngưỡng Độ Ẩm Rò Rỉ Móng (%)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="mb-1 text-warning">Chú Ý (%)</Label>
+                    <input
+                      type="number" step="1" required
+                      value={thresholdForm.mstWarn}
+                      onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Cảnh Báo (%)</Label>
+                    <input
+                      type="number" step="1" required
+                      value={thresholdForm.mstAlert}
+                      onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Nguy Cấp (%)</Label>
+                    <input
+                      type="number" step="1" required
+                      value={thresholdForm.mstCritical}
+                      onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
+                <button
+                  type="button"
+                  onClick={() => setThresholdModalOpen(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
+                >
+                  Lưu Cấu Hình Ngưỡng
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

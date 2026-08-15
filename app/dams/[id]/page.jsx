@@ -24,8 +24,11 @@ import {
   ExternalLink,
   ArrowLeft,
   Droplet,
-  Activity
+  Activity,
+  Sliders,
+  Zap
 } from 'lucide-react'
+import { fetchThresholdConfigs, updateThresholdConfig, fetchSensorClusters, updateSensorCluster } from '@/lib/api'
 import DamMap from '@/components/DamMap'
 
 export default function DamDetailPage() {
@@ -96,6 +99,116 @@ export default function DamDetailPage() {
     status: 'safe',
     cameraUrl: '',
   })
+
+  // Modals state for Threshold Config
+  const [thresholdModalOpen, setThresholdModalOpen] = useState(false)
+  const [thresholdConfigs, setThresholdConfigs] = useState([])
+  const [thresholdForm, setThresholdForm] = useState({
+    waterWarn: 10.0,
+    waterAlert: 12.0,
+    waterCritical: 15.0,
+    tankHeight: 50.0,
+    vibWarn: 2.5,
+    vibAlert: 15.0,
+    vibCritical: 25.0,
+    mstWarn: 75.0,
+    mstAlert: 85.0,
+    mstCritical: 95.0,
+  })
+
+  const openThresholdModal = async () => {
+    try {
+      const res = await fetchThresholdConfigs(id)
+      const configs = res?.configs || []
+      setThresholdConfigs(configs)
+
+      const waterCfg = configs.find(c => c.sensorType === 'water_level') || {}
+      const vibCfg = configs.find(c => c.sensorType === 'vibration') || {}
+      const mstCfg = configs.find(c => c.sensorType === 'moisture') || {}
+
+      setThresholdForm({
+        waterWarn: waterCfg.warnHigh ?? 10.0,
+        waterAlert: waterCfg.alertHigh ?? 12.0,
+        waterCritical: waterCfg.criticalHigh ?? 15.0,
+        tankHeight: waterCfg.tankHeight ?? 50.0,
+
+        vibWarn: vibCfg.warnHigh ?? 2.5,
+        vibAlert: vibCfg.alertHigh ?? 15.0,
+        vibCritical: vibCfg.criticalHigh ?? 25.0,
+
+        mstWarn: mstCfg.warnHigh ?? 75.0,
+        mstAlert: mstCfg.alertHigh ?? 85.0,
+        mstCritical: mstCfg.criticalHigh ?? 95.0,
+      })
+      setThresholdModalOpen(true)
+    } catch (err) {
+      console.error('[DamDetail] Lỗi nạp ngưỡng:', err)
+      setThresholdModalOpen(true)
+    }
+  }
+
+  const handleSaveThresholds = async (e) => {
+    e.preventDefault()
+    try {
+      const waterCfg = thresholdConfigs.find(c => c.sensorType === 'water_level')
+      const vibCfg = thresholdConfigs.find(c => c.sensorType === 'vibration')
+      const mstCfg = thresholdConfigs.find(c => c.sensorType === 'moisture')
+
+      const promises = []
+
+      if (waterCfg) {
+        promises.push(updateThresholdConfig(waterCfg.id, {
+          warnHigh: Number(thresholdForm.waterWarn),
+          alertHigh: Number(thresholdForm.waterAlert),
+          criticalHigh: Number(thresholdForm.waterCritical),
+          tankHeight: Number(thresholdForm.tankHeight),
+        }))
+      }
+
+      if (vibCfg) {
+        promises.push(updateThresholdConfig(vibCfg.id, {
+          warnHigh: Number(thresholdForm.vibWarn),
+          alertHigh: Number(thresholdForm.vibAlert),
+          criticalHigh: Number(thresholdForm.vibCritical),
+        }))
+      }
+
+      if (mstCfg) {
+        promises.push(updateThresholdConfig(mstCfg.id, {
+          warnHigh: Number(thresholdForm.mstWarn),
+          alertHigh: Number(thresholdForm.mstAlert),
+          criticalHigh: Number(thresholdForm.mstCritical),
+        }))
+      }
+
+      await Promise.all(promises)
+      showToast('Cập nhật cấu hình ngưỡng báo động & tự động đồng bộ xuống Jetson TX2 thành công!')
+      setThresholdModalOpen(false)
+      refetch()
+
+      // Đồng bộ ngưỡng độ rung sang tất cả các Node thuộc Đập này để phát tin nhắn MQTT xuống Jetson TX2
+      try {
+        const clusterRes = await fetchSensorClusters(id)
+        const nodeList = clusterRes?.clusters || clusterRes?.nodes || clusterRes || []
+        if (Array.isArray(nodeList) && nodeList.length > 0) {
+          const nodePromises = nodeList.map(node =>
+            updateSensorCluster(node.id, {
+              warnHigh: Number(thresholdForm.vibWarn),
+              vibrationThreshold: Number(thresholdForm.vibAlert),
+              criticalHigh: Number(thresholdForm.vibCritical),
+            }).catch(e => console.warn('[DamDetail] Không thể đồng bộ node:', node.id, e))
+          )
+          await Promise.all(nodePromises)
+          console.log(`[DamDetail] Đã đồng bộ ngưỡng độ rung sang ${nodeList.length} Node(s) Jetson TX2 thuộc Đập ${id}`)
+        }
+      } catch (err) {
+        console.warn('[DamDetail] Lỗi đồng bộ Node Jetson TX2:', err)
+      }
+    } catch (err) {
+      console.error('[DamDetail] Lỗi lưu ngưỡng:', err)
+      showToast('Không thể cập nhật cấu hình ngưỡng!', 'error')
+    }
+  }
 
   // Modals state for Stations
   const [stationModalOpen, setStationModalOpen] = useState(false)
@@ -362,6 +475,18 @@ export default function DamDetailPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Nút Cấu hình Ngưỡng Cảnh Báo */}
+            {!isViewer && (
+              <button
+                onClick={openThresholdModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/40 rounded-lg text-amber-400 text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                title="Cấu hình Ngưỡng Cảnh Báo cho Đập"
+              >
+                <Sliders className="w-3.5 h-3.5 shrink-0" />
+                <span>Cấu hình Ngưỡng Cảnh Báo</span>
+              </button>
+            )}
+
             {/* Dam Action Buttons: Sửa, Xóa */}
             {isAdmin && (
               <div className="flex items-center gap-1.5 border-r border-border/60 pr-3">
@@ -1008,6 +1133,175 @@ export default function DamDetailPage() {
                 Xóa vĩnh viễn
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ── MODAL: THRESHOLD CONFIG FOR DAM ── */}
+      {thresholdModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
+            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
+              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-amber-400" />
+                <span>Cấu Hình Ngưỡng Báo Động & Cảnh Báo An Toàn ({dam.name})</span>
+              </h3>
+              <button
+                onClick={() => setThresholdModalOpen(false)}
+                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveThresholds} className="p-5 space-y-4 text-[11px] max-h-[80vh] overflow-y-auto">
+              
+              {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-[10px] text-amber-300 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>Cấu hình ngưỡng độ rung sẽ <b>tự động phát gói tin MQTT đồng bộ Realtime xuống Jetson TX2</b>.</span>
+                </div>
+                <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0">
+                  🟢 MQTT Sync
+                </span>
+              </div>
+
+              {/* 1. Ngưỡng Mực Nước Hồ */}
+              <div className="bg-card2 border border-sky-500/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-sky-400 font-bold text-[12px] mb-1">
+                  <Droplet className="w-4 h-4" />
+                  <span>1. Ngưỡng Mực Nước Hồ (Water Level)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="mb-1 text-warning">Mức BĐ1 (Chú ý)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.waterWarn}
+                      onChange={e => setThresholdForm(p => ({ ...p, waterWarn: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Mức BĐ2 (Báo động)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.waterAlert}
+                      onChange={e => setThresholdForm(p => ({ ...p, waterAlert: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Mức BĐ3 (Nguy cấp)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.waterCritical}
+                      onChange={e => setThresholdForm(p => ({ ...p, waterCritical: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-muted">Chiều cao bể/đập (cm)</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.tankHeight}
+                      onChange={e => setThresholdForm(p => ({ ...p, tankHeight: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Ngưỡng Độ Rung Thân Đập */}
+              <div className="bg-card2 border border-orange-500/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[12px] mb-1">
+                  <Activity className="w-4 h-4" />
+                  <span>2. Ngưỡng Độ Rung Thân Đập (Vibration mm/s)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="mb-1 text-warning">Ngưỡng Chú Ý</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.vibWarn}
+                      onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Ngưỡng Cảnh Báo AI</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.vibAlert}
+                      onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Ngưỡng Nguy Cấp</Label>
+                    <input
+                      type="number" step="0.1" required
+                      value={thresholdForm.vibCritical}
+                      onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Ngưỡng Độ Ẩm Rò Rỉ Móng */}
+              <div className="bg-card2 border border-emerald-500/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[12px] mb-1">
+                  <Droplet className="w-4 h-4" />
+                  <span>3. Ngưỡng Độ Ẩm Móng Đập (Moisture %)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <Label className="mb-1 text-warning">Ngưỡng Chú Ý</Label>
+                    <input
+                      type="number" step="1" required
+                      value={thresholdForm.mstWarn}
+                      onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-danger">Ngưỡng Cảnh Báo</Label>
+                    <input
+                      type="number" step="1" required
+                      value={thresholdForm.mstAlert}
+                      onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <Label className="mb-1 text-red-500">Ngưỡng Nguy Cấp</Label>
+                    <input
+                      type="number" step="1" required
+                      value={thresholdForm.mstCritical}
+                      onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
+                <button
+                  type="button"
+                  onClick={() => setThresholdModalOpen(false)}
+                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
+                >
+                  Lưu Cấu Hình Ngưỡng
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
