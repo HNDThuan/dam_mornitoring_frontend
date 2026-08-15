@@ -21,8 +21,12 @@ export default function UsersPage() {
   const [savingEdit, setSavingEdit] = useState(false)
 
   // Phân trang
-  const PAGE_SIZE = 10
+  const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
+  const handlePageSizeChange = (size) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const loadData = useCallback(async () => {
     try {
@@ -47,11 +51,11 @@ export default function UsersPage() {
 
   // Giữ page trong giới hạn hợp lệ khi danh sách thay đổi (vd: sau khi xóa tài khoản)
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(users.length / PAGE_SIZE))
+    const totalPages = Math.max(1, Math.ceil(users.length / pageSize))
     if (page > totalPages) setPage(totalPages)
-  }, [users, page])
+  }, [users, page, pageSize])
 
-  const paginatedUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const paginatedUsers = users.slice((page - 1) * pageSize, page * pageSize)
 
   const handleApproveQuick = async (user) => {
     try {
@@ -260,7 +264,15 @@ export default function UsersPage() {
             </table>
           </div>
         )}
-        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={users.length} onPageChange={setPage} itemLabel="tài khoản" />
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          totalItems={users.length}
+          onPageChange={setPage}
+          itemLabel="tài khoản"
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </Panel>
 
       {/* Edit User Modal */}

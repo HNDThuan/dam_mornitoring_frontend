@@ -25,8 +25,6 @@ const CATEGORY_MAP = {
   THRESHOLD: { label: 'Ngưỡng báo động', icon: Sliders, color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
 }
 
-const PAGE_SIZE = 20
-
 export default function AuditLogsPage() {
   const { user, token, isAdmin, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -41,12 +39,18 @@ export default function AuditLogsPage() {
   const [search, setSearch] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const loadLogs = useCallback(async () => {
     try {
       setLoading(true)
       const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
-      const res = await fetchAuditLogs(selectedCategory, PAGE_SIZE, currentToken, page, search || undefined)
+      const res = await fetchAuditLogs(selectedCategory, pageSize, currentToken, page, search || undefined)
       setLogs(res.logs || [])
       setTotal(res.total || 0)
       setCategoryCounts(res.categoryCounts || {})
@@ -56,7 +60,7 @@ export default function AuditLogsPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedCategory, token, page, search])
+  }, [selectedCategory, token, page, pageSize, search])
 
   useEffect(() => {
     if (!authLoading) {
@@ -268,7 +272,15 @@ export default function AuditLogsPage() {
           </div>
         )}
         {!loading && !error && (
-          <Pagination page={page} pageSize={PAGE_SIZE} totalItems={total} onPageChange={setPage} itemLabel="bản ghi" />
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={total}
+            onPageChange={setPage}
+            itemLabel="bản ghi"
+            pageSizeOptions={[10, 20, 50, 100]}
+            onPageSizeChange={handlePageSizeChange}
+          />
         )}
       </Panel>
     </div>

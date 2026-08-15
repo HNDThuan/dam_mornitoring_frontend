@@ -140,24 +140,55 @@ export function RadialGauge({ value = 0, size = 96, stroke = 8, status = 'info',
 }
 
 /**
- * Standard pagination footer: "Hiển thị X–Y trong tổng số Z" + Trước/Sau controls.
- * Controlled — pass current `page` (1-indexed) and `onPageChange`. Renders nothing
- * when there's nothing to paginate (totalItems <= pageSize).
+ * Standard pagination footer: "Hiển thị X–Y trong tổng số Z" + Trước/Sau controls,
+ * plus an optional page-size selector. Controlled — pass current `page` (1-indexed)
+ * and `onPageChange`. Pass `pageSizeOptions` + `onPageSizeChange` to let the user
+ * adjust how many rows show per page; omit them to keep the old fixed-size behavior.
+ * Renders nothing when there's no data, or when everything already fits on one page
+ * and there's no size selector to interact with.
  */
-export function Pagination({ page, pageSize, totalItems, onPageChange, itemLabel = 'bản ghi', className = '' }) {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
-  if (totalItems <= pageSize) return null
+export function Pagination({
+  page,
+  pageSize,
+  totalItems,
+  onPageChange,
+  itemLabel = 'bản ghi',
+  className = '',
+  pageSizeOptions,
+  onPageSizeChange,
+}) {
+  const hasSizeSelector = Boolean(pageSizeOptions?.length && onPageSizeChange)
+  if (totalItems <= 0) return null
+  if (totalItems <= pageSize && !hasSizeSelector) return null
 
-  const start = totalItems > 0 ? (page - 1) * pageSize + 1 : 0
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const start = (page - 1) * pageSize + 1
   const end = Math.min(page * pageSize, totalItems)
 
   return (
-    <div className={`flex flex-col sm:flex-row justify-between items-center gap-2 px-3.5 py-2.5 border-t border-border/70 bg-card2/30 ${className}`}>
-      <Mono className="text-[9px] text-muted">
-        Hiển thị {start}–{end} trong tổng số {totalItems} {itemLabel}
-      </Mono>
+    <div className={`flex flex-col sm:flex-row justify-between items-center gap-2.5 px-3.5 py-2.5 border-t border-border/70 bg-card2/30 ${className}`}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Mono className="text-[9px] text-muted">
+          Hiển thị {start}–{end} trong tổng số {totalItems} {itemLabel}
+        </Mono>
 
-      <div className="flex items-center gap-1">
+        {hasSizeSelector && (
+          <label className="flex items-center gap-1.5 text-[9px] text-muted cursor-pointer">
+            <span>Số dòng/trang:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => onPageSizeChange(Number(e.target.value))}
+              className="bg-card2 border border-border rounded-md text-[10px] text-tx px-1.5 py-0.5 focus-visible:outline-none focus:border-accent cursor-pointer"
+            >
+              {pageSizeOptions.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <div className="flex items-center gap-1 shrink-0">
         <button
           disabled={page <= 1}
           onClick={() => onPageChange(Math.max(page - 1, 1))}

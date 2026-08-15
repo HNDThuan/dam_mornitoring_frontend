@@ -227,11 +227,16 @@ export default function HistoryPage() {
   }, [historyRecords, search])
 
   // Phân trang
-  const PAGE_SIZE = 10
+  const [pageSize, setPageSize] = useState(10)
   const paginatedRecords = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE
-    return filteredRecords.slice(start, start + PAGE_SIZE)
-  }, [filteredRecords, page])
+    const start = (page - 1) * pageSize
+    return filteredRecords.slice(start, start + pageSize)
+  }, [filteredRecords, page, pageSize])
+
+  const handlePageSizeChange = (size) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   const isLoading = alarmsLoading || damLoading || loadingHistory
 
@@ -544,7 +549,14 @@ export default function HistoryPage() {
             </table>
           </div>
 
-          <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredRecords.length} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredRecords.length}
+            onPageChange={setPage}
+            pageSizeOptions={[10, 20, 50, 100]}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </Card>
 
       </div>

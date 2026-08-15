@@ -84,8 +84,12 @@ export default function NodesPage() {
   const [filterStationId, setFilterStationId] = useState('')
 
   // Phân trang
-  const PAGE_SIZE = 10
+  const [pageSize, setPageSize] = useState(10)
   const [page, setPage] = useState(1)
+  const handlePageSizeChange = (size) => {
+    setPageSize(size)
+    setPage(1)
+  }
 
   // Expanded rows
   const [expandedRows, setExpandedRows] = useState(new Set())
@@ -178,11 +182,11 @@ export default function NodesPage() {
 
   // Giữ page trong giới hạn hợp lệ khi danh sách/bộ lọc thay đổi
   useEffect(() => {
-    const totalPages = Math.max(1, Math.ceil(filteredNodes.length / PAGE_SIZE))
+    const totalPages = Math.max(1, Math.ceil(filteredNodes.length / pageSize))
     if (page > totalPages) setPage(totalPages)
-  }, [filteredNodes.length, page])
+  }, [filteredNodes.length, page, pageSize])
 
-  const paginatedNodes = filteredNodes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const paginatedNodes = filteredNodes.slice((page - 1) * pageSize, page * pageSize)
 
   // Toggle expanded row
   const toggleExpanded = (id) => {
@@ -678,7 +682,15 @@ export default function NodesPage() {
             })}
           </tbody>
         </table>
-        <Pagination page={page} pageSize={PAGE_SIZE} totalItems={filteredNodes.length} onPageChange={setPage} itemLabel="node" />
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          totalItems={filteredNodes.length}
+          onPageChange={setPage}
+          itemLabel="node"
+          pageSizeOptions={[10, 20, 50, 100]}
+          onPageSizeChange={handlePageSizeChange}
+        />
       </Panel>
 
       {/* ── TOAST NOTIFICATION ── */}
