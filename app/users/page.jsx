@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { fetchUsers, approveUser as apiApproveUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser, fetchDams } from '@/lib/api'
 import { Mono, Panel, StatTile } from '@/components/ui'
+import { Field, Select, Modal, FormActions, Button, FormAlert } from '@/components/form'
 import { Users, CheckCircle, XCircle, Shield, Building2, Trash2, Edit2, RefreshCw, AlertTriangle, UserCheck, Clock, Ban } from 'lucide-react'
 
 export default function UsersPage() {
@@ -17,6 +18,7 @@ export default function UsersPage() {
   // Edit / Approve modal state
   const [editingUser, setEditingUser] = useState(null)
   const [editForm, setEditForm] = useState({ role: 'OPERATOR', assignedDamId: '', status: 'ACTIVE' })
+  const [savingEdit, setSavingEdit] = useState(false)
 
   const loadData = useCallback(async () => {
     try {
@@ -52,12 +54,15 @@ export default function UsersPage() {
   const handleSaveEdit = async () => {
     if (!editingUser) return
     try {
+      setSavingEdit(true)
       await apiUpdateUser(editingUser.id, editForm, token)
       setActionSuccess(`Đã cập nhật thông tin người dùng "${editingUser.username}"!`)
       setEditingUser(null)
       await loadData()
     } catch (err) {
       setError(err.message || 'Cập nhật thất bại')
+    } finally {
+      setSavingEdit(false)
     }
   }
 
@@ -116,19 +121,8 @@ export default function UsersPage() {
       </div>
 
       {/* Action Messages */}
-      {actionSuccess && (
-        <div className="p-3 bg-safe/10 border border-safe/30 rounded-lg text-safe text-xs font-bold flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 shrink-0" />
-          <span>{actionSuccess}</span>
-        </div>
-      )}
-
-      {error && (
-        <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-xs font-bold flex items-center gap-2">
-          <XCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
+      <FormAlert variant="safe" icon={CheckCircle}>{actionSuccess}</FormAlert>
+      <FormAlert variant="danger" icon={XCircle}>{error}</FormAlert>
 
       {/* Table */}
       <Panel
@@ -257,72 +251,57 @@ export default function UsersPage() {
       </Panel>
 
       {/* Edit User Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="glass-panel rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-tx">Chỉnh sửa phân quyền: {editingUser.fullName}</h3>
+      <Modal
+        open={!!editingUser}
+        onClose={() => setEditingUser(null)}
+        title={`Chỉnh sửa phân quyền: ${editingUser?.fullName || ''}`}
+        icon={Shield}
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setEditingUser(null)}>Hủy</Button>
+            <Button variant="primary" loading={savingEdit} onClick={handleSaveEdit}>Lưu Thay Đổi</Button>
+          </FormActions>
+        }
+      >
+        <Field label="Vai trò (Role)" htmlFor="edit-role">
+          <Select
+            id="edit-role"
+            value={editForm.role}
+            onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+          >
+            <option value="ADMIN">ADMIN (Quản trị viên toàn hệ thống)</option>
+            <option value="OPERATOR">OPERATOR (Cán bộ trực đập)</option>
+            <option value="VIEWER">VIEWER (Khách xem read-only)</option>
+          </Select>
+        </Field>
 
-            <div className="space-y-3 text-xs">
-              <div className="space-y-1">
-                <label className="text-muted uppercase font-bold">Vai trò (Role)</label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2.5 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                >
-                  <option value="ADMIN">ADMIN (Quản trị viên toàn hệ thống)</option>
-                  <option value="OPERATOR">OPERATOR (Cán bộ trực đập)</option>
-                  <option value="VIEWER">VIEWER (Khách xem read-only)</option>
-                </select>
-              </div>
+        <Field label="Đập phụ trách (Assigned Dam)" htmlFor="edit-dam">
+          <Select
+            id="edit-dam"
+            value={editForm.assignedDamId}
+            onChange={(e) => setEditForm({ ...editForm, assignedDamId: e.target.value })}
+          >
+            <option value="">-- Tất cả các đập (Dành cho Admin/Viewer) --</option>
+            {dams.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name} ({d.location})
+              </option>
+            ))}
+          </Select>
+        </Field>
 
-              <div className="space-y-1">
-                <label className="text-muted uppercase font-bold">Đập phụ trách (Assigned Dam)</label>
-                <select
-                  value={editForm.assignedDamId}
-                  onChange={(e) => setEditForm({ ...editForm, assignedDamId: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2.5 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                >
-                  <option value="">-- Tất cả các đập (Dành cho Admin/Viewer) --</option>
-                  {dams.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.location})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-muted uppercase font-bold">Trạng thái tài khoản</label>
-                <select
-                  value={editForm.status}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2.5 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                >
-                  <option value="ACTIVE">ACTIVE (Hoạt động)</option>
-                  <option value="PENDING_APPROVAL">PENDING_APPROVAL (Chờ duyệt)</option>
-                  <option value="SUSPENDED">SUSPENDED (Bị khóa)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-border/40">
-              <button
-                onClick={() => setEditingUser(null)}
-                className="px-4 py-2 border border-border rounded-lg text-[11px] font-semibold text-muted bg-transparent hover:bg-white/5 hover:text-tx cursor-pointer transition-colors"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveEdit}
-                className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 text-white rounded-lg text-[11px] font-bold cursor-pointer shadow-glow transition-all"
-              >
-                Lưu Thay Đổi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        <Field label="Trạng thái tài khoản" htmlFor="edit-status">
+          <Select
+            id="edit-status"
+            value={editForm.status}
+            onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+          >
+            <option value="ACTIVE">ACTIVE (Hoạt động)</option>
+            <option value="PENDING_APPROVAL">PENDING_APPROVAL (Chờ duyệt)</option>
+            <option value="SUSPENDED">SUSPENDED (Bị khóa)</option>
+          </Select>
+        </Field>
+      </Modal>
     </div>
   )
 }

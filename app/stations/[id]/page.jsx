@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { getStatus, getStatusBySeverity } from "@/lib/statusConfig";
 import { Mono, Badge, Label, Panel, LiveDot, RadialGauge } from "@/components/ui";
+import { Field, TextInput, Modal, FormActions, Button, Toast } from "@/components/form";
 import { useSensorData } from "@/hooks/useSensorData";
 import { useDamData } from "@/hooks/useDamData";
 import { useLanguage } from "@/context/LanguageContext";
@@ -33,7 +34,7 @@ import CameraViewer from "@/components/CameraViewer";
 import DamMap from "@/components/DamMap";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
-import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, X, Radio, Sliders, Droplet, Activity, Zap } from "lucide-react";
+import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity, Zap } from "lucide-react";
 import { fetchThresholdConfigs, updateThresholdConfig, updateStation, fetchSensorClusters, updateSensorCluster } from "@/lib/api";
 
 const CHART_STYLE = {
@@ -213,6 +214,7 @@ export default function StationDetailPage() {
 
   // Threshold Modal State
   const [thresholdModalOpen, setThresholdModalOpen] = useState(false)
+  const [savingThreshold, setSavingThreshold] = useState(false)
   const [thresholdConfigs, setThresholdConfigs] = useState([])
   const [thresholdForm, setThresholdForm] = useState({
     bd1: 6.0,
@@ -269,9 +271,9 @@ export default function StationDetailPage() {
     setThresholdModalOpen(true)
   }
 
-  const handleSaveThresholds = async (e) => {
-    e.preventDefault()
+  const handleSaveThresholds = async () => {
     try {
+      setSavingThreshold(true)
       await updateStation(st.id, {
         bd1: Number(thresholdForm.bd1),
         bd2: Number(thresholdForm.bd2),
@@ -333,12 +335,16 @@ export default function StationDetailPage() {
     } catch (err) {
       console.error('[StationDetail] Lỗi lưu ngưỡng:', err)
       showToast('Không thể cập nhật ngưỡng cảnh báo!', 'error')
+    } finally {
+      setSavingThreshold(false)
     }
   }
 
   // Edit / Delete Modal State
   const [editingModalOpen, setEditingModalOpen] = useState(false)
+  const [savingStation, setSavingStation] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [stationForm, setStationForm] = useState({
     name: '',
     location: '',
@@ -368,9 +374,9 @@ export default function StationDetailPage() {
     setEditingModalOpen(true)
   }
 
-  const handleSaveStation = async (e) => {
-    e.preventDefault()
+  const handleSaveStation = async () => {
     try {
+      setSavingStation(true)
       await updateStation(st.id, {
         name: stationForm.name,
         location: stationForm.location,
@@ -388,11 +394,14 @@ export default function StationDetailPage() {
       refetch(true)
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setSavingStation(false)
     }
   }
 
   const handleConfirmDelete = async () => {
     try {
+      setDeleting(true)
       await deleteStation(st.id)
       showToast(`Đã xóa trạm quan trắc ${st.name}!`, 'success')
       setDeleteConfirm(false)
@@ -401,6 +410,8 @@ export default function StationDetailPage() {
       }, 1000)
     } catch (err) {
       showToast(`Lỗi khi xóa: ${err.message}`, 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -523,18 +534,7 @@ export default function StationDetailPage() {
       <ConnectionBanner connected={connected} error={error} />
 
       {/* Toast Notification */}
-      {toast && (
-        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${
-          toast.type === 'error'
-            ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
-            : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
-        }`}>
-          <span className="text-[12px]">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* Header */}
       <div className="flex justify-between items-start mb-5">
@@ -833,333 +833,279 @@ export default function StationDetailPage() {
       </div>
 
       {/* ── MODAL: EDIT STATION ── */}
-      {editingModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-accent" />
-                <span>Chỉnh sửa thông tin Trạm #{st.id}</span>
-              </h3>
-              <button
-                onClick={() => setEditingModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveStation} className="p-5 space-y-3 text-[11px]">
-              <div>
-                <Label className="mb-1">Tên Trạm quan trắc</Label>
-                <input
-                  required
-                  value={stationForm.name}
-                  onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="vd: Trạm Tân Ấp 1"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={stationForm.latitude}
-                    onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
-                    placeholder="vd: 21.0381"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={stationForm.longitude}
-                    onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
-                    placeholder="vd: 105.8492"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1">Địa danh / Vị trí</Label>
-                <input
-                  value={stationForm.location}
-                  onChange={e => setStationForm(p => ({ ...p, location: e.target.value }))}
-                  placeholder="vd: Hoàn Kiếm, Hà Nội"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Tên Sông</Label>
-                  <input
-                    value={stationForm.river}
-                    onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
-                    placeholder="vd: Sông Hồng"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Vị trí Km / Lý trình</Label>
-                  <input
-                    value={stationForm.km}
-                    onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
-                    placeholder="vd: K25+500"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 border-t border-border pt-3">
-                <div>
-                  <Label className="mb-1">Báo động 1 (m)</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={stationForm.bd1}
-                    onChange={e => setStationForm(p => ({ ...p, bd1: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Báo động 2 (m)</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={stationForm.bd2}
-                    onChange={e => setStationForm(p => ({ ...p, bd2: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-warning"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Báo động 3 (m)</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={stationForm.bd3}
-                    onChange={e => setStationForm(p => ({ ...p, bd3: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-danger font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setEditingModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-transparent cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-info to-accent rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
-                >
-                  Lưu thay đổi
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={editingModalOpen}
+        onClose={() => setEditingModalOpen(false)}
+        title={`Chỉnh sửa thông tin Trạm #${st.id}`}
+        icon={Radio}
+        maxWidth="max-w-2xl"
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setEditingModalOpen(false)}>Hủy</Button>
+            <Button variant="primary" loading={savingStation} onClick={handleSaveStation}>Lưu thay đổi</Button>
+          </FormActions>
+        }
+      >
+        <div className="space-y-2.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Tên Trạm quan trắc" required htmlFor="station-name">
+              <TextInput
+                id="station-name"
+                required
+                value={stationForm.name}
+                onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="vd: Trạm Tân Ấp 1"
+              />
+            </Field>
+            <Field label="Địa danh / Vị trí" htmlFor="station-location">
+              <TextInput
+                id="station-location"
+                value={stationForm.location}
+                onChange={e => setStationForm(p => ({ ...p, location: e.target.value }))}
+                placeholder="vd: Hoàn Kiếm, Hà Nội"
+              />
+            </Field>
           </div>
+
+          <div className="grid grid-cols-4 gap-2.5">
+            <Field label="Vĩ độ (Latitude °N)" required htmlFor="station-lat">
+              <TextInput
+                id="station-lat"
+                type="number"
+                step="0.0001"
+                required
+                value={stationForm.latitude}
+                onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
+                placeholder="vd: 21.0381"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Kinh độ (Longitude °E)" required htmlFor="station-lng">
+              <TextInput
+                id="station-lng"
+                type="number"
+                step="0.0001"
+                required
+                value={stationForm.longitude}
+                onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
+                placeholder="vd: 105.8492"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Tên Sông" htmlFor="station-river">
+              <TextInput
+                id="station-river"
+                value={stationForm.river}
+                onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
+                placeholder="vd: Sông Hồng"
+              />
+            </Field>
+            <Field label="Vị trí Km / Lý trình" htmlFor="station-km">
+              <TextInput
+                id="station-km"
+                value={stationForm.km}
+                onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
+                placeholder="vd: K25+500"
+                className="font-mono"
+              />
+            </Field>
+          </div>
+
+        <div className="grid grid-cols-3 gap-2.5 border-t border-border pt-2.5">
+          <Field label="Báo động 1 (m)" htmlFor="station-bd1">
+            <TextInput
+              id="station-bd1"
+              type="number"
+              step="0.1"
+              value={stationForm.bd1}
+              onChange={e => setStationForm(p => ({ ...p, bd1: e.target.value }))}
+              className="font-mono"
+            />
+          </Field>
+          <Field label="Báo động 2 (m)" htmlFor="station-bd2">
+            <TextInput
+              id="station-bd2"
+              type="number"
+              step="0.1"
+              value={stationForm.bd2}
+              onChange={e => setStationForm(p => ({ ...p, bd2: e.target.value }))}
+              className="font-mono text-warning"
+            />
+          </Field>
+          <Field label="Báo động 3 (m)" htmlFor="station-bd3">
+            <TextInput
+              id="station-bd3"
+              type="number"
+              step="0.1"
+              value={stationForm.bd3}
+              onChange={e => setStationForm(p => ({ ...p, bd3: e.target.value }))}
+              className="font-mono text-danger font-bold"
+            />
+          </Field>
         </div>
-      )}
+        </div>
+      </Modal>
 
       {/* ── MODAL: DELETE CONFIRMATION ── */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-5 text-center animate-in fade-in zoom-in duration-150">
-            <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-3">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
-            </div>
-            <h3 className="text-base font-bold text-tx mb-2">Xác nhận xóa Trạm?</h3>
-            <p className="text-xs text-muted mb-5 leading-relaxed">
-              Bạn có chắc chắn muốn xóa <strong className="text-tx">{st.name}</strong>? Thao tác này không thể hoàn tác.
-            </p>
-            <div className="flex justify-center gap-2">
-              <button
-                onClick={() => setDeleteConfirm(false)}
-                className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-danger hover:bg-danger/80 text-white rounded-lg text-xs font-bold border-none cursor-pointer shadow-lg shadow-danger/20"
-              >
-                Xóa vĩnh viễn
-              </button>
-            </div>
+      <Modal
+        open={deleteConfirm}
+        onClose={() => setDeleteConfirm(false)}
+        maxWidth="max-w-sm"
+        footer={
+          <FormActions className="justify-center">
+            <Button variant="secondary" onClick={() => setDeleteConfirm(false)}>Hủy</Button>
+            <Button variant="danger" loading={deleting} onClick={handleConfirmDelete}>Xóa vĩnh viễn</Button>
+          </FormActions>
+        }
+      >
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-3">
+            <AlertTriangle className="w-6 h-6 shrink-0" />
           </div>
+          <h3 className="text-base font-bold text-tx mb-2">Xác nhận xóa Trạm?</h3>
+          <p className="text-xs text-muted leading-relaxed">
+            Bạn có chắc chắn muốn xóa <strong className="text-tx">{st.name}</strong>? Thao tác này không thể hoàn tác.
+          </p>
         </div>
-      )}
+      </Modal>
       {/* ── MODAL: THRESHOLD CONFIG FOR STATION ── */}
-      {thresholdModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-warning" />
-                <span>Cấu Hình Ngưỡng Cảnh Báo ({st.name})</span>
-              </h3>
-              <button
-                onClick={() => setThresholdModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={thresholdModalOpen}
+        onClose={() => setThresholdModalOpen(false)}
+        title={`Cấu Hình Ngưỡng Cảnh Báo (${st.name})`}
+        icon={Sliders}
+        maxWidth="max-w-2xl"
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setThresholdModalOpen(false)}>Hủy</Button>
+            <Button variant="primary" loading={savingThreshold} onClick={handleSaveThresholds}>Lưu Cấu Hình Ngưỡng</Button>
+          </FormActions>
+        }
+      >
+        <div className="space-y-2.5">
+        {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
+        <div className="bg-card2 border border-warning/30 rounded-lg p-2 text-[10px] text-warning flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-warning shrink-0" />
+            <span>Ngưỡng độ rung đồng bộ Realtime qua MQTT tới Edge Gateway Jetson TX2.</span>
+          </div>
+          <span className="text-[9px] text-safe font-semibold bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded shrink-0">
+            MQTT Sync
+          </span>
+        </div>
 
-            <form onSubmit={handleSaveThresholds} className="p-5 space-y-4 text-[11px] max-h-[80vh] overflow-y-auto">
-              
-              {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
-              <div className="bg-warning/10 border border-warning/30 rounded-lg p-2.5 text-[10px] text-warning flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-warning shrink-0" />
-                  <span>Ngưỡng độ rung sẽ <b>tự động đồng bộ Realtime qua MQTT</b> tới Edge Gateway Jetson TX2.</span>
-                </div>
-                <span className="text-[9px] text-safe font-semibold bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded shrink-0">
-                  🟢 MQTT Sync
-                </span>
-              </div>
-
-              {/* 1. Ngưỡng Mực Nước Báo Động (m) */}
-              <div className="bg-card2 border border-info/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-info font-bold text-[12px] mb-1">
-                  <Droplet className="w-4 h-4" />
-                  <span>1. Ngưỡng Mực Nước Mức Báo Động (m)</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="mb-1 text-warning">Báo Động 1 (BĐ1)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.bd1}
-                      onChange={e => setThresholdForm(p => ({ ...p, bd1: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Báo Động 2 (BĐ2)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.bd2}
-                      onChange={e => setThresholdForm(p => ({ ...p, bd2: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Báo Động 3 (BĐ3)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.bd3}
-                      onChange={e => setThresholdForm(p => ({ ...p, bd3: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. Ngưỡng Độ Rung Cảnh Báo (mm/s) */}
-              <div className="bg-card2 border border-orange-500/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[12px] mb-1">
-                  <Activity className="w-4 h-4" />
-                  <span>2. Ngưỡng Độ Rung Báo Động (Vibration mm/s)</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="mb-1 text-warning">Chú Ý (mm/s)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.vibWarn}
-                      onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Cảnh Báo (mm/s)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.vibAlert}
-                      onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Nguy Cấp (mm/s)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.vibCritical}
-                      onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Ngưỡng Độ Ẩm Móng (%) */}
-              <div className="bg-card2 border border-emerald-500/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[12px] mb-1">
-                  <Droplet className="w-4 h-4" />
-                  <span>3. Ngưỡng Độ Ẩm Rò Rỉ Móng (%)</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="mb-1 text-warning">Chú Ý (%)</Label>
-                    <input
-                      type="number" step="1" required
-                      value={thresholdForm.mstWarn}
-                      onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Cảnh Báo (%)</Label>
-                    <input
-                      type="number" step="1" required
-                      value={thresholdForm.mstAlert}
-                      onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Nguy Cấp (%)</Label>
-                    <input
-                      type="number" step="1" required
-                      value={thresholdForm.mstCritical}
-                      onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setThresholdModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
-                >
-                  Lưu Cấu Hình Ngưỡng
-                </button>
-              </div>
-            </form>
+        {/* 1. Ngưỡng Mực Nước Báo Động (m) */}
+        <div className="bg-card2 border border-info/30 rounded-lg p-2.5 space-y-2">
+          <div className="flex items-center gap-1.5 text-info font-bold text-[11px]">
+            <Droplet className="w-3.5 h-3.5" />
+            <span>1. Ngưỡng Mực Nước Mức Báo Động (m)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Báo Động 1 (BĐ1)" required htmlFor="th-bd1">
+              <TextInput
+                id="th-bd1"
+                type="number" step="0.1" min="0" required
+                value={thresholdForm.bd1}
+                onChange={e => setThresholdForm(p => ({ ...p, bd1: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Báo Động 2 (BĐ2)" required htmlFor="th-bd2">
+              <TextInput
+                id="th-bd2"
+                type="number" step="0.1" min="0" required
+                value={thresholdForm.bd2}
+                onChange={e => setThresholdForm(p => ({ ...p, bd2: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Báo Động 3 (BĐ3)" required htmlFor="th-bd3">
+              <TextInput
+                id="th-bd3"
+                type="number" step="0.1" min="0" required
+                value={thresholdForm.bd3}
+                onChange={e => setThresholdForm(p => ({ ...p, bd3: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
           </div>
         </div>
-      )}
+
+        {/* 2. Ngưỡng Độ Rung Cảnh Báo (mm/s) */}
+        <div className="bg-card2 border border-orange-500/30 rounded-lg p-2.5 space-y-2">
+          <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[11px]">
+            <Activity className="w-3.5 h-3.5" />
+            <span>2. Ngưỡng Độ Rung Báo Động (Vibration mm/s)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Chú Ý (mm/s)" required htmlFor="th-vib-warn">
+              <TextInput
+                id="th-vib-warn"
+                type="number" step="0.1" min="0" required
+                value={thresholdForm.vibWarn}
+                onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Cảnh Báo (mm/s)" required htmlFor="th-vib-alert">
+              <TextInput
+                id="th-vib-alert"
+                type="number" step="0.1" min="0" required
+                value={thresholdForm.vibAlert}
+                onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Nguy Cấp (mm/s)" required htmlFor="th-vib-crit">
+              <TextInput
+                id="th-vib-crit"
+                type="number" step="0.1" min="0" required
+                value={thresholdForm.vibCritical}
+                onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+          </div>
+        </div>
+
+        {/* 3. Ngưỡng Độ Ẩm Móng (%) */}
+        <div className="bg-card2 border border-emerald-500/30 rounded-lg p-2.5 space-y-2">
+          <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
+            <Droplet className="w-3.5 h-3.5" />
+            <span>3. Ngưỡng Độ Ẩm Rò Rỉ Móng (%)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Chú Ý (%)" required htmlFor="th-mst-warn">
+              <TextInput
+                id="th-mst-warn"
+                type="number" step="1" min="0" required
+                value={thresholdForm.mstWarn}
+                onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Cảnh Báo (%)" required htmlFor="th-mst-alert">
+              <TextInput
+                id="th-mst-alert"
+                type="number" step="1" min="0" required
+                value={thresholdForm.mstAlert}
+                onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Nguy Cấp (%)" required htmlFor="th-mst-crit">
+              <TextInput
+                id="th-mst-crit"
+                type="number" step="1" min="0" required
+                value={thresholdForm.mstCritical}
+                onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+          </div>
+        </div>
+        </div>
+      </Modal>
     </div>
   );
 }

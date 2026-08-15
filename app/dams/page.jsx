@@ -7,7 +7,8 @@ import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Label, Panel, RadialGauge, LiveDot } from '@/components/ui'
+import { Mono, Badge, Divider, Panel, RadialGauge, LiveDot } from '@/components/ui'
+import { Field, TextInput, Select, Modal, FormActions, Button, Toast } from '@/components/form'
 import {
   Plus,
   Pencil,
@@ -15,7 +16,6 @@ import {
   RefreshCw,
   Search,
   ChevronRight,
-  X,
   AlertTriangle,
   Database,
   Radio,
@@ -46,6 +46,8 @@ export default function DamsPage() {
   const [damModalOpen, setDamModalOpen] = useState(false)
   const [editingDam, setEditingDam] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, name }
+  const [savingDam, setSavingDam] = useState(false)
+  const [deletingDam, setDeletingDam] = useState(false)
 
   // Toast State
   const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' }
@@ -108,6 +110,7 @@ export default function DamsPage() {
   const handleSaveDam = async (e) => {
     e.preventDefault()
     try {
+      setSavingDam(true)
       if (editingDam) {
         await updateDam(editingDam.id, {
           name: damForm.name,
@@ -141,6 +144,8 @@ export default function DamsPage() {
       refetch(true)
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setSavingDam(false)
     }
   }
 
@@ -148,12 +153,15 @@ export default function DamsPage() {
   const handleConfirmDelete = async () => {
     if (!deleteConfirm) return
     try {
+      setDeletingDam(true)
       await deleteDam(deleteConfirm.id)
       showToast(`Đã xóa đập ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       refetch(true)
     } catch (err) {
       showToast(`Lỗi khi xóa: ${err.message}`, 'error')
+    } finally {
+      setDeletingDam(false)
     }
   }
 
@@ -205,7 +213,7 @@ export default function DamsPage() {
           {isAdmin && (
             <button
               onClick={openCreateDamModal}
-              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow shrink-0 whitespace-nowrap transition-all"
+              className="h-9 flex items-center gap-1.5 px-4 bg-accent hover:bg-accent/90 rounded-md text-white text-[11px] font-bold cursor-pointer border-none shrink-0 whitespace-nowrap transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>{t('damsPage.addDam')}</span>
@@ -288,7 +296,7 @@ export default function DamsPage() {
 
               {/* Metrics */}
               <div className="flex items-center gap-3 bg-card2 p-2.5 rounded-lg my-3 border border-border/40">
-                <RadialGauge value={dam.fillPct} size={52} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
+                <RadialGauge value={dam.fillPct} size={65} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
                 <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 text-[10px]">
                   <div>
                     <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
@@ -327,208 +335,162 @@ export default function DamsPage() {
       </div>
 
       {/* ── TOAST NOTIFICATION ── */}
-      {toast && (
-        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${toast.type === 'error'
-            ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
-            : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
-          }`}>
-          <span className="text-[12px]">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* ── MODAL: CREATE / EDIT DAM ── */}
-      {damModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Database className="w-4 h-4 text-accent" />
-                <span>{editingDam ? t('damsPage.editDam') : t('damsPage.addDam')}</span>
-              </h3>
-              <button
-                onClick={() => setDamModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={damModalOpen}
+        onClose={() => setDamModalOpen(false)}
+        title={editingDam ? t('damsPage.editDam') : t('damsPage.addDam')}
+        icon={Database}
+        maxWidth="max-w-3xl"
+        footer={
+          <FormActions>
+            <Button type="button" variant="secondary" onClick={() => setDamModalOpen(false)}>
+              {t('admin.cancel')}
+            </Button>
+            <Button type="submit" form="dam-form" variant="primary" loading={savingDam}>
+              {editingDam ? t('admin.save') : t('admin.create')}
+            </Button>
+          </FormActions>
+        }
+      >
+        <form id="dam-form" onSubmit={handleSaveDam} className="space-y-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Mã Đập Thủy Điện (ID)" hint="Tự động sinh bởi Backend">
+              <TextInput
+                icon={Lock}
+                disabled
+                readOnly
+                value={editingDam ? damForm.id : '(Tự động sinh bởi Backend)'}
+                className="font-mono cursor-not-allowed select-none"
+              />
+            </Field>
 
-            <form onSubmit={handleSaveDam} className="p-5 space-y-3 text-[11px]">
-              <div>
-                <Label className="mb-1">Mã Đập Thủy Điện (ID)</Label>
-                <input
-                  disabled
-                  readOnly
-                  value={editingDam ? damForm.id : '(Tự động sinh bởi Backend)'}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-muted outline-none opacity-70 font-mono cursor-not-allowed select-none"
-                />
-                <span className="text-[9px] text-muted mt-1 flex items-center gap-1">
-                  <Lock className="w-3 h-3 text-muted shrink-0" />
-                  <span>ID được Backend tự động tạo theo tên Đập để đảm bảo tính duy nhất.</span>
-                </span>
-              </div>
+            <Field label={t('admin.form.damNameLabel')} required htmlFor="dam-name">
+              <TextInput
+                id="dam-name"
+                required
+                value={damForm.name}
+                onChange={e => setDamForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="vd: Đập Thủy điện Hòa Bình"
+              />
+            </Field>
 
-              <div>
-                <Label className="mb-1">{t('admin.form.damNameLabel')}</Label>
-                <input
-                  required
-                  value={damForm.name}
-                  onChange={e => setDamForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="vd: Đập Thủy điện Hòa Bình"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={damForm.latitude}
-                    onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
-                    placeholder="vd: 20.8167"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={damForm.longitude}
-                    onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
-                    placeholder="vd: 105.3265"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1">Địa danh / Vị trí hành chính</Label>
-                <input
-                  value={damForm.location}
-                  onChange={e => setDamForm(p => ({ ...p, location: e.target.value }))}
-                  placeholder="vd: Hòa Bình"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="mb-1">{t('admin.form.waterLevelLabel')}</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={damForm.waterLevel}
-                    onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.flowLabel')}</Label>
-                  <input
-                    type="number"
-                    value={damForm.flow}
-                    onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.fillPctLabel')}</Label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    max="100"
-                    value={damForm.fillPct}
-                    onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1">{t('admin.form.statusLabel')}</Label>
-                <select
-                  value={damForm.status}
-                  onChange={e => setDamForm(p => ({ ...p, status: e.target.value }))}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                >
-                  <option value="safe">{t('status.safe')}</option>
-                  <option value="warning">{t('status.warning')}</option>
-                  <option value="danger">{t('status.danger')}</option>
-                </select>
-              </div>
-
-
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setDamModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-                >
-                  {t('admin.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
-                >
-                  {editingDam ? t('admin.save') : t('admin.create')}
-                </button>
-              </div>
-            </form>
+            <Field label="Địa danh / Vị trí hành chính" htmlFor="dam-location">
+              <TextInput
+                id="dam-location"
+                value={damForm.location}
+                onChange={e => setDamForm(p => ({ ...p, location: e.target.value }))}
+                placeholder="vd: Hòa Bình"
+              />
+            </Field>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Vĩ độ (Latitude °N)" required htmlFor="dam-lat">
+              <TextInput
+                id="dam-lat"
+                type="number"
+                step="0.0001"
+                required
+                value={damForm.latitude}
+                onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
+                placeholder="vd: 20.8167"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Kinh độ (Longitude °E)" required htmlFor="dam-lng">
+              <TextInput
+                id="dam-lng"
+                type="number"
+                step="0.0001"
+                required
+                value={damForm.longitude}
+                onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
+                placeholder="vd: 105.3265"
+                className="font-mono"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2.5">
+            <Field label={t('admin.form.waterLevelLabel')} htmlFor="dam-waterlevel">
+              <TextInput
+                id="dam-waterlevel"
+                type="number"
+                step="0.1"
+                value={damForm.waterLevel}
+                onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.flowLabel')} htmlFor="dam-flow">
+              <TextInput
+                id="dam-flow"
+                type="number"
+                value={damForm.flow}
+                onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.fillPctLabel')} htmlFor="dam-fillpct">
+              <TextInput
+                id="dam-fillpct"
+                type="number"
+                step="1"
+                min="0"
+                max="100"
+                value={damForm.fillPct}
+                onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.statusLabel')} htmlFor="dam-status">
+              <Select
+                id="dam-status"
+                value={damForm.status}
+                onChange={e => setDamForm(p => ({ ...p, status: e.target.value }))}
+              >
+                <option value="safe">{t('status.safe')}</option>
+                <option value="warning">{t('status.warning')}</option>
+                <option value="danger">{t('status.danger')}</option>
+              </Select>
+            </Field>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── DELETE CONFIRM MODAL ── */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-md p-5 shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center gap-3 mb-3 text-danger">
-              <div className="w-10 h-10 rounded-full bg-danger/10 border border-danger/30 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-danger" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-tx m-0">{t('admin.deleteConfirmTitle')}</h3>
-                <p className="text-[10px] text-muted m-0">{t('admin.deleteWarning')}</p>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2 p-3 rounded border border-border">
-              Xóa Đập thủy điện <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
-              <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
-                <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
-                <span>{t('admin.deleteDamNotice')}</span>
-              </span>
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-              >
-                {t('admin.cancel')}
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-danger rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-danger/20"
-              >
-                {t('admin.confirmDelete')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title={t('admin.deleteConfirmTitle')}
+        icon={AlertTriangle}
+        maxWidth="max-w-md"
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>
+              {t('admin.cancel')}
+            </Button>
+            <Button variant="danger" loading={deletingDam} onClick={handleConfirmDelete}>
+              {t('admin.confirmDelete')}
+            </Button>
+          </FormActions>
+        }
+      >
+        <p className="text-[10px] text-muted m-0">{t('admin.deleteWarning')}</p>
+        <p className="text-[11px] text-tx leading-relaxed bg-card2 p-3 rounded-lg border border-border">
+          Xóa Đập thủy điện <strong className="text-danger">{deleteConfirm?.name}</strong> (ID: {deleteConfirm?.id})?
+          <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
+            <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
+            <span>{t('admin.deleteDamNotice')}</span>
+          </span>
+        </p>
+      </Modal>
     </div>
   )
 }

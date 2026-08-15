@@ -9,7 +9,8 @@ import { exportAlarmsToExcel, exportAlarmToPDF } from '@/lib/exportHelpers'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label, Card } from '@/components/ui'
-import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio, FileSpreadsheet } from 'lucide-react'
+import { Field, TextInput, Textarea, Button } from '@/components/form'
+import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio, FileSpreadsheet, Mail } from 'lucide-react'
 
 export default function AlertsPage() {
   const { user, isOperator, isViewer, assignedDamId } = useAuth()
@@ -132,7 +133,7 @@ export default function AlertsPage() {
       } else {
         setEmailList(['ruka13312002@gmail.com'])
       }
-    }).catch(() => {})
+    }).catch(() => { })
   }, [sel])
 
   // Filter alarms
@@ -477,7 +478,7 @@ export default function AlertsPage() {
                 <Card className="p-3.5 flex flex-col justify-center">
                   <Label className="mb-2">Thời gian vượt ngưỡng</Label>
                   <Mono className={`text-2xl font-bold ${s.text}`}>
-                    {sel.durationS > 0 ? `${sel.durationS}s` : 'Tức thì'}
+                    {sel.durationS > 0 ? `${sel.durationS.toFixed(3)}s` : 'Tức thì'}
                   </Mono>
                   <p className="text-[12px] text-tx font-bold mt-1.5">
                     Loại: {typeLb}
@@ -604,22 +605,19 @@ export default function AlertsPage() {
               </div>
 
               {/* Form Admin tự thêm Email thật mới */}
-              <div className="flex gap-1.5">
-                <input
+              <div className="flex gap-1.5 items-start">
+                <TextInput
+                  icon={Mail}
                   type="email"
                   value={newEmailInput}
                   onChange={e => setNewEmailInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addEmailContact())}
                   placeholder="Thêm Email người nhận mới..."
-                  className="flex-1 bg-card2 border border-border rounded-lg px-2.5 py-1 text-tx text-[10px] outline-none focus:border-accent placeholder:text-faint"
+                  className="text-[10px] py-1.5"
                 />
-                <button
-                  type="button"
-                  onClick={addEmailContact}
-                  className="px-2.5 py-1 bg-accent/20 hover:bg-accent/30 border border-accent/40 text-accent rounded text-[10px] font-bold cursor-pointer transition-colors shrink-0"
-                >
+                <Button type="button" variant="secondary" onClick={addEmailContact} className="shrink-0 py-1.5">
                   + Thêm Email
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -644,8 +642,13 @@ export default function AlertsPage() {
                   Mẫu soạn sẵn
                 </span>
               </div>
-              <textarea value={msg || defaultMsg} onChange={e => setMsg(e.target.value)} rows={4}
-                className="w-full bg-card2 border border-border rounded-lg px-2.5 py-2 text-tx text-[10px] outline-none focus:border-accent resize-none leading-relaxed" />
+              <Textarea
+                value={msg || defaultMsg}
+                onChange={e => setMsg(e.target.value)}
+                rows={4}
+                maxLength={500}
+                className="text-[10px] py-2 leading-relaxed"
+              />
               <Mono className="text-[8px] text-muted">{(msg || defaultMsg).length}/500 ký tự</Mono>
             </div>
 

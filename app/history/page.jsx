@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Label, Card, Panel, LiveDot } from '@/components/ui'
+import { Mono, Badge, Divider, Card, Panel, LiveDot } from '@/components/ui'
+import { Field, Select, Button } from '@/components/form'
 import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert } from 'lucide-react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
@@ -257,76 +258,74 @@ export default function HistoryPage() {
         }
       >
         {/* 1. Chọn Đập Thủy Điện */}
-        <div className="mb-3">
-          <Label className="mb-1">Đập Thủy Điện</Label>
-          <select
+        <Field label="Đập Thủy Điện" htmlFor="filter-dam" className="mb-3">
+          <Select
+            id="filter-dam"
             value={selectedDamId}
             onChange={e => {
               setSelectedDamId(e.target.value)
               setSelectedStationId('all')
             }}
             disabled={isOperator && Boolean(assignedDamId)}
-            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent disabled:opacity-60"
           >
             {!isOperator && <option value="all">-- Tất cả các Đập --</option>}
             {availableDams.map(d => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
         {/* 2. Chọn Trạm Quan Trắc */}
-        <div className="mb-3">
-          <Label className="mb-1">Trạm Quan Trắc</Label>
-          <select
+        <Field label="Trạm Quan Trắc" htmlFor="filter-station" className="mb-3">
+          <Select
+            id="filter-station"
             value={selectedStationId}
             onChange={e => setSelectedStationId(e.target.value)}
-            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
           >
             <option value="all">-- Tất cả Trạm --</option>
             {availableStations.map(s => (
               <option key={s.id} value={s.id}>{s.name} ({s.location || s.river})</option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
         {/* 3. Chọn Loại Cảm Biến */}
-        <div className="mb-3">
-          <Label className="mb-1">Loại Cảm Biến</Label>
-          <select
+        <Field label="Loại Cảm Biến" htmlFor="filter-sensor-type" className="mb-3">
+          <Select
+            id="filter-sensor-type"
             value={sensorType}
             onChange={e => setSensorType(e.target.value)}
-            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
           >
             <option value="all">-- Tất cả loại Cảm biến --</option>
             <option value="water_level">Mực nước hồ (WTL)</option>
             <option value="vibration">Độ rung thân đập (VIB)</option>
             <option value="moisture">Độ ẩm móng đập (MST)</option>
-          </select>
-        </div>
+          </Select>
+        </Field>
 
         {/* 4. Khoảng Thời Gian */}
-        <div className="mb-4">
-          <Label className="mb-1">Khoảng Thời Gian</Label>
-          <select
+        <Field label="Khoảng Thời Gian" htmlFor="filter-time-range" className="mb-4">
+          <Select
+            id="filter-time-range"
             value={timeRange}
             onChange={e => setTimeRange(e.target.value)}
-            className="w-full bg-card2 border border-border rounded px-2.5 py-1.5 text-tx text-[11px] outline-none focus:border-accent"
           >
             <option value="24h">24 Giờ gần nhất</option>
             <option value="7d">7 Ngày gần nhất</option>
             <option value="30d">30 Ngày gần nhất</option>
             <option value="all">Toàn bộ lịch sử CSDL</option>
-          </select>
-        </div>
+          </Select>
+        </Field>
 
-        <button
+        <Button
+          variant="primary"
           onClick={loadHistoryData}
-          className="w-full py-2 bg-gradient-to-r from-accent2 to-accent rounded-md text-white text-[11px] font-bold border-none cursor-pointer hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-glow"
+          loading={loadingHistory}
+          className="w-full"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
+          <RefreshCw className="w-3.5 h-3.5" />
           <span>Áp Dụng Bộ Lọc</span>
-        </button>
+        </Button>
       </Panel>
 
       {/* ── KHU VỰC NỘI DUNG CHÍNH ── */}

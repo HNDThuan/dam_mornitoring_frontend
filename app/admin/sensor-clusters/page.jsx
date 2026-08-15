@@ -14,7 +14,8 @@ import {
   fetchThresholdConfigs,
   updateThresholdConfig,
 } from '@/lib/api'
-import { Label, Mono, Panel, StatTile } from '@/components/ui'
+import { Mono, Panel, StatTile } from '@/components/ui'
+import { Field, TextInput, Select, Modal, FormActions, Button, Toast } from '@/components/form'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -23,7 +24,6 @@ import {
   Trash2,
   RefreshCw,
   Search,
-  X,
   AlertTriangle,
   Cpu,
   Wifi,
@@ -33,7 +33,6 @@ import {
   Droplets,
   Thermometer,
   Activity,
-  CircleDot,
   Server,
   ExternalLink,
   MapPin,
@@ -94,6 +93,11 @@ export default function SensorClustersPage() {
   const [deviceModalOpen, setDeviceModalOpen] = useState(false)
   const [editingDevice, setEditingDevice] = useState(null)
   const [deviceClusterId, setDeviceClusterId] = useState(null)
+
+  // Saving / deleting states (for Button loading spinners)
+  const [savingCluster, setSavingCluster] = useState(false)
+  const [savingDevice, setSavingDevice] = useState(false)
+  const [deletingCluster, setDeletingCluster] = useState(false)
 
   // Toast State
   const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' }
@@ -223,6 +227,7 @@ export default function SensorClustersPage() {
   const handleSaveCluster = async (e) => {
     e.preventDefault()
     try {
+      setSavingCluster(true)
       const payload = {
         name: clusterForm.name,
         description: clusterForm.description,
@@ -259,7 +264,7 @@ export default function SensorClustersPage() {
           }
         }
 
-        showToast('Cập nhật Node & đồng bộ 2 chiều với Đập/Trạm & Jetson TX2 qua MQTT thành công!', 'success')
+        showToast('Cập nhật Node & đồng bộ 2 chiều với Đập/Trạm & Node thành công!', 'success')
       } else {
         const res = await createSensorCluster(payload)
         const newId = res?.node?.id || res?.cluster?.id || ''
@@ -269,18 +274,23 @@ export default function SensorClustersPage() {
       loadData(true)
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setSavingCluster(false)
     }
   }
 
   const handleDeleteCluster = async () => {
     if (!deleteConfirm) return
     try {
+      setDeletingCluster(true)
       await deleteSensorCluster(deleteConfirm.id)
       showToast(`Đã xóa Sensor Node ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       loadData(true)
     } catch (err) {
       showToast(`Lỗi khi xóa: ${err.message}`, 'error')
+    } finally {
+      setDeletingCluster(false)
     }
   }
 
@@ -310,6 +320,7 @@ export default function SensorClustersPage() {
   const handleSaveDevice = async (e) => {
     e.preventDefault()
     try {
+      setSavingDevice(true)
       if (editingDevice) {
         await updateSensorDevice(deviceClusterId, editingDevice.id, deviceForm)
         showToast('Cập nhật cảm biến thành công!', 'success')
@@ -321,6 +332,8 @@ export default function SensorClustersPage() {
       loadData(true)
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setSavingDevice(false)
     }
   }
 
@@ -428,7 +441,7 @@ export default function SensorClustersPage() {
           {!isViewer && (
             <button
               onClick={openCreateClusterModal}
-              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow shrink-0 whitespace-nowrap transition-all"
+              className="h-9 flex items-center gap-1.5 px-4 bg-accent hover:bg-accent/90 rounded-md text-white text-[11px] font-bold cursor-pointer border-none shrink-0 whitespace-nowrap transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm Sensor Node</span>
@@ -660,359 +673,281 @@ export default function SensorClustersPage() {
       </Panel>
 
       {/* ── TOAST NOTIFICATION ── */}
-      {toast && (
-        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${toast.type === 'error'
-          ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
-          : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
-          }`}>
-          <span className="text-[12px]">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* ── MODAL: CREATE / EDIT CLUSTER ── */}
-      {clusterModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="px-5 py-4 border-b border-border/70 flex justify-between items-center bg-card2/40">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-accent" />
-                <span>{editingCluster ? 'Sửa Sensor Node' : 'Thêm Sensor Node mới'}</span>
-              </h3>
-              <button
-                onClick={() => setClusterModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
+      <Modal
+        open={clusterModalOpen}
+        onClose={() => setClusterModalOpen(false)}
+        title={editingCluster ? 'Sửa Sensor Node' : 'Thêm Sensor Node mới'}
+        icon={Cpu}
+        maxWidth="max-w-3xl"
+        footer={
+          <FormActions>
+            <Button type="button" variant="secondary" onClick={() => setClusterModalOpen(false)}>Hủy</Button>
+            <Button type="submit" form="cluster-form" variant="primary" loading={savingCluster}>
+              {editingCluster ? 'Lưu thay đổi' : 'Tạo cụm mới'}
+            </Button>
+          </FormActions>
+        }
+      >
+        <form id="cluster-form" onSubmit={handleSaveCluster} className="space-y-2.5">
+
+          <Field label="Tên Sensor Node" required htmlFor="cluster-name">
+            <TextInput
+              id="cluster-name"
+              required
+              value={clusterForm.name}
+              onChange={e => setClusterForm(p => ({ ...p, name: e.target.value }))}
+              placeholder="vd: Sensor Node K25+500"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Mô tả" htmlFor="cluster-description">
+              <TextInput
+                id="cluster-description"
+                value={clusterForm.description}
+                onChange={e => setClusterForm(p => ({ ...p, description: e.target.value }))}
+                placeholder="Mô tả vị trí, mục đích..."
+              />
+            </Field>
+            <Field label="Vị trí lắp đặt" htmlFor="cluster-location">
+              <TextInput
+                id="cluster-location"
+                value={clusterForm.installLocation}
+                onChange={e => setClusterForm(p => ({ ...p, installLocation: e.target.value }))}
+                placeholder="vd: Thân đập chính - K25+500"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="MAC Address ESP32" htmlFor="cluster-mac">
+              <TextInput
+                id="cluster-mac"
+                value={clusterForm.espMacAddress}
+                onChange={e => setClusterForm(p => ({ ...p, espMacAddress: e.target.value }))}
+                placeholder="AA:BB:CC:DD:EE:FF"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Phiên bản Firmware" htmlFor="cluster-firmware">
+              <TextInput
+                id="cluster-firmware"
+                value={clusterForm.firmwareVersion}
+                onChange={e => setClusterForm(p => ({ ...p, firmwareVersion: e.target.value }))}
+                placeholder="vd: v1.0.0"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Gắn vào Trạm" required htmlFor="cluster-station">
+              <Select
+                id="cluster-station"
+                required
+                value={clusterForm.stationId}
+                onChange={e => setClusterForm(p => ({ ...p, stationId: e.target.value }))}
               >
-                <X className="w-4 h-4" />
-              </button>
+                <option value="">— Chọn trạm —</option>
+                {stations.map(s => {
+                  const dam = dams.find(d => d.id === s.damId)
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({dam ? dam.name : s.damId})
+                    </option>
+                  )
+                })}
+              </Select>
+            </Field>
+          </div>
+
+          {/* ⚡ Cấu Hình Ngưỡng Cảnh Báo Độ Rung AI Jetson TX2 */}
+          <div className="bg-card2 border border-amber-500/30 rounded-lg p-2.5 space-y-2 mt-2.5">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[10px] uppercase tracking-wide">
+                <Zap className="w-3.5 h-3.5 shrink-0" />
+                <span>Ngưỡng độ rung AI Jetson TX2 (mm/s)</span>
+              </div>
+              <span className="text-[9px] text-safe font-semibold bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded shrink-0">
+                Tự động đồng bộ MQTT
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              <Field label="Chú ý" required htmlFor="cluster-warn-high">
+                <TextInput
+                  id="cluster-warn-high"
+                  type="number" step="0.1" required
+                  value={clusterForm.warnHigh}
+                  onChange={e => setClusterForm(p => ({ ...p, warnHigh: e.target.value }))}
+                  placeholder="2.5"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Cảnh báo" required htmlFor="cluster-alert-high">
+                <TextInput
+                  id="cluster-alert-high"
+                  type="number" step="0.1" required
+                  value={clusterForm.vibrationThreshold}
+                  onChange={e => setClusterForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
+                  placeholder="15.0"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Nguy cấp" required htmlFor="cluster-critical-high">
+                <TextInput
+                  id="cluster-critical-high"
+                  type="number" step="0.1" required
+                  value={clusterForm.criticalHigh}
+                  onChange={e => setClusterForm(p => ({ ...p, criticalHigh: e.target.value }))}
+                  placeholder="25.0"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Số lần liên tiếp" required htmlFor="cluster-alert-count">
+                <TextInput
+                  id="cluster-alert-count"
+                  type="number" required
+                  value={clusterForm.alertMinCount}
+                  onChange={e => setClusterForm(p => ({ ...p, alertMinCount: e.target.value }))}
+                  placeholder="4"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Thời gian (s)" required htmlFor="cluster-alert-duration">
+                <TextInput
+                  id="cluster-alert-duration"
+                  type="number" step="0.5" required
+                  value={clusterForm.alertMinDurationSec}
+                  onChange={e => setClusterForm(p => ({ ...p, alertMinDurationSec: e.target.value }))}
+                  placeholder="6.0"
+                  className="font-mono"
+                />
+              </Field>
             </div>
 
-            <form onSubmit={handleSaveCluster} className="p-5 space-y-3 text-[11px]">
-
-              <div>
-                <Label className="mb-1">Tên Sensor Node</Label>
-                <input
-                  required
-                  value={clusterForm.name}
-                  onChange={e => setClusterForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="vd: Sensor Node K25+500"
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <Label className="mb-1">Mô tả</Label>
-                <input
-                  value={clusterForm.description}
-                  onChange={e => setClusterForm(p => ({ ...p, description: e.target.value }))}
-                  placeholder="Mô tả vị trí, mục đích..."
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">MAC Address ESP32</Label>
-                  <input
-                    value={clusterForm.espMacAddress}
-                    onChange={e => setClusterForm(p => ({ ...p, espMacAddress: e.target.value }))}
-                    placeholder="AA:BB:CC:DD:EE:FF"
-                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Phiên bản Firmware</Label>
-                  <input
-                    value={clusterForm.firmwareVersion}
-                    onChange={e => setClusterForm(p => ({ ...p, firmwareVersion: e.target.value }))}
-                    placeholder="vd: v1.0.0"
-                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1">Vị trí lắp đặt</Label>
-                <input
-                  value={clusterForm.installLocation}
-                  onChange={e => setClusterForm(p => ({ ...p, installLocation: e.target.value }))}
-                  placeholder="vd: Thân đập chính - K25+500"
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div>
-                <Label className="mb-1">Gắn vào Trạm</Label>
-                <select
-                  required
-                  value={clusterForm.stationId}
-                  onChange={e => setClusterForm(p => ({ ...p, stationId: e.target.value }))}
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                >
-                  <option value="">— Chọn trạm —</option>
-                  {stations.map(s => {
-                    const dam = dams.find(d => d.id === s.damId)
-                    return (
-                      <option key={s.id} value={s.id}>
-                        {s.name} ({dam ? dam.name : s.damId})
-                      </option>
-                    )
-                  })}
-                </select>
-              </div>
-
-              {/* ⚡ Cấu Hình Ngưỡng Cảnh Báo Độ Rung AI Jetson TX2 */}
-              <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-lg p-3 space-y-2 my-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
-                    <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>Cấu Hình Ngưỡng Độ Rung AI Jetson TX2 (mm/s - MQTT Sync)</span>
-                  </div>
-                  <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
-                    🟢 Tự động đồng bộ MQTT
-                  </span>
-                </div>
-                <div className="text-[9px] text-muted">
-                  Ngưỡng tại Node Jetson TX2 được <b>dùng chuyên biệt cho thông số Độ Rung (mm/s)</b>. Khi lưu, gói tin MQTT <code className="text-amber-400">config/gateway/+/update</code> sẽ được phát tức thì xuống Jetson TX2.
-                </div>
-                <div className="grid grid-cols-3 gap-2 pt-1">
-                  <div>
-                    <Label className="mb-1 text-warning">Chú ý (warn_high)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={clusterForm.warnHigh}
-                      onChange={e => setClusterForm(p => ({ ...p, warnHigh: e.target.value }))}
-                      placeholder="2.5"
-                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Cảnh báo (alert_high)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={clusterForm.vibrationThreshold}
-                      onChange={e => setClusterForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
-                      placeholder="15.0"
-                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-red-500">Nguy cấp (critical_high)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={clusterForm.criticalHigh}
-                      onChange={e => setClusterForm(p => ({ ...p, criticalHigh: e.target.value }))}
-                      placeholder="25.0"
-                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
-                    />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <Label className="mb-1">Số lần vượt ngưỡng liên tiếp</Label>
-                    <input
-                      type="number" required
-                      value={clusterForm.alertMinCount}
-                      onChange={e => setClusterForm(p => ({ ...p, alertMinCount: e.target.value }))}
-                      placeholder="4"
-                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1">Thời gian duy trì tối thiểu (s)</Label>
-                    <input
-                      type="number" step="0.5" required
-                      value={clusterForm.alertMinDurationSec}
-                      onChange={e => setClusterForm(p => ({ ...p, alertMinDurationSec: e.target.value }))}
-                      placeholder="6.0"
-                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {!editingCluster && (
-                <div className="bg-card2 border border-border rounded-lg p-3 text-[10px] text-muted">
-                  <div className="flex items-center gap-1.5 mb-1 text-info font-semibold">
-                    <CircleDot className="w-3 h-3" />
-                    <span>Cảm biến mặc định</span>
-                  </div>
-                  <span>Hệ thống sẽ tự động tạo 3 cảm biến: </span>
-                  <span className="text-sky-400">Mực nước (HC-SR04)</span>, {' '}
-                  <span className="text-emerald-400">Độ ẩm (DHT22)</span>, {' '}
-                  <span className="text-orange-400">Độ rung (SW-420)</span>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setClusterModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
-                >
-                  {editingCluster ? 'Lưu thay đổi' : 'Tạo cụm mới'}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+
+          {!editingCluster && (
+            <div className="bg-card2 border border-border rounded-lg px-3 py-2 text-[10px] text-muted">
+              <span className="text-info font-semibold">Cảm biến mặc định: </span>
+              <span className="text-sky-400">Mực nước (HC-SR04)</span>, {' '}
+              <span className="text-emerald-400">Độ ẩm (DHT22)</span>, {' '}
+              <span className="text-orange-400">Độ rung (SW-420)</span>
+            </div>
+          )}
+        </form>
+      </Modal>
 
       {/* ── MODAL: CREATE / EDIT DEVICE ── */}
-      {deviceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="px-5 py-4 border-b border-border/70 flex justify-between items-center bg-card2/40">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-accent2" />
-                <span>{editingDevice ? 'Sửa cảm biến' : 'Thêm cảm biến'}</span>
-              </h3>
-              <button
-                onClick={() => setDeviceModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={deviceModalOpen}
+        onClose={() => setDeviceModalOpen(false)}
+        title={editingDevice ? 'Sửa cảm biến' : 'Thêm cảm biến'}
+        icon={Activity}
+        maxWidth="max-w-md"
+        footer={
+          <FormActions>
+            <Button type="button" variant="secondary" onClick={() => setDeviceModalOpen(false)}>Hủy</Button>
+            <Button type="submit" form="device-form" variant="primary" loading={savingDevice}>
+              {editingDevice ? 'Lưu thay đổi' : 'Thêm cảm biến'}
+            </Button>
+          </FormActions>
+        }
+      >
+        <form id="device-form" onSubmit={handleSaveDevice} className="space-y-3">
+          <Field label="Loại cảm biến" htmlFor="device-sensor-type">
+            <Select
+              id="device-sensor-type"
+              value={deviceForm.sensorType}
+              onChange={e => {
+                const type = e.target.value
+                const cfg = SENSOR_TYPE_CONFIG[type]
+                setDeviceForm(p => ({
+                  ...p,
+                  sensorType: type,
+                  model: cfg?.defaultModel || '',
+                  unit: cfg?.unit || '',
+                }))
+              }}
+            >
+              <option value="water_level">Mực nước</option>
+              <option value="humidity">Độ ẩm</option>
+              <option value="vibration">Độ rung</option>
+            </Select>
+          </Field>
 
-            <form onSubmit={handleSaveDevice} className="p-5 space-y-3 text-[11px]">
-              <div>
-                <Label className="mb-1">Loại cảm biến</Label>
-                <select
-                  value={deviceForm.sensorType}
-                  onChange={e => {
-                    const type = e.target.value
-                    const cfg = SENSOR_TYPE_CONFIG[type]
-                    setDeviceForm(p => ({
-                      ...p,
-                      sensorType: type,
-                      model: cfg?.defaultModel || '',
-                      unit: cfg?.unit || '',
-                    }))
-                  }}
-                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                >
-                  <option value="water_level">Mực nước</option>
-                  <option value="humidity">Độ ẩm</option>
-                  <option value="vibration">Độ rung</option>
-                </select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Model</Label>
-                  <input
-                    value={deviceForm.model}
-                    onChange={e => setDeviceForm(p => ({ ...p, model: e.target.value }))}
-                    placeholder="vd: HC-SR04"
-                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Đơn vị</Label>
-                  <input
-                    value={deviceForm.unit}
-                    onChange={e => setDeviceForm(p => ({ ...p, unit: e.target.value }))}
-                    placeholder="vd: cm, %, mm/s"
-                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Giá trị hiệu chỉnh</Label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={deviceForm.calibrationOffset}
-                    onChange={e => setDeviceForm(p => ({ ...p, calibrationOffset: Number(e.target.value) }))}
-                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                {editingDevice && (
-                  <div>
-                    <Label className="mb-1">Trạng thái</Label>
-                    <select
-                      value={deviceForm.status}
-                      onChange={e => setDeviceForm(p => ({ ...p, status: e.target.value }))}
-                      className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
-                    >
-                      <option value="active">Hoạt động</option>
-                      <option value="inactive">Ngừng</option>
-                      <option value="faulty">Lỗi</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setDeviceModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
-                >
-                  {editingDevice ? 'Lưu thay đổi' : 'Thêm cảm biến'}
-                </button>
-              </div>
-            </form>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Model" htmlFor="device-model">
+              <TextInput
+                id="device-model"
+                value={deviceForm.model}
+                onChange={e => setDeviceForm(p => ({ ...p, model: e.target.value }))}
+                placeholder="vd: HC-SR04"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Đơn vị" htmlFor="device-unit">
+              <TextInput
+                id="device-unit"
+                value={deviceForm.unit}
+                onChange={e => setDeviceForm(p => ({ ...p, unit: e.target.value }))}
+                placeholder="vd: cm, %, mm/s"
+                className="font-mono"
+              />
+            </Field>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Giá trị hiệu chỉnh" htmlFor="device-calibration">
+              <TextInput
+                id="device-calibration"
+                type="number"
+                step="0.01"
+                value={deviceForm.calibrationOffset}
+                onChange={e => setDeviceForm(p => ({ ...p, calibrationOffset: Number(e.target.value) }))}
+                className="font-mono"
+              />
+            </Field>
+            {editingDevice && (
+              <Field label="Trạng thái" htmlFor="device-status">
+                <Select
+                  id="device-status"
+                  value={deviceForm.status}
+                  onChange={e => setDeviceForm(p => ({ ...p, status: e.target.value }))}
+                >
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Ngừng</option>
+                  <option value="faulty">Lỗi</option>
+                </Select>
+              </Field>
+            )}
+          </div>
+        </form>
+      </Modal>
 
       {/* ── DELETE CONFIRM MODAL ── */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-panel rounded-2xl w-full max-w-md p-5 shadow-2xl">
-            <div className="flex items-center gap-3 mb-3 text-danger">
-              <div className="w-10 h-10 rounded-full bg-danger/10 border border-danger/30 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-danger" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-tx m-0">Xác nhận xóa Sensor Node</h3>
-                <p className="text-[10px] text-muted m-0">Hành động này không thể hoàn tác</p>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2/70 p-3 rounded-lg border border-border">
-              Xóa Sensor Node <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
-              <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
-                <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
-                <span>Tất cả cảm biến trong Sensor Node này sẽ bị xóa theo.</span>
-              </span>
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 border border-border rounded-lg text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleDeleteCluster}
-                className="px-4 py-2 bg-danger/10 border border-danger/20 rounded-lg text-danger hover:bg-danger/20 hover:border-danger/40 text-[11px] font-bold cursor-pointer transition-colors"
-              >
-                Xóa Sensor Node
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title="Xác nhận xóa Sensor Node"
+        icon={AlertTriangle}
+        maxWidth="max-w-md"
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Hủy</Button>
+            <Button variant="danger" loading={deletingCluster} onClick={handleDeleteCluster}>Xóa Sensor Node</Button>
+          </FormActions>
+        }
+      >
+        <p className="text-[10px] text-muted m-0 -mt-2">Hành động này không thể hoàn tác</p>
+        <p className="text-[11px] text-tx leading-relaxed bg-card2/70 p-3 rounded-lg border border-border">
+          Xóa Sensor Node <strong className="text-danger">{deleteConfirm?.name}</strong> (ID: {deleteConfirm?.id})?
+          <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
+            <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
+            <span>Tất cả cảm biến trong Sensor Node này sẽ bị xóa theo.</span>
+          </span>
+        </p>
+      </Modal>
     </div>
   )
 }

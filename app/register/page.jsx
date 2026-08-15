@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { registerUser as apiRegister, fetchDams } from '@/lib/api'
 import { useLanguage } from '@/context/LanguageContext'
-import { Label } from '@/components/ui'
-import { ShieldCheck, User, Mail, Lock, Phone, Building2, AlertCircle, CheckCircle, ArrowLeft, Globe } from 'lucide-react'
+import { Field, TextInput, Select, Button, FormAlert } from '@/components/form'
+import { ShieldCheck, User, Mail, Lock, Phone, Building2, AlertCircle, CheckCircle, ArrowLeft, Globe, Eye, EyeOff } from 'lucide-react'
 
 export default function RegisterPage() {
   const { t, locale, toggleLanguage } = useLanguage()
@@ -21,6 +21,7 @@ export default function RegisterPage() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   useEffect(() => {
     fetchDams()
@@ -62,10 +63,10 @@ export default function RegisterPage() {
         </button>
       </div>
 
-      <div className="w-full max-w-lg glass-panel rounded-2xl shadow-panel p-8 relative z-10">
+      <div className="w-full max-w-lg bg-card border border-borderHi rounded-xl shadow-panel p-8 relative z-10">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-accent2 via-accent to-indigo-600 text-white shadow-glow mb-2">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-accent text-white mb-2">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-black tracking-tight text-tx">
@@ -77,10 +78,9 @@ export default function RegisterPage() {
         </div>
 
         {/* Alerts */}
-        {error && (
-          <div className="mb-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+        {!success && (
+          <div className="mb-4">
+            <FormAlert variant="danger" icon={AlertCircle}>{error}</FormAlert>
           </div>
         )}
 
@@ -101,111 +101,105 @@ export default function RegisterPage() {
         )}
 
         {!success && (
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} className="space-y-3.5" noValidate>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5">{t('auth.register.fullNameLabel')}</Label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    required
-                    value={form.fullName}
-                    onChange={e => setForm({ ...form, fullName: e.target.value })}
-                    placeholder={t('auth.register.fullNamePlaceholder')}
-                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1.5">{t('auth.register.usernameLabel')}</Label>
-                <div className="relative">
-                  <User className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    required
-                    value={form.username}
-                    onChange={e => setForm({ ...form, username: e.target.value })}
-                    placeholder={t('auth.register.usernamePlaceholder')}
-                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="mb-1.5">{t('auth.register.emailLabel')}</Label>
-                <div className="relative">
-                  <Mail className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={e => setForm({ ...form, email: e.target.value })}
-                    placeholder={t('auth.register.emailPlaceholder')}
-                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1.5">{t('auth.register.phoneLabel')}</Label>
-                <div className="relative">
-                  <Phone className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="tel"
-                    value={form.phoneNumber}
-                    onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
-                    placeholder={t('auth.register.phonePlaceholder')}
-                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-1.5">{t('auth.register.passwordLabel')}</Label>
-              <div className="relative">
-                <Lock className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="password"
+              <Field label={t('auth.register.fullNameLabel')} htmlFor="fullName">
+                <TextInput
+                  id="fullName"
+                  icon={User}
+                  type="text"
                   required
+                  autoComplete="name"
+                  value={form.fullName}
+                  onChange={e => setForm({ ...form, fullName: e.target.value })}
+                  placeholder={t('auth.register.fullNamePlaceholder')}
+                />
+              </Field>
+
+              <Field label={t('auth.register.usernameLabel')} htmlFor="username">
+                <TextInput
+                  id="username"
+                  icon={User}
+                  type="text"
+                  required
+                  autoComplete="username"
+                  value={form.username}
+                  onChange={e => setForm({ ...form, username: e.target.value })}
+                  placeholder={t('auth.register.usernamePlaceholder')}
+                />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={t('auth.register.emailLabel')} htmlFor="email">
+                <TextInput
+                  id="email"
+                  icon={Mail}
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  placeholder={t('auth.register.emailPlaceholder')}
+                />
+              </Field>
+
+              <Field label={t('auth.register.phoneLabel')} htmlFor="phoneNumber">
+                <TextInput
+                  id="phoneNumber"
+                  icon={Phone}
+                  type="tel"
+                  autoComplete="tel"
+                  value={form.phoneNumber}
+                  onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
+                  placeholder={t('auth.register.phonePlaceholder')}
+                />
+              </Field>
+            </div>
+
+            <Field label={t('auth.register.passwordLabel')} htmlFor="password">
+              <div className="relative">
+                <TextInput
+                  id="password"
+                  icon={Lock}
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="new-password"
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   placeholder={t('auth.register.passwordPlaceholder')}
-                  className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
+                  className="pr-10"
                 />
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-1.5">{t('auth.register.assignedDamLabel')}</Label>
-              <div className="relative">
-                <Building2 className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <select
-                  value={form.assignedDamId}
-                  onChange={e => setForm({ ...form, assignedDamId: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx focus-visible:outline-none focus:border-accent transition-colors"
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-faint hover:text-muted cursor-pointer"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
-                  <option value="">{t('auth.register.selectDamPlaceholder')}</option>
-                  {dams.map(d => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.location})
-                    </option>
-                  ))}
-                </select>
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
-            </div>
+            </Field>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-br from-accent2 via-accent to-indigo-600 text-white rounded-lg font-bold hover:brightness-110 shadow-glow transition-all py-2.5 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs mt-2"
-            >
+            <Field label={t('auth.register.assignedDamLabel')} htmlFor="assignedDamId">
+              <Select
+                id="assignedDamId"
+                value={form.assignedDamId}
+                onChange={e => setForm({ ...form, assignedDamId: e.target.value })}
+              >
+                <option value="">{t('auth.register.selectDamPlaceholder')}</option>
+                {dams.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.location})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Button type="submit" loading={loading} className="w-full py-2.5 text-xs mt-2">
               <span>{loading ? t('auth.register.submittingBtn') : t('auth.register.submitBtn')}</span>
-            </button>
+            </Button>
           </form>
         )}
 

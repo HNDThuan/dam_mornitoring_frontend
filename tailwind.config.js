@@ -23,8 +23,8 @@ module.exports = {
         tx:      '#f1f5f9',
         muted:   '#8b9cb8',
         faint:   '#5b6b85',
-        // Brand / interaction
-        accent:  '#818cf8',
+        // Brand / interaction — solid professional blue, no gradients
+        accent:  '#2563eb',
         accent2: '#22d3ee',
         // Status
         danger:  '#fb4360',

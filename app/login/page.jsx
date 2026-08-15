@@ -4,13 +4,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { useLanguage } from '@/context/LanguageContext'
-import { Label } from '@/components/ui'
-import { ShieldCheck, Lock, User, AlertCircle, ArrowRight, Globe } from 'lucide-react'
+import { Field, TextInput, Button, FormAlert } from '@/components/form'
+import { ShieldCheck, Lock, User, AlertCircle, ArrowRight, Globe, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const { login } = useAuth()
   const { t, locale, toggleLanguage } = useLanguage()
   const [form, setForm] = useState({ usernameOrEmail: '', password: '' })
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
 
@@ -46,10 +47,10 @@ export default function LoginPage() {
         </button>
       </div>
 
-      <div className="w-full max-w-sm glass-panel rounded-2xl shadow-panel p-8 relative z-10">
+      <div className="w-full max-w-sm bg-card border border-borderHi rounded-xl shadow-panel p-8 relative z-10">
         {/* Header Branding */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-accent2 via-accent to-indigo-600 text-white shadow-glow mb-3">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-lg bg-accent text-white mb-3">
             <ShieldCheck className="w-7 h-7" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-tx">
@@ -60,54 +61,54 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
+        <div className="mb-4">
+          <FormAlert variant="danger" icon={AlertCircle}>{error}</FormAlert>
+        </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>{t('auth.login.usernameOrEmailLabel')}</Label>
-            <div className="relative">
-              <User className="w-4 h-4 text-faint absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="text"
-                required
-                value={form.usernameOrEmail}
-                onChange={(e) => setForm({ ...form, usernameOrEmail: e.target.value })}
-                placeholder={t('auth.login.usernameOrEmailPlaceholder')}
-                className="w-full bg-card2 border border-border rounded-lg pl-10 pr-3.5 py-2.5 text-[13px] text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
-              />
-            </div>
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+          <Field label={t('auth.login.usernameOrEmailLabel')} required htmlFor="usernameOrEmail">
+            <TextInput
+              id="usernameOrEmail"
+              icon={User}
+              type="text"
+              required
+              autoComplete="username"
+              value={form.usernameOrEmail}
+              onChange={(e) => setForm({ ...form, usernameOrEmail: e.target.value })}
+              placeholder={t('auth.login.usernameOrEmailPlaceholder')}
+            />
+          </Field>
 
-          <div>
-            <Label>{t('auth.login.passwordLabel')}</Label>
+          <Field label={t('auth.login.passwordLabel')} required htmlFor="password">
             <div className="relative">
-              <Lock className="w-4 h-4 text-faint absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="password"
+              <TextInput
+                id="password"
+                icon={Lock}
+                type={showPassword ? 'text' : 'password'}
                 required
+                autoComplete="current-password"
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 placeholder={t('auth.login.passwordPlaceholder')}
-                className="w-full bg-card2 border border-border rounded-lg pl-10 pr-3.5 py-2.5 text-[13px] text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
+                className="pr-10"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(v => !v)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-faint hover:text-muted cursor-pointer"
+                tabIndex={-1}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
-          </div>
+          </Field>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-gradient-to-br from-accent2 via-accent to-indigo-600 text-white rounded-lg font-bold hover:brightness-110 shadow-glow transition-all py-3 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm mt-2"
-          >
+          <Button type="submit" loading={loading} className="w-full py-3 text-sm mt-2">
             <span>{loading ? t('auth.login.submittingBtn') : t('auth.login.submitBtn')}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+            {!loading && <ArrowRight className="w-4 h-4" />}
+          </Button>
         </form>
 
         {/* Register Link */}

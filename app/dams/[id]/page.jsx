@@ -8,7 +8,8 @@ import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { getSocket } from '@/lib/socket'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Label, Panel, RadialGauge, LiveDot } from '@/components/ui'
+import { Mono, Badge, Divider, Panel, RadialGauge, LiveDot } from '@/components/ui'
+import { Field, TextInput, Select, Modal, FormActions, Button, Toast } from '@/components/form'
 import {
   Plus,
   Pencil,
@@ -16,7 +17,6 @@ import {
   RefreshCw,
   Search,
   ChevronRight,
-  X,
   AlertTriangle,
   Database,
   Radio,
@@ -89,6 +89,8 @@ export default function DamDetailPage() {
   // Modals state for Dam
   const [damModalOpen, setDamModalOpen] = useState(false)
   const [deleteDamConfirm, setDeleteDamConfirm] = useState(false)
+  const [savingDam, setSavingDam] = useState(false)
+  const [deletingDam, setDeletingDam] = useState(false)
   const [damForm, setDamForm] = useState({
     name: '',
     location: '',
@@ -103,6 +105,7 @@ export default function DamDetailPage() {
 
   // Modals state for Threshold Config
   const [thresholdModalOpen, setThresholdModalOpen] = useState(false)
+  const [savingThresholds, setSavingThresholds] = useState(false)
   const [thresholdConfigs, setThresholdConfigs] = useState([])
   const [thresholdForm, setThresholdForm] = useState({
     waterWarn: 10.0,
@@ -151,6 +154,7 @@ export default function DamDetailPage() {
   const handleSaveThresholds = async (e) => {
     e.preventDefault()
     try {
+      setSavingThresholds(true)
       const waterCfg = thresholdConfigs.find(c => c.sensorType === 'water_level')
       const vibCfg = thresholdConfigs.find(c => c.sensorType === 'vibration')
       const mstCfg = thresholdConfigs.find(c => c.sensorType === 'moisture')
@@ -208,6 +212,8 @@ export default function DamDetailPage() {
     } catch (err) {
       console.error('[DamDetail] Lỗi lưu ngưỡng:', err)
       showToast('Không thể cập nhật cấu hình ngưỡng!', 'error')
+    } finally {
+      setSavingThresholds(false)
     }
   }
 
@@ -215,6 +221,8 @@ export default function DamDetailPage() {
   const [stationModalOpen, setStationModalOpen] = useState(false)
   const [editingStation, setEditingStation] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null) // { id, name }
+  const [savingStation, setSavingStation] = useState(false)
+  const [deletingStation, setDeletingStation] = useState(false)
 
   const damId = String(id)
   const dam = dams.find(d => d.id === damId) || {
@@ -255,6 +263,7 @@ export default function DamDetailPage() {
   const handleSaveDam = async (e) => {
     e.preventDefault()
     try {
+      setSavingDam(true)
       await updateDam(dam.id, {
         name: damForm.name,
         location: damForm.location,
@@ -271,11 +280,14 @@ export default function DamDetailPage() {
       refetch(true)
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setSavingDam(false)
     }
   }
 
   const handleConfirmDeleteDam = async () => {
     try {
+      setDeletingDam(true)
       await deleteDam(dam.id)
       showToast(`Đã xóa đập thủy điện ${dam.name}!`, 'success')
       setDeleteDamConfirm(false)
@@ -284,6 +296,8 @@ export default function DamDetailPage() {
       }, 1000)
     } catch (err) {
       showToast(`Lỗi khi xóa đập: ${err.message}`, 'error')
+    } finally {
+      setDeletingDam(false)
     }
   }
 
@@ -364,6 +378,7 @@ export default function DamDetailPage() {
   const handleSaveStation = async (e) => {
     e.preventDefault()
     try {
+      setSavingStation(true)
       if (editingStation) {
         await updateStation(editingStation.id, {
           name: stationForm.name,
@@ -405,18 +420,23 @@ export default function DamDetailPage() {
       refetch(true)
     } catch (err) {
       showToast(err.message, 'error')
+    } finally {
+      setSavingStation(false)
     }
   }
 
   const handleConfirmDelete = async () => {
     if (!deleteConfirm) return
     try {
+      setDeletingStation(true)
       await deleteStation(deleteConfirm.id)
       showToast(`Đã xóa trạm ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       refetch(true)
     } catch (err) {
       showToast(`Lỗi khi xóa: ${err.message}`, 'error')
+    } finally {
+      setDeletingStation(false)
     }
   }
 
@@ -511,7 +531,7 @@ export default function DamDetailPage() {
             )}
 
             <div className="flex items-center gap-4 bg-card2 border border-border rounded-xl p-3">
-              <RadialGauge value={dam.fillPct} size={48} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
+              <RadialGauge value={dam.fillPct} size={65} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
               <Divider vertical />
               <div>
                 <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
@@ -559,7 +579,7 @@ export default function DamDetailPage() {
           {!isViewer && (
             <button
               onClick={openCreateStationModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent/90 rounded-md text-white text-[11px] font-bold cursor-pointer border-none transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>{t('damDetail.addStation')}</span>
@@ -735,585 +755,501 @@ export default function DamDetailPage() {
       )}
 
       {/* ── TOAST NOTIFICATION ── */}
-      {toast && (
-        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${toast.type === 'error'
-            ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
-            : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
-          }`}>
-          <span className="text-[12px]">{toast.message}</span>
-          <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <Toast toast={toast} onClose={() => setToast(null)} />
 
       {/* ── MODAL: CREATE / EDIT STATION ── */}
-      {stationModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Radio className="w-4 h-4 text-accent" />
-                <span>{editingStation ? t('damsPage.editStation') : t('damDetail.addStation')}</span>
-              </h3>
-              <button
-                onClick={() => setStationModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={stationModalOpen}
+        onClose={() => setStationModalOpen(false)}
+        title={editingStation ? t('damsPage.editStation') : t('damDetail.addStation')}
+        icon={Radio}
+        maxWidth="max-w-2xl"
+        footer={
+          <FormActions>
+            <Button type="button" variant="secondary" onClick={() => setStationModalOpen(false)}>
+              {t('admin.cancel')}
+            </Button>
+            <Button type="submit" form="station-form" variant="primary" loading={savingStation}>
+              {editingStation ? t('admin.save') : t('admin.create')}
+            </Button>
+          </FormActions>
+        }
+      >
+        <form id="station-form" onSubmit={handleSaveStation} className="space-y-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label={t('admin.form.stationNameLabel')} required htmlFor="station-name">
+              <TextInput
+                id="station-name"
+                required
+                value={stationForm.name}
+                onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="vd: Trạm Tân Ấp 1"
+              />
+            </Field>
 
-            <form onSubmit={handleSaveStation} className="p-5 space-y-3 text-[11px]">
-              <div>
-                <Label className="mb-1">{t('admin.form.belongToDam')}</Label>
-                <input
-                  disabled
-                  value={`${dam.name} (${dam.id})`}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none font-semibold opacity-70"
-                />
-              </div>
+            <Field label={t('admin.form.belongToDam')}>
+              <TextInput disabled value={`${dam.name} (${dam.id})`} className="font-semibold" />
+            </Field>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">{t('admin.form.stationNameLabel')}</Label>
-                  <input
-                    required
-                    value={stationForm.name}
-                    onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
-                    placeholder="vd: Trạm Tân Ấp 1"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">Địa danh / Vị trí</Label>
-                  <input
-                    value={stationForm.location}
-                    onChange={e => setStationForm(p => ({ ...p, location: e.target.value }))}
-                    placeholder="vd: Hoàn Kiếm, Hà Nội"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={stationForm.latitude}
-                    onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
-                    placeholder="vd: 21.0381"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={stationForm.longitude}
-                    onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
-                    placeholder="vd: 105.8492"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">{t('admin.form.riverLabel')}</Label>
-                  <input
-                    value={stationForm.river}
-                    onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
-                    placeholder="vd: Sông Hồng"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.kmLabel')}</Label>
-                  <input
-                    value={stationForm.km}
-                    onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
-                    placeholder="vd: K25+500"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="mb-1">{t('admin.form.waterLevelLabel')}</Label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={stationForm.waterLevel}
-                    onChange={e => setStationForm(p => ({ ...p, waterLevel: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.changeLabel')}</Label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={stationForm.change}
-                    onChange={e => setStationForm(p => ({ ...p, change: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.pressureLabel')}</Label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={stationForm.pressure}
-                    onChange={e => setStationForm(p => ({ ...p, pressure: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="mb-1">{t('admin.form.bd1Label')}</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={stationForm.bd1}
-                    onChange={e => setStationForm(p => ({ ...p, bd1: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.bd2Label')}</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={stationForm.bd2}
-                    onChange={e => setStationForm(p => ({ ...p, bd2: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-
-                <div>
-                  <Label className="mb-1">{t('admin.form.bd3Label')}</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={stationForm.bd3}
-                    onChange={e => setStationForm(p => ({ ...p, bd3: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-danger font-bold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1">{t('admin.form.statusLabel')}</Label>
-                <select
-                  value={stationForm.status}
-                  onChange={e => setStationForm(p => ({ ...p, status: e.target.value }))}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                >
-                  <option value="safe">{t('status.safe')}</option>
-                  <option value="warning">{t('status.warning')}</option>
-                  <option value="danger">{t('status.danger')}</option>
-                </select>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setStationModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-                >
-                  {t('admin.cancel')}
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
-                >
-                  {editingStation ? t('admin.save') : t('admin.create')}
-                </button>
-              </div>
-            </form>
+            <Field label="Địa danh / Vị trí" htmlFor="station-location">
+              <TextInput
+                id="station-location"
+                value={stationForm.location}
+                onChange={e => setStationForm(p => ({ ...p, location: e.target.value }))}
+                placeholder="vd: Hoàn Kiếm, Hà Nội"
+              />
+            </Field>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Vĩ độ (Latitude °N)" required htmlFor="station-lat">
+              <TextInput
+                id="station-lat"
+                type="number"
+                step="0.0001"
+                required
+                value={stationForm.latitude}
+                onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
+                placeholder="vd: 21.0381"
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label="Kinh độ (Longitude °E)" required htmlFor="station-lng">
+              <TextInput
+                id="station-lng"
+                type="number"
+                step="0.0001"
+                required
+                value={stationForm.longitude}
+                onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
+                placeholder="vd: 105.8492"
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.riverLabel')} htmlFor="station-river">
+              <TextInput
+                id="station-river"
+                value={stationForm.river}
+                onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
+                placeholder="vd: Sông Hồng"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label={t('admin.form.kmLabel')} htmlFor="station-km">
+              <TextInput
+                id="station-km"
+                value={stationForm.km}
+                onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
+                placeholder="vd: K25+500"
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.waterLevelLabel')} htmlFor="station-waterlevel">
+              <TextInput
+                id="station-waterlevel"
+                type="number"
+                step="0.01"
+                value={stationForm.waterLevel}
+                onChange={e => setStationForm(p => ({ ...p, waterLevel: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.changeLabel')} htmlFor="station-change">
+              <TextInput
+                id="station-change"
+                type="number"
+                step="0.01"
+                value={stationForm.change}
+                onChange={e => setStationForm(p => ({ ...p, change: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label={t('admin.form.pressureLabel')} htmlFor="station-pressure">
+              <TextInput
+                id="station-pressure"
+                type="number"
+                step="1"
+                value={stationForm.pressure}
+                onChange={e => setStationForm(p => ({ ...p, pressure: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+
+            <Field label={t('admin.form.statusLabel')} htmlFor="station-status">
+              <Select
+                id="station-status"
+                value={stationForm.status}
+                onChange={e => setStationForm(p => ({ ...p, status: e.target.value }))}
+              >
+                <option value="safe">{t('status.safe')}</option>
+                <option value="warning">{t('status.warning')}</option>
+                <option value="danger">{t('status.danger')}</option>
+              </Select>
+            </Field>
+          </div>
+
+          {/* Ngưỡng Báo Động Mực Nước Trạm (BĐ1 / BĐ2 / BĐ3) */}
+          <div className="bg-card2/60 border border-border/60 rounded-lg p-2.5 space-y-2">
+            <div className="text-[10px] font-bold uppercase tracking-wide text-muted">
+              Ngưỡng cảnh báo mực nước trạm (BĐ1 / BĐ2 / BĐ3)
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              <Field label={t('admin.form.bd1Label')} htmlFor="station-bd1">
+                <TextInput
+                  id="station-bd1"
+                  type="number"
+                  step="0.1"
+                  value={stationForm.bd1}
+                  onChange={e => setStationForm(p => ({ ...p, bd1: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+
+              <Field label={t('admin.form.bd2Label')} htmlFor="station-bd2">
+                <TextInput
+                  id="station-bd2"
+                  type="number"
+                  step="0.1"
+                  value={stationForm.bd2}
+                  onChange={e => setStationForm(p => ({ ...p, bd2: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+
+              <Field label={t('admin.form.bd3Label')} htmlFor="station-bd3">
+                <TextInput
+                  id="station-bd3"
+                  type="number"
+                  step="0.1"
+                  value={stationForm.bd3}
+                  onChange={e => setStationForm(p => ({ ...p, bd3: e.target.value }))}
+                  className="font-mono text-danger font-bold"
+                />
+              </Field>
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── DELETE CONFIRM MODAL ── */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-md p-5 shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="flex items-center gap-3 mb-3 text-danger">
-              <div className="w-10 h-10 rounded-full bg-danger/10 border border-danger/30 flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5 text-danger" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-tx m-0">{t('admin.deleteConfirmTitle')}</h3>
-                <p className="text-[10px] text-muted m-0">{t('admin.deleteWarning')}</p>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2 p-3 rounded border border-border">
-              Xóa Trạm quan trắc <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
-            </p>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
-              >
-                {t('admin.cancel')}
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-danger rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-danger/20"
-              >
-                {t('admin.confirmDelete')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        title={t('admin.deleteConfirmTitle')}
+        icon={AlertTriangle}
+        maxWidth="max-w-md"
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>
+              {t('admin.cancel')}
+            </Button>
+            <Button variant="danger" loading={deletingStation} onClick={handleConfirmDelete}>
+              {t('admin.confirmDelete')}
+            </Button>
+          </FormActions>
+        }
+      >
+        <p className="text-[10px] text-muted m-0">{t('admin.deleteWarning')}</p>
+        <p className="text-[11px] text-tx leading-relaxed bg-card2 p-3 rounded-lg border border-border">
+          Xóa Trạm quan trắc <strong className="text-danger">{deleteConfirm?.name}</strong> (ID: {deleteConfirm?.id})?
+        </p>
+      </Modal>
 
       {/* ── MODAL: EDIT DAM ── */}
-      {damModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Database className="w-4 h-4 text-accent" />
-                <span>Chỉnh sửa thông tin Đập thủy điện ({dam.id})</span>
-              </h3>
-              <button
-                onClick={() => setDamModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <Modal
+        open={damModalOpen}
+        onClose={() => setDamModalOpen(false)}
+        title={`Chỉnh sửa thông tin Đập thủy điện (${dam.id})`}
+        icon={Database}
+        maxWidth="max-w-3xl"
+        footer={
+          <FormActions>
+            <Button type="button" variant="secondary" onClick={() => setDamModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button type="submit" form="dam-edit-form" variant="primary" loading={savingDam}>
+              Lưu thay đổi
+            </Button>
+          </FormActions>
+        }
+      >
+        <form id="dam-edit-form" onSubmit={handleSaveDam} className="space-y-2.5">
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Mã Đập Thủy Điện (ID)">
+              <TextInput disabled readOnly value={dam.id} className="font-mono cursor-not-allowed select-none" />
+            </Field>
 
-            <form onSubmit={handleSaveDam} className="p-5 space-y-3 text-[11px]">
-              <div>
-                <Label className="mb-1">Mã Đập Thủy Điện (ID)</Label>
-                <input
-                  disabled
-                  readOnly
-                  value={dam.id}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-muted outline-none opacity-70 font-mono cursor-not-allowed select-none"
-                />
-              </div>
+            <Field label="Tên Đập Thủy Điện" required htmlFor="dam-edit-name">
+              <TextInput
+                id="dam-edit-name"
+                required
+                value={damForm.name}
+                onChange={e => setDamForm(p => ({ ...p, name: e.target.value }))}
+                placeholder="vd: Đập Thủy điện Hòa Bình"
+              />
+            </Field>
 
-              <div>
-                <Label className="mb-1">Tên Đập Thủy Điện</Label>
-                <input
-                  required
-                  value={damForm.name}
-                  onChange={e => setDamForm(p => ({ ...p, name: e.target.value }))}
-                  placeholder="vd: Đập Thủy điện Hòa Bình"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="mb-1">Vĩ độ (Latitude °N)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={damForm.latitude}
-                    onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
-                    placeholder="vd: 20.8167"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Kinh độ (Longitude °E)</Label>
-                  <input
-                    type="number"
-                    step="0.0001"
-                    required
-                    value={damForm.longitude}
-                    onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
-                    placeholder="vd: 105.3265"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="mb-1">Địa danh / Vị trí hành chính</Label>
-                <input
-                  value={damForm.location}
-                  onChange={e => setDamForm(p => ({ ...p, location: e.target.value }))}
-                  placeholder="vd: Hòa Bình"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="mb-1">Mực nước (m)</Label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={damForm.waterLevel}
-                    onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Lưu lượng (m3/s)</Label>
-                  <input
-                    type="number"
-                    value={damForm.flow}
-                    onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1">Dung tích (%)</Label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={damForm.fillPct}
-                    onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
-                  />
-                </div>
-              </div>
-
-
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border">
-                <button
-                  type="button"
-                  onClick={() => setDamModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-transparent cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-glow transition-all"
-                >
-                  Lưu thay đổi
-                </button>
-              </div>
-            </form>
+            <Field label="Địa danh / Vị trí hành chính" htmlFor="dam-edit-location">
+              <TextInput
+                id="dam-edit-location"
+                value={damForm.location}
+                onChange={e => setDamForm(p => ({ ...p, location: e.target.value }))}
+                placeholder="vd: Hòa Bình"
+              />
+            </Field>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Vĩ độ (Latitude °N)" required htmlFor="dam-edit-lat">
+              <TextInput
+                id="dam-edit-lat"
+                type="number"
+                step="0.0001"
+                required
+                value={damForm.latitude}
+                onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
+                placeholder="vd: 20.8167"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Kinh độ (Longitude °E)" required htmlFor="dam-edit-lng">
+              <TextInput
+                id="dam-edit-lng"
+                type="number"
+                step="0.0001"
+                required
+                value={damForm.longitude}
+                onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
+                placeholder="vd: 105.3265"
+                className="font-mono"
+              />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5">
+            <Field label="Mực nước (m)" htmlFor="dam-edit-waterlevel">
+              <TextInput
+                id="dam-edit-waterlevel"
+                type="number"
+                step="0.1"
+                value={damForm.waterLevel}
+                onChange={e => setDamForm(p => ({ ...p, waterLevel: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Lưu lượng (m3/s)" htmlFor="dam-edit-flow">
+              <TextInput
+                id="dam-edit-flow"
+                type="number"
+                value={damForm.flow}
+                onChange={e => setDamForm(p => ({ ...p, flow: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Dung tích (%)" htmlFor="dam-edit-fillpct">
+              <TextInput
+                id="dam-edit-fillpct"
+                type="number"
+                min="0"
+                max="100"
+                value={damForm.fillPct}
+                onChange={e => setDamForm(p => ({ ...p, fillPct: e.target.value }))}
+                className="font-mono"
+              />
+            </Field>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── MODAL: DELETE DAM CONFIRMATION ── */}
-      {deleteDamConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-5 text-center animate-in fade-in zoom-in duration-150">
-            <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto mb-3">
-              <AlertTriangle className="w-6 h-6 shrink-0" />
-            </div>
-            <h3 className="text-base font-bold text-tx mb-2">Xác nhận xóa Đập Thủy Điện?</h3>
-            <p className="text-xs text-muted mb-5 leading-relaxed">
-              Bạn có chắc chắn muốn xóa đập <strong className="text-tx">{dam.name}</strong> ({dam.id}) và toàn bộ các trạm trực thuộc? Thao tác này không thể hoàn tác.
-            </p>
-            <div className="flex justify-center gap-2">
-              <button
-                onClick={() => setDeleteDamConfirm(false)}
-                className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleConfirmDeleteDam}
-                className="px-4 py-2 bg-danger hover:bg-danger/80 text-white rounded-lg text-xs font-bold border-none cursor-pointer shadow-lg shadow-danger/20"
-              >
-                Xóa vĩnh viễn
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={deleteDamConfirm}
+        onClose={() => setDeleteDamConfirm(false)}
+        title="Xác nhận xóa Đập Thủy Điện?"
+        icon={AlertTriangle}
+        maxWidth="max-w-sm"
+        footer={
+          <FormActions>
+            <Button variant="secondary" onClick={() => setDeleteDamConfirm(false)}>
+              Hủy
+            </Button>
+            <Button variant="danger" loading={deletingDam} onClick={handleConfirmDeleteDam}>
+              Xóa vĩnh viễn
+            </Button>
+          </FormActions>
+        }
+      >
+        <p className="text-xs text-muted leading-relaxed m-0">
+          Bạn có chắc chắn muốn xóa đập <strong className="text-tx">{dam.name}</strong> ({dam.id}) và toàn bộ các trạm trực thuộc? Thao tác này không thể hoàn tác.
+        </p>
+      </Modal>
+
       {/* ── MODAL: THRESHOLD CONFIG FOR DAM ── */}
-      {thresholdModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
-              <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-amber-400" />
-                <span>Cấu Hình Ngưỡng Báo Động & Cảnh Báo An Toàn ({dam.name})</span>
-              </h3>
-              <button
-                onClick={() => setThresholdModalOpen(false)}
-                className="text-muted hover:text-tx bg-transparent border-none cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
+      <Modal
+        open={thresholdModalOpen}
+        onClose={() => setThresholdModalOpen(false)}
+        title={`Cấu Hình Ngưỡng Báo Động & Cảnh Báo An Toàn (${dam.name})`}
+        icon={Sliders}
+        maxWidth="max-w-4xl"
+        footer={
+          <FormActions>
+            <Button type="button" variant="secondary" onClick={() => setThresholdModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              type="submit"
+              form="threshold-form"
+              loading={savingThresholds}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:brightness-110 shadow-lg"
+            >
+              Lưu Cấu Hình Ngưỡng
+            </Button>
+          </FormActions>
+        }
+      >
+        <form id="threshold-form" onSubmit={handleSaveThresholds} className="space-y-2.5">
+
+          {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
+          <div className="bg-card2 border border-amber-500/30 rounded-lg p-2 text-[10px] text-amber-300 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <span>Ngưỡng độ rung được đồng bộ Realtime xuống Jetson TX2 qua MQTT.</span>
             </div>
-
-            <form onSubmit={handleSaveThresholds} className="p-5 space-y-4 text-[11px] max-h-[80vh] overflow-y-auto">
-              
-              {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-[10px] text-amber-300 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span>Cấu hình ngưỡng độ rung sẽ <b>tự động phát gói tin MQTT đồng bộ Realtime xuống Jetson TX2</b>.</span>
-                </div>
-                <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0">
-                  🟢 MQTT Sync
-                </span>
-              </div>
-
-              {/* 1. Ngưỡng Mực Nước Hồ */}
-              <div className="bg-card2 border border-sky-500/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-sky-400 font-bold text-[12px] mb-1">
-                  <Droplet className="w-4 h-4" />
-                  <span>1. Ngưỡng Mực Nước Hồ (Water Level)</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="mb-1 text-warning">Mức BĐ1 (Chú ý)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.waterWarn}
-                      onChange={e => setThresholdForm(p => ({ ...p, waterWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Mức BĐ2 (Báo động)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.waterAlert}
-                      onChange={e => setThresholdForm(p => ({ ...p, waterAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-red-500">Mức BĐ3 (Nguy cấp)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.waterCritical}
-                      onChange={e => setThresholdForm(p => ({ ...p, waterCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-muted">Chiều cao bể/đập (cm)</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.tankHeight}
-                      onChange={e => setThresholdForm(p => ({ ...p, tankHeight: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. Ngưỡng Độ Rung Thân Đập */}
-              <div className="bg-card2 border border-orange-500/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[12px] mb-1">
-                  <Activity className="w-4 h-4" />
-                  <span>2. Ngưỡng Độ Rung Thân Đập (Vibration mm/s)</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="mb-1 text-warning">Ngưỡng Chú Ý</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.vibWarn}
-                      onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Ngưỡng Cảnh Báo AI</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.vibAlert}
-                      onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-red-500">Ngưỡng Nguy Cấp</Label>
-                    <input
-                      type="number" step="0.1" required
-                      value={thresholdForm.vibCritical}
-                      onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Ngưỡng Độ Ẩm Rò Rỉ Móng */}
-              <div className="bg-card2 border border-emerald-500/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[12px] mb-1">
-                  <Droplet className="w-4 h-4" />
-                  <span>3. Ngưỡng Độ Ẩm Móng Đập (Moisture %)</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="mb-1 text-warning">Ngưỡng Chú Ý</Label>
-                    <input
-                      type="number" step="1" required
-                      value={thresholdForm.mstWarn}
-                      onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-danger">Ngưỡng Cảnh Báo</Label>
-                    <input
-                      type="number" step="1" required
-                      value={thresholdForm.mstAlert}
-                      onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                  <div>
-                    <Label className="mb-1 text-red-500">Ngưỡng Nguy Cấp</Label>
-                    <input
-                      type="number" step="1" required
-                      value={thresholdForm.mstCritical}
-                      onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
-                <button
-                  type="button"
-                  onClick={() => setThresholdModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded-lg text-muted hover:text-tx text-xs font-semibold bg-card2 cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
-                >
-                  Lưu Cấu Hình Ngưỡng
-                </button>
-              </div>
-            </form>
+            <span className="text-[9px] text-safe font-semibold bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded shrink-0">
+              MQTT Sync
+            </span>
           </div>
-        </div>
-      )}
+
+          {/* 1. Ngưỡng Mực Nước Hồ */}
+          <div className="bg-card2 border border-sky-500/30 rounded-lg p-2.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-sky-400 font-bold text-[11px]">
+              <Droplet className="w-3.5 h-3.5" />
+              <span>1. Ngưỡng Mực Nước Hồ (Water Level)</span>
+            </div>
+            <div className="grid grid-cols-4 gap-2.5">
+              <Field label="Mức BĐ1 (Chú ý)" required htmlFor="th-water-warn" className="[&_label]:!text-warning">
+                <TextInput
+                  id="th-water-warn"
+                  type="number" step="0.1" required
+                  value={thresholdForm.waterWarn}
+                  onChange={e => setThresholdForm(p => ({ ...p, waterWarn: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Mức BĐ2 (Báo động)" required htmlFor="th-water-alert" className="[&_label]:!text-danger">
+                <TextInput
+                  id="th-water-alert"
+                  type="number" step="0.1" required
+                  value={thresholdForm.waterAlert}
+                  onChange={e => setThresholdForm(p => ({ ...p, waterAlert: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Mức BĐ3 (Nguy cấp)" required htmlFor="th-water-critical" className="[&_label]:!text-red-500">
+                <TextInput
+                  id="th-water-critical"
+                  type="number" step="0.1" required
+                  value={thresholdForm.waterCritical}
+                  onChange={e => setThresholdForm(p => ({ ...p, waterCritical: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Chiều cao bể/đập (cm)" required htmlFor="th-tank-height">
+                <TextInput
+                  id="th-tank-height"
+                  type="number" step="0.1" required
+                  value={thresholdForm.tankHeight}
+                  onChange={e => setThresholdForm(p => ({ ...p, tankHeight: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+          </div>
+
+          {/* 2. Ngưỡng Độ Rung Thân Đập */}
+          <div className="bg-card2 border border-orange-500/30 rounded-lg p-2.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[11px]">
+              <Activity className="w-3.5 h-3.5" />
+              <span>2. Ngưỡng Độ Rung Thân Đập (Vibration mm/s)</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              <Field label="Ngưỡng Chú Ý" required htmlFor="th-vib-warn" className="[&_label]:!text-warning">
+                <TextInput
+                  id="th-vib-warn"
+                  type="number" step="0.1" required
+                  value={thresholdForm.vibWarn}
+                  onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Ngưỡng Cảnh Báo AI" required htmlFor="th-vib-alert" className="[&_label]:!text-danger">
+                <TextInput
+                  id="th-vib-alert"
+                  type="number" step="0.1" required
+                  value={thresholdForm.vibAlert}
+                  onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Ngưỡng Nguy Cấp" required htmlFor="th-vib-critical" className="[&_label]:!text-red-500">
+                <TextInput
+                  id="th-vib-critical"
+                  type="number" step="0.1" required
+                  value={thresholdForm.vibCritical}
+                  onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+          </div>
+
+          {/* 3. Ngưỡng Độ Ẩm Rò Rỉ Móng */}
+          <div className="bg-card2 border border-emerald-500/30 rounded-lg p-2.5 space-y-2">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
+              <Droplet className="w-3.5 h-3.5" />
+              <span>3. Ngưỡng Độ Ẩm Móng Đập (Moisture %)</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              <Field label="Ngưỡng Chú Ý" required htmlFor="th-mst-warn" className="[&_label]:!text-warning">
+                <TextInput
+                  id="th-mst-warn"
+                  type="number" step="1" required
+                  value={thresholdForm.mstWarn}
+                  onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Ngưỡng Cảnh Báo" required htmlFor="th-mst-alert" className="[&_label]:!text-danger">
+                <TextInput
+                  id="th-mst-alert"
+                  type="number" step="1" required
+                  value={thresholdForm.mstAlert}
+                  onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Ngưỡng Nguy Cấp" required htmlFor="th-mst-critical" className="[&_label]:!text-red-500">
+                <TextInput
+                  id="th-mst-critical"
+                  type="number" step="1" required
+                  value={thresholdForm.mstCritical}
+                  onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }
