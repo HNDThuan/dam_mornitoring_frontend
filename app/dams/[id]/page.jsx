@@ -8,7 +8,7 @@ import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { getSocket } from '@/lib/socket'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { Mono, Badge, Divider, Label, Panel, RadialGauge, LiveDot } from '@/components/ui'
 import {
   Plus,
   Pencil,
@@ -26,7 +26,8 @@ import {
   Droplet,
   Activity,
   Sliders,
-  Zap
+  Zap,
+  Map,
 } from 'lucide-react'
 import { fetchThresholdConfigs, updateThresholdConfig, fetchSensorClusters, updateSensorCluster } from '@/lib/api'
 import DamMap from '@/components/DamMap'
@@ -456,7 +457,7 @@ export default function DamDetailPage() {
       </div>
 
       {/* Dam Summary Card */}
-      <div className={`bg-card border border-border border-l-4 ${damStatus.leftBorder} rounded-xl p-5 shadow-lg`}>
+      <div className={`bg-card border border-border border-l-4 ${damStatus.leftBorder} rounded-xl p-5 shadow-panel`}>
         <div className="flex justify-between items-start mb-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -509,7 +510,9 @@ export default function DamDetailPage() {
               </div>
             )}
 
-            <div className="flex gap-4 bg-card2 border border-border rounded-xl p-3">
+            <div className="flex items-center gap-4 bg-card2 border border-border rounded-xl p-3">
+              <RadialGauge value={dam.fillPct} size={48} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
+              <Divider vertical />
               <div>
                 <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
                 <Mono className={`text-base font-bold ${damStatus.text}`}>{dam.waterLevel} m</Mono>
@@ -519,18 +522,13 @@ export default function DamDetailPage() {
                 <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.flow')}</div>
                 <Mono className="text-sm font-semibold text-tx">{dam.flow ? dam.flow.toLocaleString() : 0} m³/s</Mono>
               </div>
-              <Divider vertical />
-              <div>
-                <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.fillCapacity')}</div>
-                <Mono className="text-sm font-semibold text-tx">{dam.fillPct}%</Mono>
-              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Top Header Actions for Stations */}
-      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-lg">
+      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-panel">
         <div className="flex items-center gap-2">
           <Radio className="w-4 h-4 text-sky-400" />
           <h2 className="text-sm font-bold text-tx m-0 tracking-wide uppercase">
@@ -540,7 +538,7 @@ export default function DamDetailPage() {
 
         <div className="flex items-center gap-2">
           {/* Search */}
-          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 w-56">
+          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 w-56 focus-within:border-accent transition-colors">
             <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input
               value={search}
@@ -561,7 +559,7 @@ export default function DamDetailPage() {
           {!isViewer && (
             <button
               onClick={openCreateStationModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>{t('damDetail.addStation')}</span>
@@ -571,7 +569,18 @@ export default function DamDetailPage() {
       </div>
 
       {/* ── INTERACTIVE LEAFLET GIS MAP ── */}
-      <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.id} height="320px" />
+      <Panel
+        title={
+          <span className="flex items-center gap-1.5">
+            <Map className="w-3 h-3" /> Bản đồ giám sát
+          </span>
+        }
+        right={<span className="flex items-center gap-1.5"><LiveDot active /><span className="text-[10px] font-mono text-safe font-bold">LIVE</span></span>}
+        bodyClassName="p-0"
+        className="[&_.leaflet-container]:rounded-b-xl"
+      >
+        <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.id} height="320px" />
+      </Panel>
 
       {/* Stations Grid */}
       {damStations.length > 0 ? (
@@ -610,7 +619,7 @@ export default function DamDetailPage() {
             return (
               <div
                 key={st.id}
-                className={`bg-card border border-border border-t-2 ${stS.topBorder} rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-lg hover:-translate-y-px transition-all`}
+                className={`bg-card border border-border border-t-2 ${stS.topBorder} rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-panel hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150`}
               >
                 <div>
                   <div className="flex justify-between items-start mb-2">
@@ -648,8 +657,8 @@ export default function DamDetailPage() {
                   <div className="flex items-center justify-between py-1.5 px-2 bg-card2/80 rounded-md border border-border/40 text-[9px] mb-2">
                     <span className="text-muted text-[8px] uppercase tracking-wider font-semibold">Sensor Node:</span>
                     <div className="flex items-center gap-2 font-mono">
-                      <span className={`inline-flex items-center gap-1 text-[9px] font-bold ${connectionStatusColor}`}>
-                        <span className={`w-2 h-2 rounded-full ${statusDotColor}`} />
+                      <span className={`inline-flex items-center gap-1.5 text-[9px] font-bold ${connectionStatusColor}`}>
+                        <LiveDot active={isConnected} size="sm" pulse={isConnected} />
                         <span>{connectionStatusLabel}</span>
                       </span>
                     </div>
@@ -720,7 +729,7 @@ export default function DamDetailPage() {
           })}
         </div>
       ) : (
-        <div className="text-center py-12 bg-card border border-border rounded-xl text-muted text-xs shadow-md">
+        <div className="text-center py-12 bg-card border border-border rounded-xl text-muted text-xs shadow-panel">
           {t('damDetail.noStations')}
         </div>
       )}
@@ -931,7 +940,7 @@ export default function DamDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded text-white text-[11px] font-bold cursor-pointer border-none"
+                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
                 >
                   {editingStation ? t('admin.save') : t('admin.create')}
                 </button>
@@ -1098,7 +1107,7 @@ export default function DamDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
+                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-glow transition-all"
                 >
                   Lưu thay đổi
                 </button>

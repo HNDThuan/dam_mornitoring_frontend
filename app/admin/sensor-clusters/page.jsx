@@ -14,7 +14,7 @@ import {
   fetchThresholdConfigs,
   updateThresholdConfig,
 } from '@/lib/api'
-import { Label } from '@/components/ui'
+import { Label, Mono, Panel, StatTile } from '@/components/ui'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -367,10 +367,10 @@ export default function SensorClustersPage() {
   return (
     <div className="p-4 min-h-[calc(100vh-48px)] space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-lg">
+      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-panel">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
               <Cpu className="w-4 h-4" />
             </div>
             <h1 className="text-xl font-bold text-tx tracking-wide m-0">Quản lý Sensor Node</h1>
@@ -389,7 +389,7 @@ export default function SensorClustersPage() {
             <select
               value={filterDamId}
               onChange={e => { setFilterDamId(e.target.value); setFilterStationId('') }}
-              className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] outline-none focus:border-accent shrink-0 cursor-pointer"
+              className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] focus-visible:outline-none focus:border-accent shrink-0 cursor-pointer"
             >
               <option value="">Tất cả đập</option>
               {dams.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
@@ -400,7 +400,7 @@ export default function SensorClustersPage() {
           <select
             value={filterStationId}
             onChange={e => setFilterStationId(e.target.value)}
-            className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] outline-none focus:border-accent shrink-0 cursor-pointer"
+            className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] focus-visible:outline-none focus:border-accent shrink-0 cursor-pointer"
           >
             <option value="">Tất cả trạm</option>
             {filteredStations.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -428,7 +428,7 @@ export default function SensorClustersPage() {
           {!isViewer && (
             <button
               onClick={openCreateClusterModal}
-              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-indigo-500/20 shrink-0 whitespace-nowrap transition-all"
+              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow shrink-0 whitespace-nowrap transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>Thêm Sensor Node</span>
@@ -438,43 +438,11 @@ export default function SensorClustersPage() {
       </div>
 
       {/* Stats Bar */}
-      <div className="grid grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-indigo-500/15 flex items-center justify-center">
-            <Server className="w-4.5 h-4.5 text-indigo-400" />
-          </div>
-          <div>
-            <div className="text-[9px] text-muted uppercase tracking-wider">Tổng Node</div>
-            <div className="text-lg font-bold text-tx font-mono">{clusters.length}</div>
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-safe/15 flex items-center justify-center">
-            <Wifi className="w-4.5 h-4.5 text-safe" />
-          </div>
-          <div>
-            <div className="text-[9px] text-muted uppercase tracking-wider">Online</div>
-            <div className="text-lg font-bold text-safe font-mono">{onlineCount}</div>
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
-            <WifiOff className="w-4.5 h-4.5 text-muted" />
-          </div>
-          <div>
-            <div className="text-[9px] text-muted uppercase tracking-wider">Offline</div>
-            <div className="text-lg font-bold text-muted font-mono">{offlineCount}</div>
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-xl p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-danger/15 flex items-center justify-center">
-            <AlertTriangle className="w-4.5 h-4.5 text-danger" />
-          </div>
-          <div>
-            <div className="text-[9px] text-muted uppercase tracking-wider">Lỗi</div>
-            <div className="text-lg font-bold text-danger font-mono">{errorCount}</div>
-          </div>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatTile icon={Server} label="Tổng Node" value={clusters.length} status="info" />
+        <StatTile icon={Wifi} label="Online" value={onlineCount} status="safe" />
+        <StatTile icon={WifiOff} label="Offline" value={offlineCount} status="info" />
+        <StatTile icon={AlertTriangle} label="Lỗi" value={errorCount} status="danger" />
       </div>
 
       {/* Error state */}
@@ -487,10 +455,15 @@ export default function SensorClustersPage() {
       )}
 
       {/* Cluster Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-lg">
+      <Panel
+        title="Danh Sách Sensor Node"
+        right={<Mono className="text-[10px] text-muted">{filteredClusters.length} node</Mono>}
+        bodyClassName="p-0"
+        className="overflow-hidden"
+      >
         <table className="w-full text-[11px]">
           <thead>
-            <tr className="bg-card2 border-b border-border text-muted text-[10px] uppercase tracking-wider">
+            <tr className="bg-card2/80 backdrop-blur border-b border-border text-muted text-[10px] uppercase tracking-wider">
               <th className="text-left px-4 py-2.5 font-semibold w-8"></th>
               <th className="text-left px-4 py-2.5 font-semibold">Node ID</th>
               <th className="text-left px-4 py-2.5 font-semibold">Tên Sensor Node</th>
@@ -522,7 +495,7 @@ export default function SensorClustersPage() {
                   {/* Cluster Row */}
                   <tr
                     key={cluster.id}
-                    className="border-b border-border/50 hover:bg-white/[0.02] transition-colors cursor-pointer"
+                    className="border-b border-border/50 hover:bg-card2/50 transition-colors cursor-pointer"
                     onClick={() => toggleExpanded(cluster.id)}
                   >
                     <td className="px-4 py-3">
@@ -583,14 +556,14 @@ export default function SensorClustersPage() {
                           <>
                             <button
                               onClick={(e) => openEditClusterModal(cluster, e)}
-                              className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent transition-colors cursor-pointer"
+                              className="p-1.5 bg-accent/10 border border-accent/20 rounded-lg text-accent hover:bg-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
                               title="Sửa cụm"
                             >
                               <Pencil className="w-3 h-3" />
                             </button>
                             <button
                               onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: cluster.id, name: cluster.name }) }}
-                              className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger transition-colors cursor-pointer"
+                              className="p-1.5 bg-danger/10 border border-danger/20 rounded-lg text-danger hover:bg-danger/20 hover:border-danger/40 transition-colors cursor-pointer"
                               title="Xóa cụm"
                             >
                               <Trash2 className="w-3 h-3" />
@@ -612,7 +585,7 @@ export default function SensorClustersPage() {
                           {!isViewer && (
                             <button
                               onClick={(e) => openAddDeviceModal(cluster.id, e)}
-                              className="flex items-center gap-1 px-2 py-1 bg-indigo-500/10 border border-indigo-500/30 rounded text-indigo-400 text-[9px] font-bold cursor-pointer hover:bg-indigo-500/20 transition-colors"
+                              className="flex items-center gap-1 px-2 py-1 bg-accent/10 border border-accent/30 rounded text-accent text-[9px] font-bold cursor-pointer hover:bg-accent/20 transition-colors"
                             >
                               <Plus className="w-3 h-3" />
                               Thêm cảm biến
@@ -657,14 +630,14 @@ export default function SensorClustersPage() {
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
                                         onClick={(e) => openEditDeviceModal(cluster.id, device, e)}
-                                        className="p-1 bg-card2 border border-border rounded text-accent hover:border-accent transition-colors cursor-pointer"
+                                        className="p-1 bg-accent/10 border border-accent/20 rounded text-accent hover:bg-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
                                         title="Sửa"
                                       >
                                         <Pencil className="w-2.5 h-2.5" />
                                       </button>
                                       <button
                                         onClick={(e) => { e.stopPropagation(); handleDeleteDevice(cluster.id, device.id) }}
-                                        className="p-1 bg-card2 border border-border rounded text-danger hover:border-danger transition-colors cursor-pointer"
+                                        className="p-1 bg-danger/10 border border-danger/20 rounded text-danger hover:bg-danger/20 hover:border-danger/40 transition-colors cursor-pointer"
                                         title="Xóa"
                                       >
                                         <Trash2 className="w-2.5 h-2.5" />
@@ -684,7 +657,7 @@ export default function SensorClustersPage() {
             })}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       {/* ── TOAST NOTIFICATION ── */}
       {toast && (
@@ -701,11 +674,11 @@ export default function SensorClustersPage() {
 
       {/* ── MODAL: CREATE / EDIT CLUSTER ── */}
       {clusterModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+            <div className="px-5 py-4 border-b border-border/70 flex justify-between items-center bg-card2/40">
               <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Cpu className="w-4 h-4 text-indigo-400" />
+                <Cpu className="w-4 h-4 text-accent" />
                 <span>{editingCluster ? 'Sửa Sensor Node' : 'Thêm Sensor Node mới'}</span>
               </h3>
               <button
@@ -725,7 +698,7 @@ export default function SensorClustersPage() {
                   value={clusterForm.name}
                   onChange={e => setClusterForm(p => ({ ...p, name: e.target.value }))}
                   placeholder="vd: Sensor Node K25+500"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 />
               </div>
 
@@ -735,7 +708,7 @@ export default function SensorClustersPage() {
                   value={clusterForm.description}
                   onChange={e => setClusterForm(p => ({ ...p, description: e.target.value }))}
                   placeholder="Mô tả vị trí, mục đích..."
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 />
               </div>
 
@@ -746,7 +719,7 @@ export default function SensorClustersPage() {
                     value={clusterForm.espMacAddress}
                     onChange={e => setClusterForm(p => ({ ...p, espMacAddress: e.target.value }))}
                     placeholder="AA:BB:CC:DD:EE:FF"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
                   />
                 </div>
                 <div>
@@ -755,7 +728,7 @@ export default function SensorClustersPage() {
                     value={clusterForm.firmwareVersion}
                     onChange={e => setClusterForm(p => ({ ...p, firmwareVersion: e.target.value }))}
                     placeholder="vd: v1.0.0"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
                   />
                 </div>
               </div>
@@ -766,7 +739,7 @@ export default function SensorClustersPage() {
                   value={clusterForm.installLocation}
                   onChange={e => setClusterForm(p => ({ ...p, installLocation: e.target.value }))}
                   placeholder="vd: Thân đập chính - K25+500"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 />
               </div>
 
@@ -776,7 +749,7 @@ export default function SensorClustersPage() {
                   required
                   value={clusterForm.stationId}
                   onChange={e => setClusterForm(p => ({ ...p, stationId: e.target.value }))}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 >
                   <option value="">— Chọn trạm —</option>
                   {stations.map(s => {
@@ -812,7 +785,7 @@ export default function SensorClustersPage() {
                       value={clusterForm.warnHigh}
                       onChange={e => setClusterForm(p => ({ ...p, warnHigh: e.target.value }))}
                       placeholder="2.5"
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
                   <div>
@@ -822,7 +795,7 @@ export default function SensorClustersPage() {
                       value={clusterForm.vibrationThreshold}
                       onChange={e => setClusterForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
                       placeholder="15.0"
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
                   <div>
@@ -832,7 +805,7 @@ export default function SensorClustersPage() {
                       value={clusterForm.criticalHigh}
                       onChange={e => setClusterForm(p => ({ ...p, criticalHigh: e.target.value }))}
                       placeholder="25.0"
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
                 </div>
@@ -844,7 +817,7 @@ export default function SensorClustersPage() {
                       value={clusterForm.alertMinCount}
                       onChange={e => setClusterForm(p => ({ ...p, alertMinCount: e.target.value }))}
                       placeholder="4"
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
                   <div>
@@ -854,14 +827,14 @@ export default function SensorClustersPage() {
                       value={clusterForm.alertMinDurationSec}
                       onChange={e => setClusterForm(p => ({ ...p, alertMinDurationSec: e.target.value }))}
                       placeholder="6.0"
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx outline-none focus:border-amber-400 font-mono"
+                      className="w-full bg-card border border-border rounded-lg px-2.5 py-1.5 text-tx text-[12px] focus-visible:outline-none focus:border-amber-400 font-mono"
                     />
                   </div>
                 </div>
               </div>
 
               {!editingCluster && (
-                <div className="bg-card2 border border-border rounded p-3 text-[10px] text-muted">
+                <div className="bg-card2 border border-border rounded-lg p-3 text-[10px] text-muted">
                   <div className="flex items-center gap-1.5 mb-1 text-info font-semibold">
                     <CircleDot className="w-3 h-3" />
                     <span>Cảm biến mặc định</span>
@@ -877,13 +850,13 @@ export default function SensorClustersPage() {
                 <button
                   type="button"
                   onClick={() => setClusterModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
+                  className="px-4 py-2 border border-border rounded-lg text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded text-white text-[11px] font-bold cursor-pointer border-none"
+                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
                 >
                   {editingCluster ? 'Lưu thay đổi' : 'Tạo cụm mới'}
                 </button>
@@ -895,11 +868,11 @@ export default function SensorClustersPage() {
 
       {/* ── MODAL: CREATE / EDIT DEVICE ── */}
       {deviceModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="px-5 py-4 border-b border-border/70 flex justify-between items-center bg-card2/40">
               <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Activity className="w-4 h-4 text-orange-400" />
+                <Activity className="w-4 h-4 text-accent2" />
                 <span>{editingDevice ? 'Sửa cảm biến' : 'Thêm cảm biến'}</span>
               </h3>
               <button
@@ -925,7 +898,7 @@ export default function SensorClustersPage() {
                       unit: cfg?.unit || '',
                     }))
                   }}
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 >
                   <option value="water_level">Mực nước</option>
                   <option value="humidity">Độ ẩm</option>
@@ -940,7 +913,7 @@ export default function SensorClustersPage() {
                     value={deviceForm.model}
                     onChange={e => setDeviceForm(p => ({ ...p, model: e.target.value }))}
                     placeholder="vd: HC-SR04"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
                   />
                 </div>
                 <div>
@@ -949,7 +922,7 @@ export default function SensorClustersPage() {
                     value={deviceForm.unit}
                     onChange={e => setDeviceForm(p => ({ ...p, unit: e.target.value }))}
                     placeholder="vd: cm, %, mm/s"
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
                   />
                 </div>
               </div>
@@ -962,7 +935,7 @@ export default function SensorClustersPage() {
                     step="0.01"
                     value={deviceForm.calibrationOffset}
                     onChange={e => setDeviceForm(p => ({ ...p, calibrationOffset: Number(e.target.value) }))}
-                    className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono"
+                    className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent font-mono"
                   />
                 </div>
                 {editingDevice && (
@@ -971,7 +944,7 @@ export default function SensorClustersPage() {
                     <select
                       value={deviceForm.status}
                       onChange={e => setDeviceForm(p => ({ ...p, status: e.target.value }))}
-                      className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent"
+                      className="w-full bg-card2 border border-border rounded-lg px-3 py-2 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                     >
                       <option value="active">Hoạt động</option>
                       <option value="inactive">Ngừng</option>
@@ -985,13 +958,13 @@ export default function SensorClustersPage() {
                 <button
                   type="button"
                   onClick={() => setDeviceModalOpen(false)}
-                  className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
+                  className="px-4 py-2 border border-border rounded-lg text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-rose-500 rounded text-white text-[11px] font-bold cursor-pointer border-none"
+                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
                 >
                   {editingDevice ? 'Lưu thay đổi' : 'Thêm cảm biến'}
                 </button>
@@ -1003,8 +976,8 @@ export default function SensorClustersPage() {
 
       {/* ── DELETE CONFIRM MODAL ── */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-xl w-full max-w-md p-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel rounded-2xl w-full max-w-md p-5 shadow-2xl">
             <div className="flex items-center gap-3 mb-3 text-danger">
               <div className="w-10 h-10 rounded-full bg-danger/10 border border-danger/30 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-5 h-5 text-danger" />
@@ -1015,7 +988,7 @@ export default function SensorClustersPage() {
               </div>
             </div>
 
-            <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2 p-3 rounded border border-border">
+            <p className="text-[11px] text-tx leading-relaxed mb-4 bg-card2/70 p-3 rounded-lg border border-border">
               Xóa Sensor Node <strong className="text-danger">{deleteConfirm.name}</strong> (ID: {deleteConfirm.id})?
               <span className="flex items-center gap-1 text-[10px] text-warning mt-1">
                 <AlertTriangle className="w-3 h-3 text-warning shrink-0" />
@@ -1026,13 +999,13 @@ export default function SensorClustersPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 border border-border rounded text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
+                className="px-4 py-2 border border-border rounded-lg text-muted bg-transparent text-[11px] font-semibold cursor-pointer hover:bg-white/5"
               >
                 Hủy
               </button>
               <button
                 onClick={handleDeleteCluster}
-                className="px-4 py-2 bg-danger rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-danger/20"
+                className="px-4 py-2 bg-danger/10 border border-danger/20 rounded-lg text-danger hover:bg-danger/20 hover:border-danger/40 text-[11px] font-bold cursor-pointer transition-colors"
               >
                 Xóa Sensor Node
               </button>

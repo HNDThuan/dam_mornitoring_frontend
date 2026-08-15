@@ -13,7 +13,7 @@ import {
   ReferenceLine,
 } from "recharts";
 import { getStatus, getStatusBySeverity } from "@/lib/statusConfig";
-import { Mono, Badge, Label } from "@/components/ui";
+import { Mono, Badge, Label, Panel, LiveDot, RadialGauge } from "@/components/ui";
 import { useSensorData } from "@/hooks/useSensorData";
 import { useDamData } from "@/hooks/useDamData";
 import { useLanguage } from "@/context/LanguageContext";
@@ -37,15 +37,15 @@ import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, Chevron
 import { fetchThresholdConfigs, updateThresholdConfig, updateStation, fetchSensorClusters, updateSensorCluster } from "@/lib/api";
 
 const CHART_STYLE = {
-  background: "#0d1520",
-  border: "1px solid #1a2a3a",
-  borderRadius: 4,
+  background: "#0e1622",
+  border: "1px solid #22314a",
+  borderRadius: 8,
   fontSize: 10,
 };
 const STATUS_HEX = {
-  danger: "#f43f5e",
-  warning: "#fb923c",
-  safe: "#34d399",
+  danger: "#fb4360",
+  warning: "#f59e0b",
+  safe: "#22c55e",
   info: "#38bdf8",
 };
 const STATUS_CL = {
@@ -58,16 +58,16 @@ const STATUS_CL = {
 function ConnectionBanner({ connected, error }) {
   if (connected)
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-safe/10 border border-safe/30 rounded-lg mb-3">
-        <div className="w-1.5 h-1.5 rounded-full bg-safe animate-pulse-dot" />
-        <span className="text-[10px] font-semibold text-safe">
-          ● REAL-TIME STREAMING ACTIVE (ĐANG TRUYỀN DATA)
+      <div className="flex items-center gap-2 px-3.5 py-2 bg-safe/10 border border-safe/30 rounded-lg mb-3">
+        <LiveDot active />
+        <span className="text-[10px] font-mono font-semibold tracking-wide text-safe">
+          REAL-TIME STREAMING ACTIVE (ĐANG TRUYỀN DATA)
         </span>
       </div>
     );
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-card2 border border-border rounded-lg mb-3">
-      <div className="w-1.5 h-1.5 rounded-full bg-muted" />
+    <div className="flex items-center gap-2 px-3.5 py-2 bg-card2/60 border border-border rounded-lg mb-3">
+      <LiveDot active={false} />
       <span className="text-[10px] text-muted">
         {error ? `Mất kết nối: ${error}` : "Đang chờ dữ liệu từ thiết bị IoT..."}
       </span>
@@ -91,17 +91,15 @@ function MetricCard({
 }) {
   return (
     <div
-      className="bg-card border border-border rounded-xl overflow-hidden flex flex-col"
+      className="bg-card border border-border rounded-xl overflow-hidden flex flex-col shadow-panel hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150"
       style={{ borderTop: `2px solid ${color}` }}
     >
-      <div className="px-4 pt-3.5 pb-0 flex justify-between items-start">
-        <div>
-          <div className="text-[9px] font-semibold text-muted uppercase tracking-widest mb-1.5">
-            {label}
-          </div>
+      <div className="px-3.5 pt-3.5 pb-0 flex justify-between items-start">
+        <div className="min-w-0">
+          <Label className="mb-1.5 truncate">{label}</Label>
           <div className="flex items-baseline gap-1.5">
             <Mono
-              className="text-[26px] font-bold leading-none"
+              className="text-2xl font-bold leading-none"
               style={{ color }}
             >
               {value}
@@ -124,8 +122,9 @@ function MetricCard({
           </div>
         </div>
         <span
-          className={`text-[8px] font-bold tracking-wide px-2 py-0.5 rounded-full border mt-1 whitespace-nowrap ${statusCl}`}
+          className={`inline-flex items-center gap-1 text-[8px] font-mono font-bold tracking-wide px-2 py-0.5 rounded-full border mt-1 whitespace-nowrap ${statusCl}`}
         >
+          <span className={`w-1 h-1 rounded-full ${statusCl.includes("text-danger") ? "bg-danger" : statusCl.includes("text-warning") ? "bg-warning" : "bg-safe"} shrink-0`} />
           {statusLabel}
         </span>
       </div>
@@ -145,17 +144,19 @@ function MetricCard({
             </defs>
             <Tooltip
               contentStyle={CHART_STYLE}
+              itemStyle={{ color: "#f1f5f9" }}
+              labelStyle={{ color: "#8b9cb8" }}
               formatter={(v) => [`${v} ${unit}`, label]}
               labelFormatter={(l) => `Thời gian: ${l}`}
             />
             {threshold && (
               <ReferenceLine
                 y={threshold}
-                stroke="#f43f5e"
+                stroke="#fb4360"
                 strokeDasharray="3 3"
                 label={{
                   value: `BĐ: ${threshold}`,
-                  fill: "#f43f5e",
+                  fill: "#fb4360",
                   fontSize: 8,
                   position: "insideTopRight",
                 }}
@@ -175,13 +176,13 @@ function MetricCard({
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 border-t border-border mt-auto">
+      <div className="grid grid-cols-3 border-t border-border/70 mt-auto">
         {stats.map(({ lb, val, cl }, i) => (
           <div
             key={lb}
-            className={`px-3 py-2.5 ${i < 2 ? "border-r border-border" : ""}`}
+            className={`px-3 py-2.5 ${i < 2 ? "border-r border-border/70" : ""}`}
           >
-            <div className="text-[8px] text-muted uppercase tracking-wide mb-1">
+            <div className="text-[8px] text-muted uppercase tracking-wide mb-1 truncate">
               {lb}
             </div>
             <Mono className={`text-[13px] font-semibold ${cl}`}>{val}</Mono>
@@ -474,7 +475,7 @@ export default function StationDetailPage() {
 
   console.log("water threshold: ", waterThreshold)
 
-  const mainColor = STATUS_HEX[waterSt.level] || "#fb923c";
+  const mainColor = STATUS_HEX[waterSt.level] || "#f59e0b";
 
   // Operator Restriction: Cannot access stations outside assigned dam
   if (isOperator && assignedDamId && st?.damId && st.damId !== assignedDamId) {
@@ -567,7 +568,7 @@ export default function StationDetailPage() {
             <>
               <button
                 onClick={openThresholdModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/40 rounded-lg text-amber-400 text-[11px] font-bold bg-amber-500/10 hover:bg-amber-500/20 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-warning/40 rounded-lg text-warning text-[11px] font-bold bg-warning/10 hover:bg-warning/20 transition-colors cursor-pointer"
                 title="Cấu hình Ngưỡng Cảnh Báo cho Trạm"
               >
                 <Sliders className="w-3.5 h-3.5 shrink-0" />
@@ -591,7 +592,7 @@ export default function StationDetailPage() {
               </button>
             </>
           )}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-sky-500 to-indigo-500">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-info to-accent shadow-glow hover:brightness-110 transition-all">
             <Download className="w-3.5 h-3.5 shrink-0" />
             <span>{t('stationDetail.exportReport')}</span>
           </button>
@@ -599,19 +600,24 @@ export default function StationDetailPage() {
       </div>
 
       {/* ── GIS MAP BẢN ĐỒ TỌA ĐỘ TRẠM ── */}
-      <div className="bg-card border border-border rounded-xl p-3 mb-4 shadow-lg">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-sky-400" />
-            <span className="text-xs font-bold text-tx">Vị trí địa lý & Tọa độ GIS Trạm quan trắc</span>
-          </div>
+      <Panel
+        title={
+          <span className="flex items-center gap-1.5 normal-case text-xs font-bold text-tx tracking-normal">
+            <MapPin className="w-4 h-4 text-info shrink-0" />
+            <span>Vị trí địa lý & Tọa độ GIS Trạm quan trắc</span>
+          </span>
+        }
+        right={
           <span className="font-mono text-[10px] text-muted flex items-center gap-1">
             <MapPin className="w-3 h-3 text-muted shrink-0" />
             <span>Tọa độ: {st.latitude != null && st.longitude != null ? `${st.latitude}°N, ${st.longitude}°E` : (st.location || 'Chưa cập nhật')}</span>
           </span>
-        </div>
+        }
+        bodyClassName="p-0"
+        className="mb-4 [&_.leaflet-container]:rounded-b-xl"
+      >
         <DamMap dams={dams.filter(d => d.id === st.damId)} stations={[st]} height="320px" />
-      </div>
+      </Panel>
 
       {/* ── 3 Metric Cards ── */}
       <div className="grid grid-cols-4 gap-3 mb-3">
@@ -683,7 +689,7 @@ export default function StationDetailPage() {
           deltaUp={ampDelta.up}
           statusLabel={vibSt.label}
           statusCl={STATUS_CL[vibSt.level]}
-          color="#fc893cff"
+          color="#f59e0b"
           data={ampChartData}
           threshold={vibThreshold}
           stats={[
@@ -702,23 +708,26 @@ export default function StationDetailPage() {
         {/* Right: Amplitude + Events */}
         <div className="flex flex-col gap-3">
           {/* Amplitude / Pressure card */}
-          <div className="bg-card border border-border rounded-xl p-4">
-            <div className="flex justify-between items-start mb-3">
-              <div>
+          <Panel
+            title={
+              <span className="normal-case tracking-normal">
                 <div className="text-[12px] font-semibold text-tx">
                   Biên độ rung & Lưu lượng
                 </div>
-                <div className="text-[9px] text-muted mt-0.5">
+                <div className="text-[9px] text-muted mt-0.5 font-normal">
                   Dữ liệu cảm biến thời gian thực
                 </div>
-              </div>
-              {latest && (
-                <span className="font-mono text-[9px] text-safe bg-safe/10 border border-safe/30 px-2 py-0.5 rounded">
-                  LIVE
+              </span>
+            }
+            right={
+              latest && (
+                <span className="flex items-center gap-1.5">
+                  <LiveDot active />
+                  <span className="font-mono text-[9px] text-safe font-bold">LIVE</span>
                 </span>
-              )}
-            </div>
-
+              )
+            }
+          >
             <div className="grid grid-cols-2 gap-2 mb-3">
               {[
                 {
@@ -746,7 +755,7 @@ export default function StationDetailPage() {
                   cl: "text-muted",
                 },
               ].map(({ lb, val, sub, cl }) => (
-                <div key={lb} className="bg-card2 rounded-lg px-3 py-2">
+                <div key={lb} className="bg-card2/70 rounded-lg px-3 py-2 border border-border/50">
                   <div className="text-[8px] text-muted uppercase tracking-wide mb-1">
                     {lb}
                   </div>
@@ -758,37 +767,40 @@ export default function StationDetailPage() {
               ))}
             </div>
 
-            {/* Percent fill bar */}
-            <div>
-              <div className="flex justify-between text-[9px] text-muted mb-1">
-                <span>Mức chứa hồ</span>
-                <Mono className="text-info">{percent}%</Mono>
-              </div>
-              <div className="h-2 bg-border rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{
-                    width: `${Math.min(percent, 100)}%`,
-                    background:
-                      percent > 90
-                        ? "#f43f5e"
-                        : percent > 75
-                          ? "#fb923c"
-                          : "#34d399",
-                  }}
-                />
+            {/* Percent fill gauge */}
+            <div className="flex items-center gap-3 bg-card2/50 border border-border/50 rounded-lg px-3 py-2.5">
+              <RadialGauge
+                value={percent}
+                size={52}
+                stroke={5}
+                status={percent > 90 ? "danger" : percent > 75 ? "warning" : "safe"}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="text-[9px] text-muted uppercase tracking-wide mb-1">Mức chứa hồ</div>
+                <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min(percent, 100)}%`,
+                      background:
+                        percent > 90
+                          ? "#fb4360"
+                          : percent > 75
+                            ? "#f59e0b"
+                            : "#22c55e",
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </Panel>
 
           {/* Events */}
-          <div className="bg-card border border-border rounded-xl p-4 flex-1">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-[12px] font-semibold text-tx">
-                Cảnh Báo & Sự Kiện
-              </span>
-              <Link href="/alerts" className="text-[10px] text-accent cursor-pointer font-semibold hover:underline no-underline">Xem tất cả</Link>
-            </div>
+          <Panel
+            title={<span className="normal-case tracking-normal text-[12px] font-semibold text-tx">Cảnh Báo & Sự Kiện</span>}
+            right={<Link href="/alerts" className="text-[10px] text-accent cursor-pointer font-semibold hover:underline no-underline">Xem tất cả</Link>}
+            className="flex-1"
+          >
             {alarms.length === 0 && (
               <div className="text-center py-4 text-[10px] text-muted flex items-center justify-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-safe shrink-0" />
@@ -816,7 +828,7 @@ export default function StationDetailPage() {
                 </div>
               )
             })}
-          </div>
+          </Panel>
         </div>
       </div>
 
@@ -950,7 +962,7 @@ export default function StationDetailPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
+                  className="px-4 py-2 bg-gradient-to-r from-info to-accent rounded-lg text-white text-xs font-bold border-none cursor-pointer shadow-lg"
                 >
                   Lưu thay đổi
                 </button>
@@ -994,7 +1006,7 @@ export default function StationDetailPage() {
           <div className="bg-card border border-border rounded-xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150">
             <div className="px-5 py-4 border-b border-border flex justify-between items-center bg-card2">
               <h3 className="text-sm font-bold text-tx m-0 flex items-center gap-2">
-                <Sliders className="w-4 h-4 text-amber-400" />
+                <Sliders className="w-4 h-4 text-warning" />
                 <span>Cấu Hình Ngưỡng Cảnh Báo ({st.name})</span>
               </h3>
               <button
@@ -1008,19 +1020,19 @@ export default function StationDetailPage() {
             <form onSubmit={handleSaveThresholds} className="p-5 space-y-4 text-[11px] max-h-[80vh] overflow-y-auto">
               
               {/* Banner Đồng bộ Realtime MQTT Jetson TX2 */}
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-2.5 text-[10px] text-amber-300 flex items-center justify-between">
+              <div className="bg-warning/10 border border-warning/30 rounded-lg p-2.5 text-[10px] text-warning flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Zap className="w-4 h-4 text-amber-400 shrink-0" />
+                  <Zap className="w-4 h-4 text-warning shrink-0" />
                   <span>Ngưỡng độ rung sẽ <b>tự động đồng bộ Realtime qua MQTT</b> tới Edge Gateway Jetson TX2.</span>
                 </div>
-                <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded shrink-0">
+                <span className="text-[9px] text-safe font-semibold bg-safe/10 border border-safe/30 px-1.5 py-0.5 rounded shrink-0">
                   🟢 MQTT Sync
                 </span>
               </div>
 
               {/* 1. Ngưỡng Mực Nước Báo Động (m) */}
-              <div className="bg-card2 border border-sky-500/30 rounded-lg p-3 space-y-2">
-                <div className="flex items-center gap-1.5 text-sky-400 font-bold text-[12px] mb-1">
+              <div className="bg-card2 border border-info/30 rounded-lg p-3 space-y-2">
+                <div className="flex items-center gap-1.5 text-info font-bold text-[12px] mb-1">
                   <Droplet className="w-4 h-4" />
                   <span>1. Ngưỡng Mực Nước Mức Báo Động (m)</span>
                 </div>
@@ -1031,7 +1043,7 @@ export default function StationDetailPage() {
                       type="number" step="0.1" required
                       value={thresholdForm.bd1}
                       onChange={e => setThresholdForm(p => ({ ...p, bd1: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                   <div>
@@ -1040,16 +1052,16 @@ export default function StationDetailPage() {
                       type="number" step="0.1" required
                       value={thresholdForm.bd2}
                       onChange={e => setThresholdForm(p => ({ ...p, bd2: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                   <div>
-                    <Label className="mb-1 text-red-500">Báo Động 3 (BĐ3)</Label>
+                    <Label className="mb-1 text-danger">Báo Động 3 (BĐ3)</Label>
                     <input
                       type="number" step="0.1" required
                       value={thresholdForm.bd3}
                       onChange={e => setThresholdForm(p => ({ ...p, bd3: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                 </div>
@@ -1068,7 +1080,7 @@ export default function StationDetailPage() {
                       type="number" step="0.1" required
                       value={thresholdForm.vibWarn}
                       onChange={e => setThresholdForm(p => ({ ...p, vibWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                   <div>
@@ -1077,16 +1089,16 @@ export default function StationDetailPage() {
                       type="number" step="0.1" required
                       value={thresholdForm.vibAlert}
                       onChange={e => setThresholdForm(p => ({ ...p, vibAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                   <div>
-                    <Label className="mb-1 text-red-500">Nguy Cấp (mm/s)</Label>
+                    <Label className="mb-1 text-danger">Nguy Cấp (mm/s)</Label>
                     <input
                       type="number" step="0.1" required
                       value={thresholdForm.vibCritical}
                       onChange={e => setThresholdForm(p => ({ ...p, vibCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                 </div>
@@ -1105,7 +1117,7 @@ export default function StationDetailPage() {
                       type="number" step="1" required
                       value={thresholdForm.mstWarn}
                       onChange={e => setThresholdForm(p => ({ ...p, mstWarn: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                   <div>
@@ -1114,16 +1126,16 @@ export default function StationDetailPage() {
                       type="number" step="1" required
                       value={thresholdForm.mstAlert}
                       onChange={e => setThresholdForm(p => ({ ...p, mstAlert: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                   <div>
-                    <Label className="mb-1 text-red-500">Nguy Cấp (%)</Label>
+                    <Label className="mb-1 text-danger">Nguy Cấp (%)</Label>
                     <input
                       type="number" step="1" required
                       value={thresholdForm.mstCritical}
                       onChange={e => setThresholdForm(p => ({ ...p, mstCritical: e.target.value }))}
-                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-amber-400"
+                      className="w-full bg-card border border-border rounded px-2.5 py-1.5 text-tx font-mono outline-none focus:border-warning"
                     />
                   </div>
                 </div>

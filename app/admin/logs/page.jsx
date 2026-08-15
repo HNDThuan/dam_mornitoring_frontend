@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { fetchAuditLogs } from '@/lib/api'
-import { Mono } from '@/components/ui'
+import { Mono, Panel, StatTile } from '@/components/ui'
 import {
   FileText,
   KeyRound,
@@ -94,7 +94,7 @@ export default function AuditLogsPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-48px)] p-6 font-sans">
-        <div className="bg-card border border-border rounded-2xl p-8 max-w-md text-center space-y-4 shadow-xl">
+        <div className="bg-card border border-border rounded-xl p-8 max-w-md text-center space-y-4 shadow-panel">
           <Shield className="w-12 h-12 text-danger mx-auto" />
           <h2 className="text-lg font-bold text-tx">Khu Vực Hạn Chế Phân Quyền</h2>
           <p className="text-xs text-muted">
@@ -108,10 +108,10 @@ export default function AuditLogsPage() {
   return (
     <div className="p-4 min-h-[calc(100vh-48px)] space-y-4 max-w-7xl mx-auto font-sans">
       {/* Top Bar Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-card border border-border rounded-2xl p-4 shadow-lg">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-card border border-border rounded-xl p-4 shadow-panel">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-accent/10 text-accent flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
               <FileText className="w-4 h-4" />
             </div>
             <div>
@@ -123,7 +123,7 @@ export default function AuditLogsPage() {
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Ô Tìm kiếm */}
-          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-xl px-3 py-1.5 flex-1 sm:w-64">
+          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 flex-1 sm:w-64 focus-within:border-accent">
             <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input
               value={search}
@@ -136,7 +136,7 @@ export default function AuditLogsPage() {
           <button
             onClick={loadLogs}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-xl text-tx text-[11px] font-semibold bg-card2 hover:bg-white/5 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-tx text-[11px] font-semibold bg-card2 hover:bg-white/5 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 text-accent ${loading ? 'animate-spin' : ''}`} />
             <span>Tải lại</span>
@@ -146,45 +146,10 @@ export default function AuditLogsPage() {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-accent/10 text-accent flex items-center justify-center shrink-0">
-            <FileText className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Tổng Thao Tác</div>
-            <Mono className="text-lg font-bold text-tx">{stats.total}</Mono>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0">
-            <KeyRound className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Xác Thực (Auth)</div>
-            <Mono className="text-lg font-bold text-indigo-400">{stats.authCount}</Mono>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center shrink-0">
-            <Building2 className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Hạ Tầng Đập / Trạm</div>
-            <Mono className="text-lg font-bold text-emerald-400">{stats.damCount}</Mono>
-          </div>
-        </div>
-
-        <div className="bg-card border border-border rounded-xl p-3.5 shadow-md flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center shrink-0">
-            <Sliders className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-[10px] text-muted uppercase font-bold tracking-wider">Cấu Hình Ngưỡng</div>
-            <Mono className="text-lg font-bold text-amber-400">{stats.thresholdCount}</Mono>
-          </div>
-        </div>
+        <StatTile icon={FileText} label="Tổng Thao Tác" value={stats.total} status="info" />
+        <StatTile icon={KeyRound} label="Xác Thực (Auth)" value={stats.authCount} status="info" />
+        <StatTile icon={Building2} label="Hạ Tầng Đập / Trạm" value={stats.damCount} status="safe" />
+        <StatTile icon={Sliders} label="Cấu Hình Ngưỡng" value={stats.thresholdCount} status="warning" />
       </div>
 
       {/* Tabs Phân Loại */}
@@ -210,7 +175,12 @@ export default function AuditLogsPage() {
       </div>
 
       {/* Main Table */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
+      <Panel
+        title="Nhật Ký Chi Tiết"
+        right={<Mono className="text-[10px] text-muted">{filteredLogs.length} bản ghi</Mono>}
+        bodyClassName="p-0"
+        className="overflow-hidden"
+      >
         {loading ? (
           <div className="py-20 text-center text-muted space-y-2">
             <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
@@ -227,7 +197,7 @@ export default function AuditLogsPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-card2 border-b border-border/60 text-[10px] text-muted uppercase font-bold tracking-wider">
+                <tr className="bg-card2/80 backdrop-blur border-b border-border/60 text-[10px] text-muted uppercase font-bold tracking-wider">
                   <th className="py-3 px-4 w-44">Thời Gian</th>
                   <th className="py-3 px-4 w-36">Người Thực Hiện</th>
                   <th className="py-3 px-4 w-36">Loại Thao Tác</th>
@@ -247,7 +217,7 @@ export default function AuditLogsPage() {
                   })
 
                   return (
-                    <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                    <tr key={log.id} className="hover:bg-card2/50 transition-colors">
                       {/* Thời gian */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 text-muted font-mono text-[11px]">
@@ -289,7 +259,7 @@ export default function AuditLogsPage() {
             </table>
           </div>
         )}
-      </div>
+      </Panel>
     </div>
   )
 }

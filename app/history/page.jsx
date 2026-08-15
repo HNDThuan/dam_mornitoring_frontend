@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { Mono, Badge, Divider, Label, Card, Panel, LiveDot } from '@/components/ui'
 import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert } from 'lucide-react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
@@ -12,7 +12,9 @@ import { fetchLongTermHistory, fetchHistoryKpi } from '@/lib/api'
 import { exportAlarmsToExcel } from '@/lib/exportHelpers'
 import { timeAgo, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS } from '@/lib/sensorHelpers'
 
-const TOOLTIP_STYLE = { background: '#0d1520', border: '1px solid #1a2a3a', borderRadius: 6, fontSize: 11, color: '#e2e8f0' }
+const TOOLTIP_STYLE = { background: '#13202f', border: '1px solid #22314a', borderRadius: 8, fontSize: 11, color: '#f1f5f9' }
+const CHART_GRID_COLOR = '#22314a'
+const CHART_TICK_STYLE = { fontSize: 8, fill: '#5b6b85' }
 
 export default function HistoryPage() {
   const { user, isOperator, assignedDamId } = useAuth()
@@ -236,12 +238,15 @@ export default function HistoryPage() {
     <div className="grid gap-3.5 p-4 min-h-[calc(100vh-48px)]" style={{ gridTemplateColumns: '220px 1fr' }}>
 
       {/* ── SIDEBAR BỘ LỌC CSDL ── */}
-      <div className="bg-card border border-border rounded-lg p-3.5 self-start">
-        <div className="flex items-center justify-between mb-3.5 pb-2 border-b border-border">
-          <h2 className="text-[13px] font-bold text-tx flex items-center gap-1.5">
-            <Filter className="w-4 h-4 text-accent" />
+      <Panel
+        className="self-start"
+        title={
+          <span className="flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-accent" />
             <span>Bộ Lọc Dữ Liệu</span>
-          </h2>
+          </span>
+        }
+        right={
           <button
             onClick={loadHistoryData}
             className="p-1 hover:bg-card2 rounded text-muted hover:text-tx transition-colors bg-transparent border-none cursor-pointer"
@@ -249,8 +254,8 @@ export default function HistoryPage() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin text-accent' : ''}`} />
           </button>
-        </div>
-
+        }
+      >
         {/* 1. Chọn Đập Thủy Điện */}
         <div className="mb-3">
           <Label className="mb-1">Đập Thủy Điện</Label>
@@ -317,12 +322,12 @@ export default function HistoryPage() {
 
         <button
           onClick={loadHistoryData}
-          className="w-full py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-md text-white text-[11px] font-bold border-none cursor-pointer hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-lg"
+          className="w-full py-2 bg-gradient-to-r from-accent2 to-accent rounded-md text-white text-[11px] font-bold border-none cursor-pointer hover:brightness-110 transition-all flex items-center justify-center gap-1.5 shadow-glow"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loadingHistory ? 'animate-spin' : ''}`} />
           <span>Áp Dụng Bộ Lọc</span>
         </button>
-      </div>
+      </Panel>
 
       {/* ── KHU VỰC NỘI DUNG CHÍNH ── */}
       <div>
@@ -331,7 +336,8 @@ export default function HistoryPage() {
           <div>
             <h1 className="text-xl font-bold text-tx tracking-wide flex items-center gap-2">
               <span>LỊCH SỬ & PHÂN TÍCH DỮ LIỆU CSDL THỰC TẾ</span>
-              <span className="text-[10px] font-mono font-normal text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-mono font-normal text-safe bg-safe-soft border border-safe-soft px-2 py-0.5 rounded-full flex items-center gap-1.5">
+                <LiveDot active size="sm" />
                 LIVE DB DATA
               </span>
             </h1>
@@ -342,9 +348,9 @@ export default function HistoryPage() {
           <div className="flex gap-2">
             <button
               onClick={() => exportAlarmsToExcel(scopedAlarms, selectedDamId || 'Dam')}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-500/40 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-bold cursor-pointer hover:bg-emerald-500/20 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[10px] font-bold cursor-pointer hover:bg-safe/20 transition-colors"
             >
-              <Download className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <Download className="w-3.5 h-3.5 text-safe shrink-0" />
               <span>Xuất Báo Cáo Excel</span>
             </button>
           </div>
@@ -352,10 +358,10 @@ export default function HistoryPage() {
 
         {/* Thẻ Thống Kê KPI Thật */}
         <div className="grid grid-cols-3 gap-3 mb-3.5">
-          <div className="bg-card border border-border rounded-lg p-3.5">
+          <Card className="p-3.5">
             <div className="flex justify-between items-start mb-2">
               <AlertTriangle className="w-4 h-4 text-warning" />
-              <Mono className="text-[8px] text-warning bg-card2 px-1.5 py-0.5 rounded-sm font-semibold">
+              <Mono className="text-[8px] text-warning bg-warning-soft border border-warning-soft px-1.5 py-0.5 rounded-sm font-semibold">
                 {kpiData?.unresolvedCount ? `${kpiData.unresolvedCount} Chưa xử lý` : 'An toàn'}
               </Mono>
             </div>
@@ -363,68 +369,68 @@ export default function HistoryPage() {
               {kpiData?.totalAlarms ?? scopedAlarms.length}
             </Mono>
             <p className="text-[10px] text-muted mt-1.5">Tổng số sự kiện cảnh báo trong kỳ</p>
-          </div>
+          </Card>
 
-          <div className="bg-card border border-border rounded-lg p-3.5">
+          <Card className="p-3.5">
             <div className="flex justify-between items-start mb-2">
-              <Droplet className="w-4 h-4 text-sky-400" />
-              <Mono className="text-[8px] text-sky-400 bg-card2 px-1.5 py-0.5 rounded-sm font-semibold">
+              <Droplet className="w-4 h-4 text-info" />
+              <Mono className="text-[8px] text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded-sm font-semibold">
                 Đỉnh cao nhất
               </Mono>
             </div>
-            <Mono className="text-2xl font-bold block text-sky-400">
+            <Mono className="text-2xl font-bold block text-info">
               {kpiData?.maxWaterLevel ? `${kpiData.maxWaterLevel.toFixed(2)} m` : `${dams[0]?.waterLevel || 0} m`}
             </Mono>
             <p className="text-[10px] text-muted mt-1.5">Mực nước cao nhất ghi nhận được</p>
-          </div>
+          </Card>
 
-          <div className="bg-card border border-border rounded-lg p-3.5">
+          <Card className="p-3.5">
             <div className="flex justify-between items-start mb-2">
-              <Clock className="w-4 h-4 text-emerald-400" />
-              <Mono className="text-[8px] text-emerald-400 bg-card2 px-1.5 py-0.5 rounded-sm font-semibold">
+              <Clock className="w-4 h-4 text-safe" />
+              <Mono className="text-[8px] text-safe bg-safe-soft border border-safe-soft px-1.5 py-0.5 rounded-sm font-semibold">
                 Trung bình
               </Mono>
             </div>
-            <Mono className="text-2xl font-bold block text-emerald-400">
+            <Mono className="text-2xl font-bold block text-safe">
               {kpiData?.avgResponseTimeSec ? `${Math.round(kpiData.avgResponseTimeSec / 60)} phút` : '15 phút'}
             </Mono>
             <p className="text-[10px] text-muted mt-1.5">Thời gian phản ứng xử lý sự cố</p>
-          </div>
+          </Card>
         </div>
 
         {/* ── BIỂU ĐỒ THỰC TẾ (RECHARTS) ── */}
         <div className="grid grid-cols-2 gap-3 mb-3.5">
           {/* Biểu đồ Đường: Chuỗi dữ liệu CSDL */}
-          <div className="bg-card border border-border rounded-lg p-3.5">
+          <Card className="p-3.5">
             <div className="flex justify-between items-center mb-2">
               <div className="text-[12px] font-bold text-tx">Diễn Biến Thông Số Cảm Biến Realtime</div>
               <Mono className="text-[9px] text-muted">Số bản ghi: {lineChartData.length}</Mono>
             </div>
             <div className="flex gap-3 mb-2">
               <div className="flex items-center gap-1.5">
-                <div className="w-4 h-0.5 bg-sky-400" />
+                <div className="w-4 h-0.5 bg-info" />
                 <span className="text-[9px] text-muted">Đường đo CSDL ({sensorType === 'all' ? 'Tất cả' : sensorType})</span>
               </div>
             </div>
             {lineChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={150}>
                 <LineChart data={lineChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="2 4" stroke="#1a2a3a" />
-                  <XAxis dataKey="d" tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
+                  <CartesianGrid strokeDasharray="2 4" stroke={CHART_GRID_COLOR} />
+                  <XAxis dataKey="d" tick={CHART_TICK_STYLE} tickLine={false} />
+                  <YAxis tick={CHART_TICK_STYLE} tickLine={false} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
                   <Line type="monotone" dataKey="value" stroke="#38bdf8" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[150px] flex items-center justify-center text-[10px] text-muted italic bg-card2/50 rounded">
+              <div className="h-[150px] flex items-center justify-center text-[10px] text-muted italic bg-card2/50 rounded-lg">
                 Chưa có dữ liệu cảm biến trong khoảng thời gian này
               </div>
             )}
-          </div>
+          </Card>
 
           {/* Biểu đồ Cột: Phân bố sự cố theo Ngày từ CSDL */}
-          <div className="bg-card border border-border rounded-lg p-3.5">
+          <Card className="p-3.5">
             <div className="flex justify-between items-center mb-2">
               <div className="text-[12px] font-bold text-tx">Phân Bố Cảnh Báo Sự Cố theo Ngày</div>
               <Mono className="text-[9px] text-muted">Số sự cố: {scopedAlarms.length}</Mono>
@@ -442,32 +448,32 @@ export default function HistoryPage() {
             {barChartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={150}>
                 <BarChart data={barChartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="2 4" stroke="#1a2a3a" />
-                  <XAxis dataKey="d" tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
-                  <YAxis tick={{ fontSize: 8, fill: '#64748b' }} tickLine={false} />
+                  <CartesianGrid strokeDasharray="2 4" stroke={CHART_GRID_COLOR} />
+                  <XAxis dataKey="d" tick={CHART_TICK_STYLE} tickLine={false} />
+                  <YAxis tick={CHART_TICK_STYLE} tickLine={false} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="warning" fill="#fb923c" opacity={0.85} radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="critical" fill="#f43f5e" opacity={0.85} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="warning" fill="#f59e0b" opacity={0.85} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="critical" fill="#fb4360" opacity={0.85} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[150px] flex items-center justify-center text-[10px] text-muted italic bg-card2/50 rounded">
+              <div className="h-[150px] flex items-center justify-center text-[10px] text-muted italic bg-card2/50 rounded-lg">
                 Không ghi nhận sự cố cảnh báo nào trong kỳ
               </div>
             )}
-          </div>
+          </Card>
         </div>
 
         {/* ── BẢNG DỮ LIỆU THỰC TẾ ── */}
-        <div className="bg-card border border-border rounded-lg overflow-hidden">
-          <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border bg-card2/50">
+        <Card className="overflow-hidden">
+          <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border/70">
             <div className="flex items-center gap-2">
-              <span className="text-[12px] font-bold text-tx">Danh Sách Bản Ghi Lịch Sử từ CSDL</span>
-              <span className="text-[9px] font-mono text-muted bg-card px-2 py-0.5 rounded border border-border">
+              <span className="text-[11px] text-muted font-bold tracking-[0.14em] uppercase">Danh Sách Bản Ghi Lịch Sử từ CSDL</span>
+              <span className="text-[9px] font-mono text-muted bg-card3 px-2 py-0.5 rounded-full border border-border">
                 {filteredRecords.length} bản ghi
               </span>
             </div>
-            <div className="flex items-center gap-1.5 bg-card2 border border-border rounded px-2.5 py-1">
+            <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-2.5 py-1 focus-within:border-accent transition-colors">
               <Search className="w-3.5 h-3.5 text-muted shrink-0" />
               <input
                 value={search}
@@ -476,7 +482,7 @@ export default function HistoryPage() {
                   setPage(1)
                 }}
                 placeholder="Tìm trạm, đập, mã thiết bị..."
-                className="bg-transparent border-none outline-none text-tx text-[10px] w-48 placeholder:text-muted"
+                className="bg-transparent border-none outline-none text-tx text-[10px] w-48 placeholder:text-faint"
               />
             </div>
           </div>
@@ -496,7 +502,7 @@ export default function HistoryPage() {
                     const as = getStatus(r.alertLv)
                     const ss = getStatus(r.statusLv)
                     return (
-                      <tr key={i} className="border-t border-border hover:bg-white/[0.02] transition-colors">
+                      <tr key={i} className="border-t border-border/70 hover:bg-card2/40 transition-colors">
                         <td className="px-3 py-2">
                           <Mono className="text-[9px] text-muted whitespace-nowrap">{r.time}</Mono>
                         </td>
@@ -540,7 +546,7 @@ export default function HistoryPage() {
           </div>
 
           {/* Phân trang thật */}
-          <div className="flex justify-between items-center px-3.5 py-2 border-t border-border bg-card2/30">
+          <div className="flex justify-between items-center px-3.5 py-2 border-t border-border/70 bg-card2/30">
             <Mono className="text-[9px] text-muted">
               Hiển thị {filteredRecords.length > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, filteredRecords.length)} trong tổng số {filteredRecords.length} bản ghi
             </Mono>
@@ -549,7 +555,7 @@ export default function HistoryPage() {
               <button
                 disabled={page === 1}
                 onClick={() => setPage(p => Math.max(p - 1, 1))}
-                className="px-2 py-0.5 rounded text-[10px] border border-border bg-transparent text-muted hover:text-tx disabled:opacity-40 cursor-pointer"
+                className="px-2 py-0.5 rounded-lg text-[10px] border border-border bg-transparent text-muted hover:text-tx hover:bg-card2 disabled:opacity-40 cursor-pointer transition-colors"
               >
                 Trước
               </button>
@@ -559,13 +565,13 @@ export default function HistoryPage() {
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                className="px-2 py-0.5 rounded text-[10px] border border-border bg-transparent text-muted hover:text-tx disabled:opacity-40 cursor-pointer"
+                className="px-2 py-0.5 rounded-lg text-[10px] border border-border bg-transparent text-muted hover:text-tx hover:bg-card2 disabled:opacity-40 cursor-pointer transition-colors"
               >
                 Sau
               </button>
             </div>
           </div>
-        </div>
+        </Card>
 
       </div>
     </div>

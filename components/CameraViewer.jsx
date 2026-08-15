@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Mono } from '@/components/ui'
+import { Mono, Panel, LiveDot } from '@/components/ui'
 import { useLanguage } from '@/context/LanguageContext'
 import { Video, VideoOff, Camera, Maximize2, ChevronLeft, ChevronRight, X } from 'lucide-react'
 
@@ -12,7 +12,7 @@ const CAMERAS = [
   { id: 4, label: 'Cửa xả — Trạm bơm', code: 'CAM-04', status: 'offline' },
 ]
 
-const CAM_DOT = { safe: '#34d399', warning: '#fb923c', offline: '#4a6070' }
+const CAM_DOT = { safe: '#22c55e', warning: '#f59e0b', offline: '#5b6b85' }
 
 export default function CameraViewer() {
   const [active, setActive] = useState(0)
@@ -26,7 +26,7 @@ export default function CameraViewer() {
   const next = () => setActive(i => (i + 1) % CAMERAS.length)
 
   const CamFeed = ({ large = false }) => (
-    <div className={`relative bg-[#070e1a] overflow-hidden ${large ? '' : 'rounded-lg'}`}
+    <div className={`relative bg-card3 overflow-hidden ${large ? '' : 'rounded-lg'}`}
       style={{ aspectRatio: '16/7' }}>
       <div className="absolute inset-0 flex items-center justify-center">
         {cam.status === 'offline'
@@ -77,8 +77,8 @@ export default function CameraViewer() {
           <button key={c.id} onClick={() => setActive(i)}
             className="relative rounded overflow-hidden cursor-pointer transition-all p-0 border-none"
             style={{
-              aspectRatio: '16/9', background: '#0a1220',
-              outline: i === active ? '2px solid #818cf8' : '1px solid #1a2a3a',
+              aspectRatio: '16/9', background: '#0a1119',
+              outline: i === active ? '2px solid #818cf8' : '1px solid #22314a',
             }}>
             <div className="absolute inset-0 flex items-center justify-center opacity-10">
               <Video className="w-4 h-4 text-tx" />
@@ -102,16 +102,20 @@ export default function CameraViewer() {
 
   return (
     <>
-      <div className="bg-card border border-border rounded-xl p-4">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center gap-2">
+      <Panel
+        title={
+          <span className="flex items-center gap-1.5 normal-case tracking-normal text-[12px] font-semibold text-tx">
             <Camera className="w-4 h-4 text-accent shrink-0" />
-            <span className="text-[12px] font-semibold text-tx">{t('camera.title')}</span>
-          </div>
-          <Mono className="text-[8px] text-safe">● {t('camera.live')}</Mono>
-        </div>
-
+            <span>{t('camera.title')}</span>
+          </span>
+        }
+        right={
+          <span className="flex items-center gap-1.5">
+            <LiveDot active />
+            <Mono className="text-[9px] text-safe font-bold">{t('camera.live')}</Mono>
+          </span>
+        }
+      >
         <CamFeed />
 
         {/* Label + dot indicator */}
@@ -123,7 +127,7 @@ export default function CameraViewer() {
                 className="rounded-full cursor-pointer border-none p-0 transition-all"
                 style={{
                   width: i === active ? 16 : 6, height: 6,
-                  background: i === active ? '#818cf8' : '#1a2a3a',
+                  background: i === active ? '#818cf8' : '#22314a',
                   borderRadius: i === active ? 3 : '50%',
                 }} />
             ))}
@@ -135,13 +139,13 @@ export default function CameraViewer() {
         {/* AI stats */}
         <div className="grid grid-cols-4 gap-1.5 mt-3">
           {[[t('camera.people'), '0', 'text-safe'], [t('camera.vehicles'), '2', 'text-tx'], [t('camera.cracks'), t('camera.none'), 'text-safe'], [t('camera.confidence'), '98.5%', 'text-info']].map(([lb, val, cl]) => (
-            <div key={lb} className="bg-card2 rounded px-2 py-1.5 text-center">
+            <div key={lb} className="bg-card2/70 border border-border/50 rounded px-2 py-1.5 text-center">
               <div className="text-[7px] text-muted uppercase tracking-wide mb-1">{lb}</div>
               <Mono className={`text-[11px] font-bold ${cl}`}>{val}</Mono>
             </div>
           ))}
         </div>
-      </div>
+      </Panel>
 
       {/* Expanded modal */}
       {expanded && (
@@ -165,7 +169,7 @@ export default function CameraViewer() {
               </div>
             </div>
             <CamFeed large />
-            <div className="p-3 bg-[#0a111c] border-t border-border">
+            <div className="p-3 bg-card3 border-t border-border">
               <Thumbnails gap="gap-2" />
             </div>
           </div>

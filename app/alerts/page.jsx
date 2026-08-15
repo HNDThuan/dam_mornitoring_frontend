@@ -8,7 +8,7 @@ import { sendEmailAlert, fetchDamManagers, getFormattedImageUrl } from '@/lib/ap
 import { exportAlarmsToExcel, exportAlarmToPDF } from '@/lib/exportHelpers'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
-import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { Mono, Badge, Divider, Label, Card } from '@/components/ui'
 import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio, FileSpreadsheet } from 'lucide-react'
 
 export default function AlertsPage() {
@@ -212,13 +212,13 @@ export default function AlertsPage() {
   // Block Viewer role from viewing Emergency Alert Center
   if (isViewer) return (
     <div className="flex items-center justify-center h-[calc(100vh-48px)] p-6 font-sans">
-      <div className="bg-card border border-border rounded-2xl p-8 max-w-md text-center space-y-4 shadow-xl">
+      <Card glass className="p-8 max-w-md text-center space-y-4">
         <Shield className="w-12 h-12 text-danger mx-auto" />
         <h2 className="text-lg font-bold text-tx">Khu Vực Hạn Chế Phân Quyền</h2>
         <p className="text-xs text-muted">
           Tài khoản vai trò <strong className="text-accent">VIEWER (Khách quan sát)</strong> chỉ có quyền xem bản đồ & chỉ số tổng quan, không có quyền truy cập Trung tâm Cảnh Báo Khẩn Cấp.
         </p>
-      </div>
+      </Card>
     </div>
   )
 
@@ -278,7 +278,7 @@ export default function AlertsPage() {
               return (
                 <div key={al.id} onClick={() => setSelId(al.id)}
                   className={`border-l-[3px] ${s.leftBorder} rounded-lg p-2.5 cursor-pointer transition-all
-                  ${isSel ? `${s.bg} ${s.border} border` : 'bg-card border border-border hover:bg-white/5'}
+                  ${isSel ? `${s.bg} ${s.border} border` : 'bg-card border border-border hover:bg-card2/60'}
                   ${al.resolvedAt ? 'opacity-60' : ''}`}>
                   <div className="flex justify-between mb-1">
                     <Mono className={`text-[10px] uppercase font-bold ${s.text} flex items-center gap-1`}>
@@ -329,7 +329,7 @@ export default function AlertsPage() {
           return (
             <div className="overflow-y-auto space-y-3">
               {/* Header */}
-              <div className="flex justify-between items-start bg-card border border-border rounded-xl p-4 shadow-md">
+              <Card className="flex justify-between items-start p-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1.5">
                     <h2 className="text-xl font-bold text-tx m-0">{typeLb} vượt ngưỡng</h2>
@@ -362,7 +362,7 @@ export default function AlertsPage() {
                   {/* Nút Xuất Excel */}
                   <button
                     onClick={() => exportAlarmsToExcel(shown, loc.damName)}
-                    className="px-3 py-1.5 border border-emerald-500/40 rounded-lg bg-emerald-500/10 text-emerald-400 text-[11px] font-bold cursor-pointer hover:bg-emerald-500/20 transition-colors flex items-center gap-1"
+                    className="px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[11px] font-bold cursor-pointer hover:bg-safe/20 transition-colors flex items-center gap-1"
                     title="Xuất bảng nhật ký cảnh báo ra file Excel"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
@@ -379,10 +379,10 @@ export default function AlertsPage() {
                     <span>Xuất PDF</span>
                   </button>
                 </div>
-              </div>
+              </Card>
 
               {/* DEDICATED LOCATION CARD */}
-              <div className="bg-card2 border border-border rounded-xl p-4 shadow-md space-y-2">
+              <div className="bg-card2/60 border border-border rounded-xl p-4 shadow-panel space-y-2">
                 <div className="text-[11px] font-bold text-accent uppercase tracking-wider flex items-center gap-1.5">
                   <MapPin className="w-4 h-4 text-accent shrink-0" />
                   <span>VỊ TRÍ XẢY RA CẢNH BÁO</span>
@@ -390,8 +390,8 @@ export default function AlertsPage() {
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   {/* Đập thủy điện */}
-                  <div className="bg-card border border-border rounded-lg p-3 flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Card className="p-3 flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent border border-accent/30 flex items-center justify-center shrink-0 mt-0.5">
                       <Database className="w-4 h-4" />
                     </div>
                     <div>
@@ -402,11 +402,11 @@ export default function AlertsPage() {
                         <span>Vị trí đập: <strong>{loc.damLocation}</strong></span>
                       </div>
                     </div>
-                  </div>
+                  </Card>
 
                   {/* Trạm quan trắc */}
-                  <div className="bg-card border border-border rounded-lg p-3 flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <Card className="p-3 flex items-start gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-info/15 text-info border border-info/30 flex items-center justify-center shrink-0 mt-0.5">
                       <Radio className="w-4 h-4" />
                     </div>
                     <div>
@@ -417,14 +417,14 @@ export default function AlertsPage() {
                         <span>Vị trí: <strong>{loc.stationLoc}</strong> ({loc.river} — <Mono className="text-tx">{loc.km}</Mono>)</span>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 </div>
               </div>
 
               {/* Metrics Cards */}
               <div className="grid gap-2.5 mb-3" style={{ gridTemplateColumns: '1.3fr 1fr 1fr' }}>
                 {/* Camera AI */}
-                <div className="bg-card border border-border rounded-lg p-3">
+                <Card className="p-3">
                   <div className="flex justify-between mb-2">
                     <Mono className="text-[9px] text-tx">Camera AI — {sel.sensorId}</Mono>
                     <Mono className={`text-[7px] ${sel.cameraActivated ? 'text-safe' : 'text-muted'}`}>
@@ -460,56 +460,56 @@ export default function AlertsPage() {
                     )}
                   </div>
                   <p className="text-[9px] text-tx leading-relaxed">{sel.notes}</p>
-                </div>
+                </Card>
 
                 {/* Giá trị đo */}
-                <div className="bg-card border border-border rounded-lg p-3.5 flex flex-col justify-center">
-                  <div className="text-[15px] text-white uppercase tracking-wider mb-2">Giá trị đo</div>
+                <Card className="p-3.5 flex flex-col justify-center">
+                  <Label className="mb-2">Giá trị đo</Label>
                   <Mono className={`text-2xl font-bold ${s.text}`}>{sel.measuredVal} {unit}</Mono>
-                  <p className={`text-[12px] text-white mt-1.5`}>Ngưỡng: {sel.thresholdVal} {unit}</p>
+                  <p className="text-[12px] text-muted mt-1.5">Ngưỡng: {sel.thresholdVal} {unit}</p>
                   <div className="h-1 bg-border rounded-full mt-2">
                     <div className={`h-full rounded-full ${s.dot} opacity-85`}
                       style={{ width: `${Math.min((sel.measuredVal / (sel.thresholdVal * 1.5)) * 100, 100)}%` }} />
                   </div>
-                </div>
+                </Card>
 
                 {/* Duration / Thông tin thêm */}
-                <div className="bg-card border border-border rounded-lg p-3.5 flex flex-col justify-center">
-                  <div className="text-[15px] text-white uppercase tracking-wider mb-2">Thời gian vượt ngưỡng</div>
+                <Card className="p-3.5 flex flex-col justify-center">
+                  <Label className="mb-2">Thời gian vượt ngưỡng</Label>
                   <Mono className={`text-2xl font-bold ${s.text}`}>
                     {sel.durationS > 0 ? `${sel.durationS}s` : 'Tức thì'}
                   </Mono>
-                  <p className="text-[12px] text-white font-bold mt-1.5">
+                  <p className="text-[12px] text-tx font-bold mt-1.5">
                     Loại: {typeLb}
                   </p>
                   <div className="mt-2 flex gap-1.5">
                     {sel.cameraActivated && (
-                      <span className="text-[12px] font-mono text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <span className="text-[10px] font-mono text-info bg-info-soft border border-info-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
                         <Camera className="w-3 h-3" />
                         <span>CAM</span>
                       </span>
                     )}
                     {sel.crackDetected && (
-                      <span className="text-[12px] font-mono text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <span className="text-[10px] font-mono text-danger bg-danger-soft border border-danger-soft px-1.5 py-0.5 rounded flex items-center gap-0.5">
                         <AlertTriangle className="w-3 h-3" />
                         <span>NỨT</span>
                       </span>
                     )}
                   </div>
-                </div>
+                </Card>
               </div>
 
               {/* Sensor table — Lịch sử cảnh báo cùng loại */}
-              <div className="bg-card border border-border rounded-lg overflow-hidden">
-                <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border">
-                  <span className="text-[12px] font-semibold text-tx">Lịch sử cảnh báo — {typeLb}</span>
-                  <Mono className="text-[12px] text-white">{sensorRows.length} bản ghi</Mono>
+              <Card className="overflow-hidden">
+                <div className="flex justify-between items-center px-3.5 py-2.5 border-b border-border/70">
+                  <span className="text-[11px] text-muted font-bold tracking-[0.14em] uppercase">Lịch sử cảnh báo — {typeLb}</span>
+                  <Mono className="text-[11px] text-tx">{sensorRows.length} bản ghi</Mono>
                 </div>
                 <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-card2">
+                    <tr className="bg-card2/60">
                       {['THỜI GIAN', 'GIÁ TRỊ ĐO', 'NGƯỠNG', 'MỨC CẢNH BÁO'].map(h => (
-                        <th key={h} className="px-3 py-2 text-left text-[12px] text-white font-bold uppercase tracking-widest">{h}</th>
+                        <th key={h} className="px-3 py-2 text-left text-[10px] text-muted font-bold uppercase tracking-widest">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -518,8 +518,8 @@ export default function AlertsPage() {
                       const rs = getStatusBySeverity(r.severity)
                       const ri = SEVERITY_MAP[r.severity] || SEVERITY_MAP.WARNING
                       return (
-                        <tr key={i} className="border-t border-border">
-                          <td className="px-3 py-2"><Mono className="text-[12px] text-white">{r.t}</Mono></td>
+                        <tr key={i} className="border-t border-border/70">
+                          <td className="px-3 py-2"><Mono className="text-[12px] text-muted">{r.t}</Mono></td>
                           <td className="px-3 py-2"><Mono className={`text-[13px] font-bold ${rs.text}`}>{r.val} {r.unit}</Mono></td>
                           <td className="px-3 py-2"><Mono className="text-[12px] text-tx">{r.threshold} {r.unit}</Mono></td>
                           <td className="px-3 py-2">
@@ -536,7 +536,7 @@ export default function AlertsPage() {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </Card>
             </div>
           )
         })()}
@@ -554,20 +554,20 @@ export default function AlertsPage() {
 
         {/* RIGHT: Dispatch */}
         <div className="overflow-y-auto">
-          <div className="bg-card border border-border rounded-lg p-3 mb-2.5">
+          <Card className="p-3 mb-2.5">
             <Mono className="text-[8px] text-muted tracking-widest block mb-1">ĐIỀU PHỐI</Mono>
             <div className="text-[13px] font-bold text-tx mb-3">TRUNG TÂM CHỈ HUY KHẨN CẤP</div>
-            <button className="w-full py-2 mb-2 rounded-md text-white text-[11px] font-bold tracking-wide border-none cursor-pointer bg-gradient-to-r from-red-600 to-red-500 flex items-center justify-center gap-1.5">
+            <button className="w-full py-2 mb-2 rounded-md text-white text-[11px] font-bold tracking-wide border-none cursor-pointer bg-gradient-to-r from-danger to-danger/70 shadow-glow-danger flex items-center justify-center gap-1.5">
               <Bell className="w-3.5 h-3.5 animate-bounce shrink-0" />
               <span>KÍCH HOẠT CÒI BÁO ĐỘNG</span>
             </button>
-            <button className="w-full py-2 rounded border border-border bg-transparent text-tx text-[11px] font-bold tracking-wide cursor-pointer hover:bg-white/5 flex items-center justify-center gap-1.5">
+            <button className="w-full py-2 rounded-md border border-border bg-transparent text-tx text-[11px] font-bold tracking-wide cursor-pointer hover:bg-card2 transition-colors flex items-center justify-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-muted shrink-0" />
               <span>PHÊ DUYỆT SOP — P-03</span>
             </button>
-          </div>
+          </Card>
 
-          <div className="bg-card border border-border rounded-lg p-3">
+          <Card className="p-3">
             <div className="text-[12px] font-bold text-tx mb-3">GỬI THÔNG BÁO KHẨN CẤP</div>
 
             <div className="mb-3">
@@ -577,21 +577,21 @@ export default function AlertsPage() {
 
               {/* Thông tin Cán bộ quản lý đập được phân công */}
               {damManagers.length > 0 && (
-                <div className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded mb-2 font-semibold flex items-center justify-between">
+                <div className="text-[9px] text-safe bg-safe-soft border border-safe-soft px-2 py-1 rounded mb-2 font-semibold flex items-center justify-between">
                   <span>Cán bộ phụ trách Đập ({sel?.damId || 'Sự cố'}):</span>
                   <span className="font-mono text-tx font-bold">{damManagers.map(m => m.fullName || m.username).join(', ')}</span>
                 </div>
               )}
 
               {/* Danh sách Email dạng thẻ (Badges) do Admin quản lý */}
-              <div className="flex flex-wrap gap-1.5 mb-2 max-h-28 overflow-y-auto bg-card2 border border-border p-2 rounded">
+              <div className="flex flex-wrap gap-1.5 mb-2 max-h-28 overflow-y-auto bg-card2 border border-border p-2 rounded-lg">
                 {emailList.map(email => (
                   <span key={email} className="inline-flex items-center gap-1 bg-accent-soft border border-accent/40 text-accent font-mono text-[9px] px-2 py-0.5 rounded-full">
                     <span>{email}</span>
                     <button
                       type="button"
                       onClick={() => removeEmailContact(email)}
-                      className="hover:text-red-400 cursor-pointer ml-1 font-bold text-[11px] border-none bg-transparent text-accent/70"
+                      className="hover:text-danger cursor-pointer ml-1 font-bold text-[11px] border-none bg-transparent text-accent/70"
                       title="Xóa Email này"
                     >
                       ×
@@ -611,7 +611,7 @@ export default function AlertsPage() {
                   onChange={e => setNewEmailInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addEmailContact())}
                   placeholder="Thêm Email người nhận mới..."
-                  className="flex-1 bg-card2 border border-border rounded px-2.5 py-1 text-tx text-[10px] outline-none"
+                  className="flex-1 bg-card2 border border-border rounded-lg px-2.5 py-1 text-tx text-[10px] outline-none focus:border-accent placeholder:text-faint"
                 />
                 <button
                   type="button"
@@ -645,19 +645,19 @@ export default function AlertsPage() {
                 </span>
               </div>
               <textarea value={msg || defaultMsg} onChange={e => setMsg(e.target.value)} rows={4}
-                className="w-full bg-card2 border border-border rounded px-2.5 py-2 text-tx text-[10px] outline-none resize-none leading-relaxed" />
+                className="w-full bg-card2 border border-border rounded-lg px-2.5 py-2 text-tx text-[10px] outline-none focus:border-accent resize-none leading-relaxed" />
               <Mono className="text-[8px] text-muted">{(msg || defaultMsg).length}/500 ký tự</Mono>
             </div>
 
             {statusMsg && (
-              <div className={`p-2 rounded text-[10px] font-semibold mb-2.5 ${sent ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'}`}>
+              <div className={`p-2 rounded-lg text-[10px] font-semibold mb-2.5 ${sent ? 'bg-safe-soft text-safe border border-safe-soft' : 'bg-warning-soft text-warning border border-warning-soft'}`}>
                 {statusMsg}
               </div>
             )}
 
             <button onClick={handleSend} disabled={sending}
               className={`w-full py-2 rounded-md border-none text-white text-[11px] font-bold tracking-wide cursor-pointer transition-all flex items-center justify-center gap-1.5
-              ${sent ? 'bg-gradient-to-r from-emerald-600 to-emerald-500' : 'bg-gradient-to-r from-red-600 to-red-500'} ${sending ? 'opacity-70 cursor-not-allowed' : ''}`}>
+              ${sent ? 'bg-gradient-to-r from-safe to-safe/70 shadow-glow-safe' : 'bg-gradient-to-r from-danger to-danger/70 shadow-glow-danger'} ${sending ? 'opacity-70 cursor-not-allowed' : ''}`}>
               {sending ? (
                 <>
                   <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin shrink-0" />
@@ -710,7 +710,7 @@ export default function AlertsPage() {
             {alarms.length === 0 && (
               <div className="text-[10px] text-muted text-center py-2">Chưa có hoạt động</div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
 

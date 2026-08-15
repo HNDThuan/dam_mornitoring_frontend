@@ -7,7 +7,7 @@ import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { getStatus } from '@/lib/statusConfig'
-import { Mono, Badge, Divider, Label } from '@/components/ui'
+import { Mono, Badge, Divider, Label, Panel, RadialGauge, LiveDot } from '@/components/ui'
 import {
   Plus,
   Pencil,
@@ -21,6 +21,7 @@ import {
   Radio,
   MapPin,
   Lock,
+  Map,
 } from 'lucide-react'
 import DamPinMap from '@/components/DamMap'
 
@@ -170,10 +171,10 @@ export default function DamsPage() {
   return (
     <div className="p-4 min-h-[calc(100vh-48px)] space-y-4">
       {/* Top Bar / Header */}
-      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-lg">
+      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-panel">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-lg bg-accent-soft text-accent border border-accent-soft flex items-center justify-center">
               <Database className="w-4 h-4" />
             </div>
             <h1 className="text-xl font-bold text-tx tracking-wide m-0">{t('damsPage.title')}</h1>
@@ -183,7 +184,7 @@ export default function DamsPage() {
 
         <div className="flex items-center gap-2.5 shrink-0">
           {/* Search */}
-          <div className="h-9 flex items-center gap-2 bg-card2 border border-border rounded-lg px-3 w-60 shrink-0 focus-within:border-accent">
+          <div className="h-9 flex items-center gap-2 bg-card2 border border-border rounded-lg px-3 w-60 shrink-0 focus-within:border-accent transition-colors">
             <Search className="w-3.5 h-3.5 text-muted shrink-0" />
             <input
               value={search}
@@ -204,7 +205,7 @@ export default function DamsPage() {
           {isAdmin && (
             <button
               onClick={openCreateDamModal}
-              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-r from-sky-500 to-indigo-500 hover:from-sky-600 hover:to-indigo-600 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-lg shadow-sky-500/20 shrink-0 whitespace-nowrap transition-all"
+              className="h-9 flex items-center gap-1.5 px-4 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded-lg text-white text-[11px] font-bold cursor-pointer border-none shadow-glow shrink-0 whitespace-nowrap transition-all"
             >
               <Plus className="w-4 h-4" />
               <span>{t('damsPage.addDam')}</span>
@@ -214,7 +215,18 @@ export default function DamsPage() {
       </div>
 
       {/* ── INTERACTIVE LEAFLET GIS MAP ── */}
-      <DamPinMap dams={visibleDams} stations={visibleStations} height="360px" />
+      <Panel
+        title={
+          <span className="flex items-center gap-1.5">
+            <Map className="w-3 h-3" /> Bản đồ giám sát
+          </span>
+        }
+        right={<span className="flex items-center gap-1.5"><LiveDot active /><span className="text-[10px] font-mono text-safe font-bold">LIVE</span></span>}
+        bodyClassName="p-0"
+        className="[&_.leaflet-container]:rounded-b-xl"
+      >
+        <DamPinMap dams={visibleDams} stations={visibleStations} height="360px" />
+      </Panel>
 
       {/* Dams List */}
       <div className="grid grid-cols-2 gap-3">
@@ -226,7 +238,7 @@ export default function DamsPage() {
             <div
               key={dam.id}
               onClick={() => router.push(`/dams/${dam.id}`)}
-              className={`bg-card border border-border border-l-4 ${s.leftBorder} rounded-xl p-4 cursor-pointer hover:border-accent/60 transition-all duration-150 shadow-lg group`}
+              className={`bg-card border border-border border-l-4 ${s.leftBorder} rounded-xl p-4 cursor-pointer hover:border-accent/60 hover:-translate-y-0.5 transition-all duration-150 shadow-panel group`}
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
@@ -275,24 +287,17 @@ export default function DamsPage() {
               </div>
 
               {/* Metrics */}
-              <div className="grid grid-cols-3 gap-2 bg-card2 p-2.5 rounded-lg text-[10px] my-3 border border-border/40">
-                <div>
-                  <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
-                  <Mono className={`text-[14px] font-bold ${s.text}`}>{dam.waterLevel} m</Mono>
-                </div>
+              <div className="flex items-center gap-3 bg-card2 p-2.5 rounded-lg my-3 border border-border/40">
+                <RadialGauge value={dam.fillPct} size={52} stroke={5} status={dam.status} sublabel={t('damsPage.fillCapacity')} />
+                <div className="flex-1 min-w-0 grid grid-cols-2 gap-2 text-[10px]">
+                  <div>
+                    <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
+                    <Mono className={`text-[14px] font-bold ${s.text}`}>{dam.waterLevel} m</Mono>
+                  </div>
 
-                <div>
-                  <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.flow')}</div>
-                  <Mono className="text-[13px] text-tx">{dam.flow ? dam.flow.toLocaleString() : 0} m³/s</Mono>
-                </div>
-
-                <div>
-                  <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.fillCapacity')}</div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <div className="w-12 h-1.5 bg-border rounded-full overflow-hidden">
-                      <div className={`h-full ${s.dot}`} style={{ width: `${Math.min(dam.fillPct, 100)}%` }} />
-                    </div>
-                    <Mono className="text-[10px] text-tx">{dam.fillPct}%</Mono>
+                  <div>
+                    <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.flow')}</div>
+                    <Mono className="text-[13px] text-tx">{dam.flow ? dam.flow.toLocaleString() : 0} m³/s</Mono>
                   </div>
                 </div>
               </div>
@@ -315,7 +320,7 @@ export default function DamsPage() {
         })}
 
         {filteredDams.length === 0 && (
-          <div className="col-span-2 text-center py-12 bg-card border border-border rounded-xl text-muted text-xs">
+          <div className="col-span-2 text-center py-12 bg-card border border-border rounded-xl text-muted text-xs shadow-panel">
             Không tìm thấy đập thủy điện nào phù hợp.
           </div>
         )}
@@ -475,7 +480,7 @@ export default function DamsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-indigo-500 rounded text-white text-[11px] font-bold cursor-pointer border-none"
+                  className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 rounded text-white text-[11px] font-bold cursor-pointer border-none shadow-glow transition-all"
                 >
                   {editingDam ? t('admin.save') : t('admin.create')}
                 </button>

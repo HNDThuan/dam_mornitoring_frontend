@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import { fetchUsers, approveUser as apiApproveUser, updateUser as apiUpdateUser, deleteUser as apiDeleteUser, fetchDams } from '@/lib/api'
-import { Mono, Badge } from '@/components/ui'
+import { Mono, Panel, StatTile } from '@/components/ui'
 import { Users, CheckCircle, XCircle, Shield, Building2, Trash2, Edit2, RefreshCw, AlertTriangle, UserCheck, Clock, Ban } from 'lucide-react'
 
 export default function UsersPage() {
@@ -82,44 +82,61 @@ export default function UsersPage() {
     )
   }
 
+  const pendingCount = users.filter(u => u.status === 'PENDING_APPROVAL').length
+  const activeCount = users.filter(u => u.status === 'ACTIVE').length
+
   return (
-    <div className="space-y-6 font-sans">
+    <div className="p-4 min-h-[calc(100vh-48px)] space-y-4 font-sans">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border rounded-2xl p-5 shadow-lg">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-card border border-border rounded-xl p-4 shadow-panel">
         <div>
-          <div className="flex items-center gap-2">
-            <Users className="w-6 h-6 text-accent" />
-            <h1 className="text-xl font-black text-tx tracking-tight">QUẢN LÝ NGƯỜI DÙNG & PHÂN QUYỀN</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
+            <h1 className="text-xl font-bold text-tx tracking-wide m-0">Quản lý Người dùng & Phân quyền</h1>
           </div>
-          <p className="text-xs text-muted mt-1">Phê duyệt tài khoản cán bộ, gán vai trò (ADMIN, OPERATOR, VIEWER) và đập phụ trách</p>
+          <p className="text-[10px] text-muted m-0">Phê duyệt tài khoản cán bộ, gán vai trò (ADMIN, OPERATOR, VIEWER) và đập phụ trách</p>
         </div>
 
         <button
           onClick={loadData}
-          className="px-3 py-2 bg-card2 border border-border rounded-xl text-xs font-bold text-tx hover:border-accent flex items-center gap-1.5 cursor-pointer transition-colors"
+          className="h-9 px-3.5 bg-card2 border border-border rounded-lg text-[11px] font-semibold text-tx hover:bg-white/5 flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-3.5 h-3.5 text-accent" />
           <span>Tải lại</span>
         </button>
       </div>
 
+      {/* Stats Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <StatTile icon={Users} label="Tổng tài khoản" value={users.length} status="info" />
+        <StatTile icon={Clock} label="Chờ phê duyệt" value={pendingCount} status={pendingCount > 0 ? 'warning' : 'safe'} />
+        <StatTile icon={CheckCircle} label="Đang hoạt động" value={activeCount} status="safe" />
+      </div>
+
       {/* Action Messages */}
       {actionSuccess && (
-        <div className="p-3 bg-safe/10 border border-safe/30 rounded-xl text-safe text-xs font-bold flex items-center gap-2">
+        <div className="p-3 bg-safe/10 border border-safe/30 rounded-lg text-safe text-xs font-bold flex items-center gap-2">
           <CheckCircle className="w-4 h-4 shrink-0" />
           <span>{actionSuccess}</span>
         </div>
       )}
 
       {error && (
-        <div className="p-3 bg-danger/10 border border-danger/30 rounded-xl text-danger text-xs font-bold flex items-center gap-2">
+        <div className="p-3 bg-danger/10 border border-danger/30 rounded-lg text-danger text-xs font-bold flex items-center gap-2">
           <XCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-lg">
+      <Panel
+        title="Danh Sách Người Dùng"
+        right={<Mono className="text-[10px] text-muted">{users.length} tài khoản</Mono>}
+        bodyClassName="p-0"
+        className="overflow-hidden"
+      >
         {loading ? (
           <div className="p-8 text-center text-xs text-muted">Đang tải danh sách tài khoản...</div>
         ) : users.length === 0 ? (
@@ -128,7 +145,7 @@ export default function UsersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-card2 border-b border-border text-[10px] uppercase text-muted font-bold tracking-wider">
+                <tr className="bg-card2/80 backdrop-blur border-b border-border text-[10px] uppercase text-muted font-bold tracking-wider">
                   <th className="py-3 px-4">Họ và tên / Username</th>
                   <th className="py-3 px-4">Email & SĐT</th>
                   <th className="py-3 px-4">Vai trò (Role)</th>
@@ -215,7 +232,7 @@ export default function UsersPage() {
                                 status: u.status || 'ACTIVE',
                               })
                             }}
-                            className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent cursor-pointer"
+                            className="p-1.5 bg-accent/10 border border-accent/20 rounded-lg text-accent hover:bg-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
                             title="Chỉnh sửa phân quyền"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -223,7 +240,7 @@ export default function UsersPage() {
 
                           <button
                             onClick={() => handleDelete(u.id, u.username)}
-                            className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger cursor-pointer"
+                            className="p-1.5 bg-danger/10 border border-danger/20 rounded-lg text-danger hover:bg-danger/20 hover:border-danger/40 transition-colors cursor-pointer"
                             title="Xóa tài khoản"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -237,12 +254,12 @@ export default function UsersPage() {
             </table>
           </div>
         )}
-      </div>
+      </Panel>
 
       {/* Edit User Modal */}
       {editingUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+          <div className="glass-panel rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
             <h3 className="text-base font-bold text-tx">Chỉnh sửa phân quyền: {editingUser.fullName}</h3>
 
             <div className="space-y-3 text-xs">
@@ -251,7 +268,7 @@ export default function UsersPage() {
                 <select
                   value={editForm.role}
                   onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-xl p-2.5 text-tx focus:outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2.5 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 >
                   <option value="ADMIN">ADMIN (Quản trị viên toàn hệ thống)</option>
                   <option value="OPERATOR">OPERATOR (Cán bộ trực đập)</option>
@@ -264,7 +281,7 @@ export default function UsersPage() {
                 <select
                   value={editForm.assignedDamId}
                   onChange={(e) => setEditForm({ ...editForm, assignedDamId: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-xl p-2.5 text-tx focus:outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2.5 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 >
                   <option value="">-- Tất cả các đập (Dành cho Admin/Viewer) --</option>
                   {dams.map((d) => (
@@ -280,7 +297,7 @@ export default function UsersPage() {
                 <select
                   value={editForm.status}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full bg-card2 border border-border rounded-xl p-2.5 text-tx focus:outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg px-3 py-2.5 text-tx text-[12px] focus-visible:outline-none focus:border-accent"
                 >
                   <option value="ACTIVE">ACTIVE (Hoạt động)</option>
                   <option value="PENDING_APPROVAL">PENDING_APPROVAL (Chờ duyệt)</option>
@@ -292,13 +309,13 @@ export default function UsersPage() {
             <div className="flex justify-end gap-2 pt-3 border-t border-border/40">
               <button
                 onClick={() => setEditingUser(null)}
-                className="px-4 py-2 bg-card2 border border-border rounded-xl text-xs font-bold text-muted hover:text-tx cursor-pointer"
+                className="px-4 py-2 border border-border rounded-lg text-[11px] font-semibold text-muted bg-transparent hover:bg-white/5 hover:text-tx cursor-pointer transition-colors"
               >
                 Hủy
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="px-4 py-2 bg-accent text-white rounded-xl text-xs font-bold hover:bg-accent/90 cursor-pointer shadow"
+                className="px-4 py-2 bg-gradient-to-br from-accent2 via-accent to-indigo-600 hover:brightness-110 text-white rounded-lg text-[11px] font-bold cursor-pointer shadow-glow transition-all"
               >
                 Lưu Thay Đổi
               </button>

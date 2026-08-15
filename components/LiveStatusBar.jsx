@@ -3,8 +3,18 @@
 import { usePathname } from 'next/navigation'
 import { useSensorData } from '@/hooks/useSensorData'
 import { useLanguage } from '@/context/LanguageContext'
-import { Mono } from '@/components/ui'
+import { Mono, LiveDot, Divider } from '@/components/ui'
 import { Droplet, CloudRain, Activity, TrendingUp } from 'lucide-react'
+
+function Reading({ icon: Icon, iconClass, label, value }) {
+  return (
+    <div className="flex items-center gap-1.5 text-muted shrink-0">
+      <Icon className={`w-3.5 h-3.5 shrink-0 ${iconClass}`} />
+      <span className="text-[11px] font-semibold hidden sm:inline">{label}</span>
+      <Mono className="text-tx font-bold text-[12px]">{value}</Mono>
+    </div>
+  )
+}
 
 export default function LiveStatusBar() {
   const pathname = usePathname()
@@ -19,50 +29,26 @@ export default function LiveStatusBar() {
   if (!connected && !latest) return null
 
   return (
-    <div className={`flex items-center gap-6 px-8 py-3 border-b border-border text-[15px] font-medium
-      ${connected ? 'bg-safe/10' : 'bg-warning/10'}`}>
-      {/* Connection dot */}
-      <div className="flex items-center gap-2">
-        <div className={`w-2.5 h-2.5 rounded-full animate-pulse-dot ${connected ? 'bg-safe' : 'bg-warning'}`} />
-        <span className={connected ? 'text-safe font-bold tracking-wider' : 'text-warning font-bold'}>
+    <div className="flex items-center gap-4 px-4 py-2 border-b border-border/70 bg-card/40 text-[12px] overflow-x-auto">
+      {/* Connection status */}
+      <div className="flex items-center gap-2 shrink-0">
+        <LiveDot active={connected} />
+        <span className={`font-mono font-bold tracking-wider text-[11px] ${connected ? 'text-safe' : 'text-warning'}`}>
           {connected ? 'LIVE' : 'OFFLINE'}
         </span>
       </div>
 
-      {/* Latest values */}
       {latest && (
         <>
-          <div className="flex items-center gap-1.5 text-muted">
-            <Droplet className="w-4 h-4 text-sky-400 shrink-0" />
-            <span className="font-semibold">{t('liveBar.waterLevel')}:</span>
-            <Mono className="text-info font-bold text-[15px]">
-              {(latest.waterLevel ?? 0).toFixed(2)} m
-            </Mono>
-          </div>
-          <div className="flex items-center gap-1.5 text-muted">
-            <CloudRain className="w-4 h-4 text-blue-400 shrink-0" />
-            <span className="font-semibold">{t('liveBar.moisture')}:</span>
-            <Mono className="text-info font-bold text-[15px]">
-              {(latest.moisture ?? 0).toFixed(1)}%
-            </Mono>
-          </div>
-          <div className="flex items-center gap-1.5 text-muted">
-            <Activity className="w-4 h-4 text-indigo-400 shrink-0" />
-            <span className="font-semibold">{t('liveBar.freq')}:</span>
-            <Mono className="text-info font-bold text-[15px]">
-              {(latest.freq ?? 0).toFixed(2)} Hz
-            </Mono>
-          </div>
-          <div className="flex items-center gap-1.5 text-muted">
-            <TrendingUp className="w-4 h-4 text-orange-400 shrink-0" />
-            <span className="font-semibold">{t('liveBar.amp')}:</span>
-            <Mono className="text-info font-bold text-[15px]">
-              {(latest.amp ?? 0).toFixed(2)} mm
-            </Mono>
-          </div>
-          <div className="ml-auto text-muted text-[13px]">
+          <Divider vertical className="h-4" />
+          <Reading icon={Droplet} iconClass="text-sky-400" label={t('liveBar.waterLevel')} value={`${(latest.waterLevel ?? 0).toFixed(2)} m`} />
+          <Reading icon={CloudRain} iconClass="text-blue-400" label={t('liveBar.moisture')} value={`${(latest.moisture ?? 0).toFixed(1)}%`} />
+          <Reading icon={Activity} iconClass="text-indigo-400" label={t('liveBar.freq')} value={`${(latest.freq ?? 0).toFixed(2)} Hz`} />
+          <Reading icon={TrendingUp} iconClass="text-orange-400" label={t('liveBar.amp')} value={`${(latest.amp ?? 0).toFixed(2)} mm`} />
+
+          <div className="ml-auto text-faint text-[10px] shrink-0 whitespace-nowrap">
             {t('liveBar.updated')}:{' '}
-            <Mono className="text-tx font-bold">
+            <Mono className="text-muted font-bold">
               {latest.timestamp
                 ? new Date(latest.timestamp).toLocaleTimeString(
                     locale === 'vi' ? 'vi-VN' : 'en-US',

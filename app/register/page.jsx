@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { registerUser as apiRegister, fetchDams } from '@/lib/api'
 import { useLanguage } from '@/context/LanguageContext'
+import { Label } from '@/components/ui'
 import { ShieldCheck, User, Mail, Lock, Phone, Building2, AlertCircle, CheckCircle, ArrowLeft, Globe } from 'lucide-react'
 
 export default function RegisterPage() {
@@ -48,50 +49,43 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden font-sans bg-[#060b14]">
-      {/* Full Cover Bright Background Image */}
-      <img
-        src="/login-bg.jpg"
-        alt="Dam Monitoring"
-        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-0 select-none"
-      />
-
+    <div className="min-h-screen flex items-center justify-center p-4 relative font-sans">
       {/* Language Switcher on Top Right */}
       <div className="absolute top-4 right-4 z-20">
         <button
           onClick={toggleLanguage}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-card/90 backdrop-blur-md border border-border rounded-xl text-[11px] font-bold text-tx cursor-pointer hover:border-accent hover:text-accent transition-all shadow-lg"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-card2/70 border border-border rounded-lg text-[11px] font-bold text-tx cursor-pointer hover:border-accent/50 hover:text-accent transition-all"
           title="Chuyển đổi ngôn ngữ / Switch Language"
         >
-          <Globe className="w-4 h-4 text-accent" />
+          <Globe className="w-3.5 h-3.5 text-accent" />
           <span>{locale === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}</span>
         </button>
       </div>
 
-      <div className="w-full max-w-lg bg-card/95 backdrop-blur-md border border-border rounded-3xl p-8 shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-10 space-y-6">
+      <div className="w-full max-w-lg glass-panel rounded-2xl shadow-panel p-8 relative z-10">
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 bg-accent/10 border border-accent/30 rounded-2xl text-accent mb-1">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-accent2 via-accent to-indigo-600 text-white shadow-glow mb-2">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <h1 className="text-xl font-black tracking-tight text-tx">
             {t('auth.register.title')}
           </h1>
-          <p className="text-xs text-muted">
+          <p className="text-xs text-muted mt-1.5">
             {t('auth.register.subtitle')}
           </p>
         </div>
 
         {/* Alerts */}
         {error && (
-          <div className="p-3 bg-danger/10 border border-danger/30 rounded-xl text-danger text-xs flex items-center gap-2">
+          <div className="mb-4 p-3 bg-danger/10 border border-danger/20 rounded-lg text-danger text-xs flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {success && (
-          <div className="p-4 bg-safe/10 border border-safe/30 rounded-xl text-safe text-xs flex flex-col gap-2">
+          <div className="p-4 bg-safe/10 border border-safe/20 rounded-lg text-safe text-xs flex flex-col gap-2">
             <div className="flex items-center gap-2 font-bold text-sm">
               <CheckCircle className="w-5 h-5 shrink-0" />
               <span>{t('auth.register.successTitle')}</span>
@@ -99,7 +93,7 @@ export default function RegisterPage() {
             <p className="text-muted">{success}</p>
             <Link
               href="/login"
-              className="mt-2 inline-flex items-center justify-center gap-1.5 bg-safe text-white font-bold py-2 px-4 rounded-lg text-xs hover:bg-safe/90 no-underline"
+              className="mt-2 inline-flex items-center justify-center gap-1.5 bg-safe text-white font-bold py-2 px-4 rounded-lg text-xs hover:brightness-110 transition-all no-underline"
             >
               <span>{t('auth.register.backToLogin')}</span>
             </Link>
@@ -109,91 +103,91 @@ export default function RegisterPage() {
         {!success && (
           <form onSubmit={handleSubmit} className="space-y-3.5">
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted uppercase">{t('auth.register.fullNameLabel')}</label>
+              <div>
+                <Label className="mb-1.5">{t('auth.register.fullNameLabel')}</Label>
                 <div className="relative">
-                  <User className="w-3.5 h-3.5 text-muted absolute left-3 top-3" />
+                  <User className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={form.fullName}
                     onChange={e => setForm({ ...form, fullName: e.target.value })}
                     placeholder={t('auth.register.fullNamePlaceholder')}
-                    className="w-full bg-card2 border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-tx focus:outline-none focus:border-accent"
+                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted uppercase">{t('auth.register.usernameLabel')}</label>
+              <div>
+                <Label className="mb-1.5">{t('auth.register.usernameLabel')}</Label>
                 <div className="relative">
-                  <User className="w-3.5 h-3.5 text-muted absolute left-3 top-3" />
+                  <User className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     required
                     value={form.username}
                     onChange={e => setForm({ ...form, username: e.target.value })}
                     placeholder={t('auth.register.usernamePlaceholder')}
-                    className="w-full bg-card2 border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-tx focus:outline-none focus:border-accent"
+                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
                   />
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted uppercase">{t('auth.register.emailLabel')}</label>
+              <div>
+                <Label className="mb-1.5">{t('auth.register.emailLabel')}</Label>
                 <div className="relative">
-                  <Mail className="w-3.5 h-3.5 text-muted absolute left-3 top-3" />
+                  <Mail className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="email"
                     required
                     value={form.email}
                     onChange={e => setForm({ ...form, email: e.target.value })}
                     placeholder={t('auth.register.emailPlaceholder')}
-                    className="w-full bg-card2 border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-tx focus:outline-none focus:border-accent"
+                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-muted uppercase">{t('auth.register.phoneLabel')}</label>
+              <div>
+                <Label className="mb-1.5">{t('auth.register.phoneLabel')}</Label>
                 <div className="relative">
-                  <Phone className="w-3.5 h-3.5 text-muted absolute left-3 top-3" />
+                  <Phone className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="tel"
                     value={form.phoneNumber}
                     onChange={e => setForm({ ...form, phoneNumber: e.target.value })}
                     placeholder={t('auth.register.phonePlaceholder')}
-                    className="w-full bg-card2 border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-tx focus:outline-none focus:border-accent"
+                    className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-muted uppercase">{t('auth.register.passwordLabel')}</label>
+            <div>
+              <Label className="mb-1.5">{t('auth.register.passwordLabel')}</Label>
               <div className="relative">
-                <Lock className="w-3.5 h-3.5 text-muted absolute left-3 top-3" />
+                <Lock className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="password"
                   required
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   placeholder={t('auth.register.passwordPlaceholder')}
-                  className="w-full bg-card2 border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-tx focus:outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx placeholder:text-faint focus-visible:outline-none focus:border-accent transition-colors"
                 />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-muted uppercase">{t('auth.register.assignedDamLabel')}</label>
+            <div>
+              <Label className="mb-1.5">{t('auth.register.assignedDamLabel')}</Label>
               <div className="relative">
-                <Building2 className="w-3.5 h-3.5 text-muted absolute left-3 top-3" />
+                <Building2 className="w-3.5 h-3.5 text-faint absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <select
                   value={form.assignedDamId}
                   onChange={e => setForm({ ...form, assignedDamId: e.target.value })}
-                  className="w-full bg-card2 border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-tx focus:outline-none focus:border-accent"
+                  className="w-full bg-card2 border border-border rounded-lg pl-9 pr-3 py-2 text-xs text-tx focus-visible:outline-none focus:border-accent transition-colors"
                 >
                   <option value="">{t('auth.register.selectDamPlaceholder')}</option>
                   {dams.map(d => (
@@ -208,14 +202,14 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-accent hover:bg-accent/90 text-white font-bold py-2.5 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer text-xs mt-2"
+              className="w-full bg-gradient-to-br from-accent2 via-accent to-indigo-600 text-white rounded-lg font-bold hover:brightness-110 shadow-glow transition-all py-2.5 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-xs mt-2"
             >
               <span>{loading ? t('auth.register.submittingBtn') : t('auth.register.submitBtn')}</span>
             </button>
           </form>
         )}
 
-        <div className="pt-3 border-t border-border/40 text-center">
+        <div className="pt-3 mt-3 border-t border-border/60 text-center">
           <Link href="/login" className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-accent no-underline">
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>{t('auth.register.hasAccount')} {t('auth.register.loginNow')}</span>
