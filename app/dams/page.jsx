@@ -323,11 +323,10 @@ export default function DamsPage() {
 
       {/* ── TOAST NOTIFICATION ── */}
       {toast && (
-        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${
-          toast.type === 'error'
+        <div className={`fixed top-14 right-4 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 ${toast.type === 'error'
             ? 'bg-danger/20 border-danger/40 text-danger shadow-danger/10'
             : 'bg-safe/20 border-safe/40 text-safe shadow-safe/10'
-        }`}>
+          }`}>
           <span className="text-[12px]">{toast.message}</span>
           <button onClick={() => setToast(null)} className="ml-2 text-muted hover:text-tx bg-transparent border-none cursor-pointer p-0.5">
             <X className="w-3.5 h-3.5" />
@@ -464,16 +463,7 @@ export default function DamsPage() {
                 </select>
               </div>
 
-              <div>
-                <Label className="mb-1">{t('admin.form.cameraUrlLabel')}</Label>
-                <input
-                  type="text"
-                  value={damForm.cameraUrl}
-                  onChange={e => setDamForm(p => ({ ...p, cameraUrl: e.target.value }))}
-                  placeholder="vd: http://192.168.1.50:8000"
-                  className="w-full bg-card2 border border-border rounded px-3 py-2 text-tx outline-none focus:border-accent font-mono text-[12px]"
-                />
-              </div>
+
 
               <div className="flex justify-end gap-2 pt-3 border-t border-border mt-4">
                 <button

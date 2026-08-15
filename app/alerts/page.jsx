@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
 import { useAuth } from '@/context/AuthContext'
-import { sendEmailAlert, getFormattedImageUrl } from '@/lib/api'
+import { sendEmailAlert, fetchDamManagers, getFormattedImageUrl } from '@/lib/api'
 import { exportAlarmsToExcel, exportAlarmToPDF } from '@/lib/exportHelpers'
 import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
@@ -40,6 +40,7 @@ export default function AlertsPage() {
     return ['ruka13312002@gmail.com']
   })
   const [newEmailInput, setNewEmailInput] = useState('')
+  const [damManagers, setDamManagers] = useState([])
 
   // Helper tra cứu vị trí Trạm & Đập
   const getLocationInfo = (alarm) => {
@@ -117,6 +118,23 @@ export default function AlertsPage() {
     return `[${sevInfo.label}] Cảnh báo ${typeLb} tại vị trí: ${locInfo.fullLocation}. Giá trị đo: ${sel.measuredVal} ${unit} (Ngưỡng: ${sel.thresholdVal} ${unit}). ${sel.notes || ''}`
   }, [sel, dams, stations])
 
+  // Tự động tải Email Cán bộ phụ trách Đập xảy ra sự cố khi chọn cảnh báo
+  useEffect(() => {
+    if (!sel) return
+    const loc = getLocationInfo(sel)
+    const targetDamId = sel.damId || 'dam_1'
+    fetchDamManagers(targetDamId).then(res => {
+      const managers = res.managers || []
+      setDamManagers(managers)
+      const managerEmails = managers.map(m => m.email).filter(Boolean)
+      if (managerEmails.length > 0) {
+        setEmailList(managerEmails)
+      } else {
+        setEmailList(['ruka13312002@gmail.com'])
+      }
+    }).catch(() => {})
+  }, [sel])
+
   // Filter alarms
   const shown = useMemo(() => {
     if (filter === 'all') return scopedAlarms
@@ -160,6 +178,7 @@ export default function AlertsPage() {
         toEmail: recipientsToSend,
         message: msg || defaultMsg,
         alarmId: sel?.id,
+        damId: sel?.damId,
       })
       if (data.success) {
         setSent(true)
@@ -555,6 +574,14 @@ export default function AlertsPage() {
               <div className="flex justify-between items-center mb-1.5">
                 <Label className="mb-0">Danh sách Email nhận thông báo ({emailList.length})</Label>
               </div>
+
+              {/* Thông tin Cán bộ quản lý đập được phân công */}
+              {damManagers.length > 0 && (
+                <div className="text-[9px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2 py-1 rounded mb-2 font-semibold flex items-center justify-between">
+                  <span>Cán bộ phụ trách Đập ({sel?.damId || 'Sự cố'}):</span>
+                  <span className="font-mono text-tx font-bold">{damManagers.map(m => m.fullName || m.username).join(', ')}</span>
+                </div>
+              )}
 
               {/* Danh sách Email dạng thẻ (Badges) do Admin quản lý */}
               <div className="flex flex-wrap gap-1.5 mb-2 max-h-28 overflow-y-auto bg-card2 border border-border p-2 rounded">
