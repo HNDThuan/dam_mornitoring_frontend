@@ -11,6 +11,8 @@ import {
   addSensorDevice,
   updateSensorDevice,
   deleteSensorDevice,
+  fetchThresholdConfigs,
+  updateThresholdConfig,
 } from '@/lib/api'
 import { Label } from '@/components/ui'
 import Link from 'next/link'
@@ -237,7 +239,27 @@ export default function SensorClustersPage() {
       }
       if (editingCluster) {
         await updateSensorCluster(editingCluster.id, payload)
-        showToast('Cập nhật node & phát tin nhắn MQTT đồng bộ Jetson TX2 thành công!', 'success')
+
+        // Đồng bộ 2 chiều: Cập nhật luôn ThresholdConfig của Đập chứa Station này
+        const targetStation = stations.find(s => String(s.id) === String(payload.stationId || editingCluster.stationId))
+        if (targetStation?.damId) {
+          try {
+            const res = await fetchThresholdConfigs(targetStation.damId)
+            const configs = res?.configs || []
+            const vibCfg = configs.find(c => c.sensorType === 'vibration')
+            if (vibCfg) {
+              await updateThresholdConfig(vibCfg.id, {
+                warnHigh: payload.warnHigh,
+                alertHigh: payload.vibrationThreshold,
+                criticalHigh: payload.criticalHigh,
+              })
+            }
+          } catch (e) {
+            console.warn('[SensorClusters] Không thể đồng bộ ngược ThresholdConfig:', e)
+          }
+        }
+
+        showToast('Cập nhật Node & đồng bộ 2 chiều với Đập/Trạm & Jetson TX2 qua MQTT thành công!', 'success')
       } else {
         const res = await createSensorCluster(payload)
         const newId = res?.node?.id || res?.cluster?.id || ''
@@ -768,19 +790,19 @@ export default function SensorClustersPage() {
                 </select>
               </div>
 
-              {/* ⚡ Cấu Hình Ngưỡng Cảnh Báo AI Jetson TX2 */}
+              {/* ⚡ Cấu Hình Ngưỡng Cảnh Báo Độ Rung AI Jetson TX2 */}
               <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-amber-500/30 rounded-lg p-3 space-y-2 my-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-amber-400 font-bold text-[11px]">
                     <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span>Cấu Hình Ngưỡng AI Jetson TX2 (MQTT Realtime Sync)</span>
+                    <span>Cấu Hình Ngưỡng Độ Rung AI Jetson TX2 (mm/s - MQTT Sync)</span>
                   </div>
                   <span className="text-[9px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/30 px-1.5 py-0.5 rounded">
                     🟢 Tự động đồng bộ MQTT
                   </span>
                 </div>
                 <div className="text-[9px] text-muted">
-                  Khi lưu, hệ thống sẽ tự động phát tin nhắn MQTT <code className="text-amber-400">config/gateway/+/update</code> tới Jetson TX2.
+                  Ngưỡng tại Node Jetson TX2 được <b>dùng chuyên biệt cho thông số Độ Rung (mm/s)</b>. Khi lưu, gói tin MQTT <code className="text-amber-400">config/gateway/+/update</code> sẽ được phát tức thì xuống Jetson TX2.
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-1">
                   <div>
