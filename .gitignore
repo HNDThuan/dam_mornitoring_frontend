@@ -138,3 +138,6 @@ dist
 # agent skills
 .agents
 .claude
+
+
+repomix-output.xml

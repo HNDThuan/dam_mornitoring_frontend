@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import {
-  fetchSensorClusters,
+  fetchNodes,
   fetchDams,
   fetchStations,
-  createSensorCluster,
-  updateSensorCluster,
-  deleteSensorCluster,
-  addSensorDevice,
-  updateSensorDevice,
-  deleteSensorDevice,
+  createNode,
+  updateNode,
+  deleteNode,
+  addNodeSensor,
+  updateNodeSensor,
+  deleteNodeSensor,
   fetchThresholdConfigs,
   updateThresholdConfig,
 } from '@/lib/api'
@@ -64,15 +64,15 @@ const STATUS_CONFIG = {
   error: { label: 'Lỗi', dot: 'bg-danger', text: 'text-danger', bg: 'bg-danger-soft', border: 'border-danger-soft' },
 }
 
-const DEVICE_STATUS_CONFIG = {
+const SENSOR_STATUS_CONFIG = {
   active: { label: 'Hoạt động', dot: 'bg-safe', text: 'text-safe' },
   inactive: { label: 'Ngừng', dot: 'bg-muted', text: 'text-muted' },
   faulty: { label: 'Lỗi', dot: 'bg-danger', text: 'text-danger' },
 }
 
-export default function SensorClustersPage() {
+export default function NodesPage() {
   const { user, isAdmin, isOperator, isViewer, assignedDamId } = useAuth()
-  const [clusters, setClusters] = useState([])
+  const [nodes, setNodes] = useState([])
   const [dams, setDams] = useState([])
   const [stations, setStations] = useState([])
   const [loading, setLoading] = useState(true)
@@ -87,17 +87,17 @@ export default function SensorClustersPage() {
   const [expandedRows, setExpandedRows] = useState(new Set())
 
   // Modals
-  const [clusterModalOpen, setClusterModalOpen] = useState(false)
-  const [editingCluster, setEditingCluster] = useState(null)
+  const [nodeModalOpen, setNodeModalOpen] = useState(false)
+  const [editingNode, setEditingNode] = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
-  const [deviceModalOpen, setDeviceModalOpen] = useState(false)
-  const [editingDevice, setEditingDevice] = useState(null)
-  const [deviceClusterId, setDeviceClusterId] = useState(null)
+  const [sensorModalOpen, setSensorModalOpen] = useState(false)
+  const [editingSensor, setEditingSensor] = useState(null)
+  const [sensorNodeId, setSensorNodeId] = useState(null)
 
   // Saving / deleting states (for Button loading spinners)
-  const [savingCluster, setSavingCluster] = useState(false)
-  const [savingDevice, setSavingDevice] = useState(false)
-  const [deletingCluster, setDeletingCluster] = useState(false)
+  const [savingNode, setSavingNode] = useState(false)
+  const [savingSensor, setSavingSensor] = useState(false)
+  const [deletingNode, setDeletingNode] = useState(false)
 
   // Toast State
   const [toast, setToast] = useState(null) // { message: string, type: 'success' | 'error' }
@@ -107,13 +107,13 @@ export default function SensorClustersPage() {
     setTimeout(() => setToast(null), 4000)
   }, [])
 
-  // Cluster form
-  const [clusterForm, setClusterForm] = useState({
-    id: '', name: '', description: '', espMacAddress: '', firmwareVersion: '', installLocation: '', stationId: '',
+  // Node form
+  const [nodeForm, setNodeForm] = useState({
+    id: '', name: '', description: '', macAddress: '', firmwareVersion: '', installLocation: '', stationId: '',
   })
 
-  // Device form
-  const [deviceForm, setDeviceForm] = useState({
+  // Sensor form
+  const [sensorForm, setSensorForm] = useState({
     sensorType: 'water_level', model: '', unit: '', calibrationOffset: 0, status: 'active',
   })
 
@@ -123,27 +123,25 @@ export default function SensorClustersPage() {
     setError(null)
     try {
       const activeDam = isOperator && assignedDamId ? assignedDamId : (filterDamId || undefined)
-      const [clustersRes, damsRes, stationsRes] = await Promise.all([
-        fetchSensorClusters(filterStationId || undefined, activeDam),
+      const [nodesRes, damsRes, stationsRes] = await Promise.all([
+        fetchNodes(undefined, filterStationId ? Number(filterStationId) : undefined, activeDam),
         fetchDams(),
         fetchStations(activeDam),
       ])
 
-      let allClusters = clustersRes.clusters || []
+      let allNodes = nodesRes.nodes || []
       let allDams = damsRes.dams || []
       let allStations = stationsRes.stations || []
 
-      // Scope strictly to assigned dam for operators
+      // Scope strictly to assigned dam for operators (read endpoints aren't sent an auth token,
+      // so the backend can't apply @CurrentUser scoping here — enforce it client-side too)
       if (isOperator && assignedDamId) {
         allDams = allDams.filter(d => d.id === assignedDamId)
         allStations = allStations.filter(s => s.damId === assignedDamId)
-        allClusters = allClusters.filter(c => {
-          const st = allStations.find(s => s.id === c.stationId || s.id === c.gateway?.stationId)
-          return c.damId === assignedDamId || (st && st.damId === assignedDamId)
-        })
+        allNodes = allNodes.filter(n => n.gateway?.station?.damId === assignedDamId)
       }
 
-      setClusters(allClusters)
+      setNodes(allNodes)
       setDams(allDams)
       setStations(allStations)
     } catch (err) {
@@ -162,15 +160,15 @@ export default function SensorClustersPage() {
       ? stations.filter(s => s.damId === filterDamId)
       : stations
 
-  // Filter clusters by search
-  const filteredClusters = clusters.filter(c => {
+  // Filter nodes by search
+  const filteredNodes = nodes.filter(n => {
     if (!search) return true
     const q = search.toLowerCase()
     return (
-      c.name.toLowerCase().includes(q) ||
-      c.id.toLowerCase().includes(q) ||
-      (c.espMacAddress && c.espMacAddress.toLowerCase().includes(q)) ||
-      (c.installLocation && c.installLocation.toLowerCase().includes(q))
+      n.name.toLowerCase().includes(q) ||
+      n.id.toLowerCase().includes(q) ||
+      (n.macAddress && n.macAddress.toLowerCase().includes(q)) ||
+      (n.installLocation && n.installLocation.toLowerCase().includes(q))
     )
   })
 
@@ -183,14 +181,14 @@ export default function SensorClustersPage() {
     })
   }
 
-  // ── Cluster CRUD ──
-  const openCreateClusterModal = () => {
-    setEditingCluster(null)
-    setClusterForm({
+  // ── Node CRUD ──
+  const openCreateNodeModal = () => {
+    setEditingNode(null)
+    setNodeForm({
       id: '',
       name: '',
       description: '',
-      espMacAddress: '',
+      macAddress: '',
       firmwareVersion: 'v1.0.0',
       installLocation: '',
       stationId: filteredStations[0]?.id || stations[0]?.id || '',
@@ -200,53 +198,51 @@ export default function SensorClustersPage() {
       alertMinCount: 4,
       alertMinDurationSec: 6.0,
     })
-    setClusterModalOpen(true)
+    setNodeModalOpen(true)
   }
 
-  const openEditClusterModal = (cluster, e) => {
+  const openEditNodeModal = (node, e) => {
     e?.stopPropagation()
-    setEditingCluster(cluster)
-    const effectiveStationId = cluster.stationId || cluster.gateway?.stationId || ''
-    setClusterForm({
-      id: cluster.id,
-      name: cluster.name || '',
-      description: cluster.description || '',
-      espMacAddress: cluster.macAddress || cluster.espMacAddress || '',
-      firmwareVersion: cluster.firmwareVersion || '',
-      installLocation: cluster.installLocation || '',
-      stationId: effectiveStationId,
-      vibrationThreshold: cluster.vibrationThreshold ?? 15.0,
-      warnHigh: cluster.warnHigh ?? 2.5,
-      criticalHigh: cluster.criticalHigh ?? 25.0,
-      alertMinCount: cluster.alertMinCount ?? 4,
-      alertMinDurationSec: cluster.alertMinDurationSec ?? 6.0,
+    setEditingNode(node)
+    setNodeForm({
+      id: node.id,
+      name: node.name || '',
+      description: node.description || '',
+      macAddress: node.macAddress || '',
+      firmwareVersion: node.firmwareVersion || '',
+      installLocation: node.installLocation || '',
+      stationId: node.gateway?.stationId || '',
+      vibrationThreshold: node.vibrationThreshold ?? 15.0,
+      warnHigh: node.warnHigh ?? 2.5,
+      criticalHigh: node.criticalHigh ?? 25.0,
+      alertMinCount: node.alertMinCount ?? 4,
+      alertMinDurationSec: node.alertMinDurationSec ?? 6.0,
     })
-    setClusterModalOpen(true)
+    setNodeModalOpen(true)
   }
 
-  const handleSaveCluster = async (e) => {
+  const handleSaveNode = async (e) => {
     e.preventDefault()
     try {
-      setSavingCluster(true)
+      setSavingNode(true)
       const payload = {
-        name: clusterForm.name,
-        description: clusterForm.description,
-        macAddress: clusterForm.espMacAddress,
-        espMacAddress: clusterForm.espMacAddress,
-        firmwareVersion: clusterForm.firmwareVersion,
-        installLocation: clusterForm.installLocation,
-        stationId: clusterForm.stationId ? Number(clusterForm.stationId) : undefined,
-        vibrationThreshold: Number(clusterForm.vibrationThreshold),
-        warnHigh: Number(clusterForm.warnHigh),
-        criticalHigh: Number(clusterForm.criticalHigh),
-        alertMinCount: Number(clusterForm.alertMinCount),
-        alertMinDurationSec: Number(clusterForm.alertMinDurationSec),
+        name: nodeForm.name,
+        description: nodeForm.description,
+        macAddress: nodeForm.macAddress,
+        firmwareVersion: nodeForm.firmwareVersion,
+        installLocation: nodeForm.installLocation,
+        stationId: nodeForm.stationId ? Number(nodeForm.stationId) : undefined,
+        vibrationThreshold: Number(nodeForm.vibrationThreshold),
+        warnHigh: Number(nodeForm.warnHigh),
+        criticalHigh: Number(nodeForm.criticalHigh),
+        alertMinCount: Number(nodeForm.alertMinCount),
+        alertMinDurationSec: Number(nodeForm.alertMinDurationSec),
       }
-      if (editingCluster) {
-        await updateSensorCluster(editingCluster.id, payload)
+      if (editingNode) {
+        await updateNode(editingNode.id, payload)
 
         // Đồng bộ 2 chiều: Cập nhật luôn ThresholdConfig của Đập chứa Station này
-        const targetStation = stations.find(s => String(s.id) === String(payload.stationId || editingCluster.stationId))
+        const targetStation = stations.find(s => String(s.id) === String(payload.stationId || editingNode.gateway?.stationId))
         if (targetStation?.damId) {
           try {
             const res = await fetchThresholdConfigs(targetStation.damId)
@@ -260,87 +256,86 @@ export default function SensorClustersPage() {
               })
             }
           } catch (e) {
-            console.warn('[SensorClusters] Không thể đồng bộ ngược ThresholdConfig:', e)
+            console.warn('[Nodes] Không thể đồng bộ ngược ThresholdConfig:', e)
           }
         }
 
         showToast('Cập nhật Node & đồng bộ 2 chiều với Đập/Trạm & Node thành công!', 'success')
       } else {
-        const res = await createSensorCluster(payload)
-        const newId = res?.node?.id || res?.cluster?.id || ''
-        showToast(`Tạo node thành công! (Mã: ${newId})`, 'success')
+        const res = await createNode(payload)
+        showToast(`Tạo node thành công! (Mã: ${res?.node?.id || ''})`, 'success')
       }
-      setClusterModalOpen(false)
+      setNodeModalOpen(false)
       loadData(true)
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
-      setSavingCluster(false)
+      setSavingNode(false)
     }
   }
 
-  const handleDeleteCluster = async () => {
+  const handleDeleteNode = async () => {
     if (!deleteConfirm) return
     try {
-      setDeletingCluster(true)
-      await deleteSensorCluster(deleteConfirm.id)
+      setDeletingNode(true)
+      await deleteNode(deleteConfirm.id)
       showToast(`Đã xóa Sensor Node ${deleteConfirm.name}!`, 'success')
       setDeleteConfirm(null)
       loadData(true)
     } catch (err) {
       showToast(`Lỗi khi xóa: ${err.message}`, 'error')
     } finally {
-      setDeletingCluster(false)
+      setDeletingNode(false)
     }
   }
 
-  // ── Device CRUD ──
-  const openAddDeviceModal = (clusterId, e) => {
+  // ── Sensor CRUD ──
+  const openAddSensorModal = (nodeId, e) => {
     e?.stopPropagation()
-    setEditingDevice(null)
-    setDeviceClusterId(clusterId)
-    setDeviceForm({ sensorType: 'water_level', model: 'HC-SR04', unit: 'cm', calibrationOffset: 0, status: 'active' })
-    setDeviceModalOpen(true)
+    setEditingSensor(null)
+    setSensorNodeId(nodeId)
+    setSensorForm({ sensorType: 'water_level', model: 'HC-SR04', unit: 'cm', calibrationOffset: 0, status: 'active' })
+    setSensorModalOpen(true)
   }
 
-  const openEditDeviceModal = (clusterId, device, e) => {
+  const openEditSensorModal = (nodeId, sensor, e) => {
     e?.stopPropagation()
-    setEditingDevice(device)
-    setDeviceClusterId(clusterId)
-    setDeviceForm({
-      sensorType: device.sensorType || 'water_level',
-      model: device.model || '',
-      unit: device.unit || '',
-      calibrationOffset: device.calibrationOffset || 0,
-      status: device.status || 'active',
+    setEditingSensor(sensor)
+    setSensorNodeId(nodeId)
+    setSensorForm({
+      sensorType: sensor.sensorType || 'water_level',
+      model: sensor.model || '',
+      unit: sensor.unit || '',
+      calibrationOffset: sensor.calibrationOffset || 0,
+      status: sensor.status || 'active',
     })
-    setDeviceModalOpen(true)
+    setSensorModalOpen(true)
   }
 
-  const handleSaveDevice = async (e) => {
+  const handleSaveSensor = async (e) => {
     e.preventDefault()
     try {
-      setSavingDevice(true)
-      if (editingDevice) {
-        await updateSensorDevice(deviceClusterId, editingDevice.id, deviceForm)
+      setSavingSensor(true)
+      if (editingSensor) {
+        await updateNodeSensor(sensorNodeId, editingSensor.id, sensorForm)
         showToast('Cập nhật cảm biến thành công!', 'success')
       } else {
-        await addSensorDevice(deviceClusterId, deviceForm)
+        await addNodeSensor(sensorNodeId, sensorForm)
         showToast('Thêm cảm biến vào Sensor Node thành công!', 'success')
       }
-      setDeviceModalOpen(false)
+      setSensorModalOpen(false)
       loadData(true)
     } catch (err) {
       showToast(err.message, 'error')
     } finally {
-      setSavingDevice(false)
+      setSavingSensor(false)
     }
   }
 
-  const handleDeleteDevice = async (clusterId, deviceId) => {
+  const handleDeleteSensor = async (nodeId, sensorId) => {
     if (!confirm('Xóa cảm biến này?')) return
     try {
-      await deleteSensorDevice(clusterId, deviceId)
+      await deleteNodeSensor(nodeId, sensorId)
       showToast('Đã xóa cảm biến!', 'success')
       loadData(true)
     } catch (err) {
@@ -373,9 +368,9 @@ export default function SensorClustersPage() {
   }
 
   // Stats
-  const onlineCount = clusters.filter(c => c.status === 'online').length
-  const offlineCount = clusters.filter(c => c.status === 'offline').length
-  const errorCount = clusters.filter(c => c.status === 'error').length
+  const onlineCount = nodes.filter(n => n.status === 'online').length
+  const offlineCount = nodes.filter(n => n.status === 'offline').length
+  const errorCount = nodes.filter(n => n.status === 'error').length
 
   return (
     <div className="p-4 min-h-[calc(100vh-48px)] space-y-4">
@@ -440,7 +435,7 @@ export default function SensorClustersPage() {
 
           {!isViewer && (
             <button
-              onClick={openCreateClusterModal}
+              onClick={openCreateNodeModal}
               className="h-9 flex items-center gap-1.5 px-4 bg-accent hover:bg-accent/90 rounded-md text-white text-[11px] font-bold cursor-pointer border-none shrink-0 whitespace-nowrap transition-colors"
             >
               <Plus className="w-4 h-4" />
@@ -452,7 +447,7 @@ export default function SensorClustersPage() {
 
       {/* Stats Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatTile icon={Server} label="Tổng Node" value={clusters.length} status="info" />
+        <StatTile icon={Server} label="Tổng Node" value={nodes.length} status="info" />
         <StatTile icon={Wifi} label="Online" value={onlineCount} status="safe" />
         <StatTile icon={WifiOff} label="Offline" value={offlineCount} status="info" />
         <StatTile icon={AlertTriangle} label="Lỗi" value={errorCount} status="danger" />
@@ -467,10 +462,10 @@ export default function SensorClustersPage() {
         </div>
       )}
 
-      {/* Cluster Table */}
+      {/* Node Table */}
       <Panel
         title="Danh Sách Sensor Node"
-        right={<Mono className="text-[10px] text-muted">{filteredClusters.length} node</Mono>}
+        right={<Mono className="text-[10px] text-muted">{filteredNodes.length} node</Mono>}
         bodyClassName="p-0"
         className="overflow-hidden"
       >
@@ -494,22 +489,23 @@ export default function SensorClustersPage() {
               <tr><td colSpan={10} className="text-center py-12 text-muted">Đang tải...</td></tr>
             )}
 
-            {!loading && filteredClusters.length === 0 && (
+            {!loading && filteredNodes.length === 0 && (
               <tr><td colSpan={10} className="text-center py-12 text-muted">Không tìm thấy Sensor Node nào.</td></tr>
             )}
 
-            {!loading && filteredClusters.map(cluster => {
-              const st = STATUS_CONFIG[cluster.status] || STATUS_CONFIG.offline
-              const isExpanded = expandedRows.has(cluster.id)
-              const devices = cluster.devices || []
+            {!loading && filteredNodes.map(node => {
+              const st = STATUS_CONFIG[node.status] || STATUS_CONFIG.offline
+              const isExpanded = expandedRows.has(node.id)
+              const sensors = node.sensors || []
+              const stationId = node.gateway?.stationId
 
               return (
                 <>
-                  {/* Cluster Row */}
+                  {/* Node Row */}
                   <tr
-                    key={cluster.id}
+                    key={node.id}
                     className="border-b border-border/50 hover:bg-card2/50 transition-colors cursor-pointer"
-                    onClick={() => toggleExpanded(cluster.id)}
+                    onClick={() => toggleExpanded(node.id)}
                   >
                     <td className="px-4 py-3">
                       {isExpanded
@@ -518,48 +514,48 @@ export default function SensorClustersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="font-mono text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
-                        {cluster.id}
+                        {node.id}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="font-semibold text-tx">{cluster.name}</div>
-                      {cluster.installLocation && (
-                        <div className="text-[9px] text-muted mt-0.5">{cluster.installLocation}</div>
+                      <div className="font-semibold text-tx">{node.name}</div>
+                      {node.installLocation && (
+                        <div className="text-[9px] text-muted mt-0.5">{node.installLocation}</div>
                       )}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       <Link
-                        href={`/stations/${cluster.stationId || cluster.gateway?.stationId}`}
+                        href={`/stations/${stationId}`}
                         className="text-tx hover:text-accent font-semibold text-[11px] inline-flex items-center gap-1 group/st"
                         title="Xem chi tiết Trạm quan trắc"
                       >
-                        <span>{getStationName(cluster.stationId || cluster.gateway?.stationId)}</span>
+                        <span>{getStationName(stationId)}</span>
                         <ExternalLink className="w-3 h-3 text-muted group-hover/st:text-accent transition-colors" />
                       </Link>
-                      <div className="text-[9px] text-muted">{getDamName(cluster.stationId || cluster.gateway?.stationId)}</div>
+                      <div className="text-[9px] text-muted">{getDamName(stationId)}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-[10px] text-muted">{cluster.espMacAddress || '—'}</span>
+                      <span className="font-mono text-[10px] text-muted">{node.macAddress || '—'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-mono text-[10px] text-muted">{cluster.firmwareVersion || '—'}</span>
+                      <span className="font-mono text-[10px] text-muted">{node.firmwareVersion || '—'}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold ${st.bg} ${st.text} border ${st.border}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot} ${cluster.status === 'online' ? 'animate-pulse-dot' : ''}`}></span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot} ${node.status === 'online' ? 'animate-pulse-dot' : ''}`}></span>
                         {st.label}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-[10px] text-muted">
-                      {timeAgo(cluster.lastSeenAt)}
+                      {timeAgo(node.lastSeenAt)}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-mono font-bold text-info">{devices.length}</span>
+                      <span className="font-mono font-bold text-info">{sensors.length}</span>
                     </td>
                     <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1">
                         <Link
-                          href={`/stations/${cluster.stationId}`}
+                          href={`/stations/${stationId}`}
                           className="p-1.5 bg-card2 border border-border rounded-lg text-info hover:border-info hover:bg-info/10 transition-colors cursor-pointer inline-flex items-center justify-center"
                           title="Xem chi tiết Trạm quan trắc"
                         >
@@ -568,16 +564,16 @@ export default function SensorClustersPage() {
                         {!isViewer && (
                           <>
                             <button
-                              onClick={(e) => openEditClusterModal(cluster, e)}
+                              onClick={(e) => openEditNodeModal(node, e)}
                               className="p-1.5 bg-accent/10 border border-accent/20 rounded-lg text-accent hover:bg-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
-                              title="Sửa cụm"
+                              title="Sửa node"
                             >
                               <Pencil className="w-3 h-3" />
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: cluster.id, name: cluster.name }) }}
+                              onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: node.id, name: node.name }) }}
                               className="p-1.5 bg-danger/10 border border-danger/20 rounded-lg text-danger hover:bg-danger/20 hover:border-danger/40 transition-colors cursor-pointer"
-                              title="Xóa cụm"
+                              title="Xóa node"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -587,17 +583,17 @@ export default function SensorClustersPage() {
                     </td>
                   </tr>
 
-                  {/* Expanded: Devices List */}
+                  {/* Expanded: Sensors List */}
                   {isExpanded && (
-                    <tr key={`${cluster.id}-devices`} className="bg-card2/50">
+                    <tr key={`${node.id}-sensors`} className="bg-card2/50">
                       <td colSpan={10} className="px-6 py-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] text-muted uppercase tracking-wider font-semibold">
-                            Danh sách cảm biến ({devices.length})
+                            Danh sách cảm biến ({sensors.length})
                           </span>
                           {!isViewer && (
                             <button
-                              onClick={(e) => openAddDeviceModal(cluster.id, e)}
+                              onClick={(e) => openAddSensorModal(node.id, e)}
                               className="flex items-center gap-1 px-2 py-1 bg-accent/10 border border-accent/30 rounded text-accent text-[9px] font-bold cursor-pointer hover:bg-accent/20 transition-colors"
                             >
                               <Plus className="w-3 h-3" />
@@ -606,18 +602,18 @@ export default function SensorClustersPage() {
                           )}
                         </div>
 
-                        {devices.length === 0 ? (
+                        {sensors.length === 0 ? (
                           <div className="text-center py-4 text-muted text-[10px]">Chưa có cảm biến nào.</div>
                         ) : (
                           <div className="grid grid-cols-3 gap-2">
-                            {devices.map(device => {
-                              const cfg = getSensorTypeConfig(device.sensorType)
+                            {sensors.map(sensor => {
+                              const cfg = getSensorTypeConfig(sensor.sensorType)
                               const Icon = cfg.icon
-                              const dCfg = DEVICE_STATUS_CONFIG[device.status] || DEVICE_STATUS_CONFIG.active
+                              const sCfg = SENSOR_STATUS_CONFIG[sensor.status] || SENSOR_STATUS_CONFIG.active
 
                               return (
                                 <div
-                                  key={device.id}
+                                  key={sensor.id}
                                   className="bg-card border border-border rounded-lg p-3 flex items-start gap-3 group hover:border-accent/40 transition-colors"
                                 >
                                   <div className={`w-8 h-8 rounded-lg ${cfg.bgColor} flex items-center justify-center shrink-0`}>
@@ -626,30 +622,30 @@ export default function SensorClustersPage() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className={`text-[11px] font-bold ${cfg.color}`}>{cfg.label}</span>
-                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0 rounded text-[8px] font-bold ${dCfg.text}`}>
-                                        <span className={`w-1 h-1 rounded-full ${dCfg.dot}`}></span>
-                                        {dCfg.label}
+                                      <span className={`inline-flex items-center gap-1 px-1.5 py-0 rounded text-[8px] font-bold ${sCfg.text}`}>
+                                        <span className={`w-1 h-1 rounded-full ${sCfg.dot}`}></span>
+                                        {sCfg.label}
                                       </span>
                                     </div>
                                     <div className="text-[9px] text-muted space-y-0.5">
-                                      <div>Model: <span className="text-tx font-mono">{device.model || '—'}</span></div>
-                                      <div>Đơn vị: <span className="text-tx font-mono">{device.unit || '—'}</span></div>
-                                      {device.calibrationOffset != null && device.calibrationOffset !== 0 && (
-                                        <div>Hiệu chỉnh: <span className="text-tx font-mono">{device.calibrationOffset}</span></div>
+                                      <div>Model: <span className="text-tx font-mono">{sensor.model || '—'}</span></div>
+                                      <div>Đơn vị: <span className="text-tx font-mono">{sensor.unit || '—'}</span></div>
+                                      {sensor.calibrationOffset != null && sensor.calibrationOffset !== 0 && (
+                                        <div>Hiệu chỉnh: <span className="text-tx font-mono">{sensor.calibrationOffset}</span></div>
                                       )}
                                     </div>
                                   </div>
                                   {!isViewer && (
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <button
-                                        onClick={(e) => openEditDeviceModal(cluster.id, device, e)}
+                                        onClick={(e) => openEditSensorModal(node.id, sensor, e)}
                                         className="p-1 bg-accent/10 border border-accent/20 rounded text-accent hover:bg-accent/20 hover:border-accent/40 transition-colors cursor-pointer"
                                         title="Sửa"
                                       >
                                         <Pencil className="w-2.5 h-2.5" />
                                       </button>
                                       <button
-                                        onClick={(e) => { e.stopPropagation(); handleDeleteDevice(cluster.id, device.id) }}
+                                        onClick={(e) => { e.stopPropagation(); handleDeleteSensor(node.id, sensor.id) }}
                                         className="p-1 bg-danger/10 border border-danger/20 rounded text-danger hover:bg-danger/20 hover:border-danger/40 transition-colors cursor-pointer"
                                         title="Xóa"
                                       >
@@ -675,78 +671,78 @@ export default function SensorClustersPage() {
       {/* ── TOAST NOTIFICATION ── */}
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {/* ── MODAL: CREATE / EDIT CLUSTER ── */}
+      {/* ── MODAL: CREATE / EDIT NODE ── */}
       <Modal
-        open={clusterModalOpen}
-        onClose={() => setClusterModalOpen(false)}
-        title={editingCluster ? 'Sửa Sensor Node' : 'Thêm Sensor Node mới'}
+        open={nodeModalOpen}
+        onClose={() => setNodeModalOpen(false)}
+        title={editingNode ? 'Sửa Sensor Node' : 'Thêm Sensor Node mới'}
         icon={Cpu}
         maxWidth="max-w-3xl"
         footer={
           <FormActions>
-            <Button type="button" variant="secondary" onClick={() => setClusterModalOpen(false)}>Hủy</Button>
-            <Button type="submit" form="cluster-form" variant="primary" loading={savingCluster}>
-              {editingCluster ? 'Lưu thay đổi' : 'Tạo cụm mới'}
+            <Button type="button" variant="secondary" onClick={() => setNodeModalOpen(false)}>Hủy</Button>
+            <Button type="submit" form="node-form" variant="primary" loading={savingNode}>
+              {editingNode ? 'Lưu thay đổi' : 'Tạo node mới'}
             </Button>
           </FormActions>
         }
       >
-        <form id="cluster-form" onSubmit={handleSaveCluster} className="space-y-2.5">
+        <form id="node-form" onSubmit={handleSaveNode} className="space-y-2.5">
 
-          <Field label="Tên Sensor Node" required htmlFor="cluster-name">
+          <Field label="Tên Sensor Node" required htmlFor="node-name">
             <TextInput
-              id="cluster-name"
+              id="node-name"
               required
-              value={clusterForm.name}
-              onChange={e => setClusterForm(p => ({ ...p, name: e.target.value }))}
+              value={nodeForm.name}
+              onChange={e => setNodeForm(p => ({ ...p, name: e.target.value }))}
               placeholder="vd: Sensor Node K25+500"
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-2.5">
-            <Field label="Mô tả" htmlFor="cluster-description">
+            <Field label="Mô tả" htmlFor="node-description">
               <TextInput
-                id="cluster-description"
-                value={clusterForm.description}
-                onChange={e => setClusterForm(p => ({ ...p, description: e.target.value }))}
+                id="node-description"
+                value={nodeForm.description}
+                onChange={e => setNodeForm(p => ({ ...p, description: e.target.value }))}
                 placeholder="Mô tả vị trí, mục đích..."
               />
             </Field>
-            <Field label="Vị trí lắp đặt" htmlFor="cluster-location">
+            <Field label="Vị trí lắp đặt" htmlFor="node-location">
               <TextInput
-                id="cluster-location"
-                value={clusterForm.installLocation}
-                onChange={e => setClusterForm(p => ({ ...p, installLocation: e.target.value }))}
+                id="node-location"
+                value={nodeForm.installLocation}
+                onChange={e => setNodeForm(p => ({ ...p, installLocation: e.target.value }))}
                 placeholder="vd: Thân đập chính - K25+500"
               />
             </Field>
           </div>
 
           <div className="grid grid-cols-3 gap-2.5">
-            <Field label="MAC Address ESP32" htmlFor="cluster-mac">
+            <Field label="MAC Address ESP32" htmlFor="node-mac">
               <TextInput
-                id="cluster-mac"
-                value={clusterForm.espMacAddress}
-                onChange={e => setClusterForm(p => ({ ...p, espMacAddress: e.target.value }))}
+                id="node-mac"
+                value={nodeForm.macAddress}
+                onChange={e => setNodeForm(p => ({ ...p, macAddress: e.target.value }))}
                 placeholder="AA:BB:CC:DD:EE:FF"
                 className="font-mono"
               />
             </Field>
-            <Field label="Phiên bản Firmware" htmlFor="cluster-firmware">
+            <Field label="Phiên bản Firmware" htmlFor="node-firmware">
               <TextInput
-                id="cluster-firmware"
-                value={clusterForm.firmwareVersion}
-                onChange={e => setClusterForm(p => ({ ...p, firmwareVersion: e.target.value }))}
+                id="node-firmware"
+                value={nodeForm.firmwareVersion}
+                onChange={e => setNodeForm(p => ({ ...p, firmwareVersion: e.target.value }))}
                 placeholder="vd: v1.0.0"
                 className="font-mono"
               />
             </Field>
-            <Field label="Gắn vào Trạm" required htmlFor="cluster-station">
+            <Field label="Gắn vào Trạm" required htmlFor="node-station">
               <Select
-                id="cluster-station"
+                id="node-station"
                 required
-                value={clusterForm.stationId}
-                onChange={e => setClusterForm(p => ({ ...p, stationId: e.target.value }))}
+                value={nodeForm.stationId}
+                onChange={e => setNodeForm(p => ({ ...p, stationId: e.target.value }))}
               >
                 <option value="">— Chọn trạm —</option>
                 {stations.map(s => {
@@ -773,52 +769,52 @@ export default function SensorClustersPage() {
               </span>
             </div>
             <div className="grid grid-cols-5 gap-2">
-              <Field label="Chú ý" required htmlFor="cluster-warn-high">
+              <Field label="Chú ý" required htmlFor="node-warn-high">
                 <TextInput
-                  id="cluster-warn-high"
+                  id="node-warn-high"
                   type="number" step="0.1" required
-                  value={clusterForm.warnHigh}
-                  onChange={e => setClusterForm(p => ({ ...p, warnHigh: e.target.value }))}
+                  value={nodeForm.warnHigh}
+                  onChange={e => setNodeForm(p => ({ ...p, warnHigh: e.target.value }))}
                   placeholder="2.5"
                   className="font-mono"
                 />
               </Field>
-              <Field label="Cảnh báo" required htmlFor="cluster-alert-high">
+              <Field label="Cảnh báo" required htmlFor="node-alert-high">
                 <TextInput
-                  id="cluster-alert-high"
+                  id="node-alert-high"
                   type="number" step="0.1" required
-                  value={clusterForm.vibrationThreshold}
-                  onChange={e => setClusterForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
+                  value={nodeForm.vibrationThreshold}
+                  onChange={e => setNodeForm(p => ({ ...p, vibrationThreshold: e.target.value }))}
                   placeholder="15.0"
                   className="font-mono"
                 />
               </Field>
-              <Field label="Nguy cấp" required htmlFor="cluster-critical-high">
+              <Field label="Nguy cấp" required htmlFor="node-critical-high">
                 <TextInput
-                  id="cluster-critical-high"
+                  id="node-critical-high"
                   type="number" step="0.1" required
-                  value={clusterForm.criticalHigh}
-                  onChange={e => setClusterForm(p => ({ ...p, criticalHigh: e.target.value }))}
+                  value={nodeForm.criticalHigh}
+                  onChange={e => setNodeForm(p => ({ ...p, criticalHigh: e.target.value }))}
                   placeholder="25.0"
                   className="font-mono"
                 />
               </Field>
-              <Field label="Số lần liên tiếp" required htmlFor="cluster-alert-count">
+              <Field label="Số lần liên tiếp" required htmlFor="node-alert-count">
                 <TextInput
-                  id="cluster-alert-count"
+                  id="node-alert-count"
                   type="number" required
-                  value={clusterForm.alertMinCount}
-                  onChange={e => setClusterForm(p => ({ ...p, alertMinCount: e.target.value }))}
+                  value={nodeForm.alertMinCount}
+                  onChange={e => setNodeForm(p => ({ ...p, alertMinCount: e.target.value }))}
                   placeholder="4"
                   className="font-mono"
                 />
               </Field>
-              <Field label="Thời gian (s)" required htmlFor="cluster-alert-duration">
+              <Field label="Thời gian (s)" required htmlFor="node-alert-duration">
                 <TextInput
-                  id="cluster-alert-duration"
+                  id="node-alert-duration"
                   type="number" step="0.5" required
-                  value={clusterForm.alertMinDurationSec}
-                  onChange={e => setClusterForm(p => ({ ...p, alertMinDurationSec: e.target.value }))}
+                  value={nodeForm.alertMinDurationSec}
+                  onChange={e => setNodeForm(p => ({ ...p, alertMinDurationSec: e.target.value }))}
                   placeholder="6.0"
                   className="font-mono"
                 />
@@ -827,7 +823,7 @@ export default function SensorClustersPage() {
 
           </div>
 
-          {!editingCluster && (
+          {!editingNode && (
             <div className="bg-card2 border border-border rounded-lg px-3 py-2 text-[10px] text-muted">
               <span className="text-info font-semibold">Cảm biến mặc định: </span>
               <span className="text-sky-400">Mực nước (HC-SR04)</span>, {' '}
@@ -838,31 +834,31 @@ export default function SensorClustersPage() {
         </form>
       </Modal>
 
-      {/* ── MODAL: CREATE / EDIT DEVICE ── */}
+      {/* ── MODAL: CREATE / EDIT SENSOR ── */}
       <Modal
-        open={deviceModalOpen}
-        onClose={() => setDeviceModalOpen(false)}
-        title={editingDevice ? 'Sửa cảm biến' : 'Thêm cảm biến'}
+        open={sensorModalOpen}
+        onClose={() => setSensorModalOpen(false)}
+        title={editingSensor ? 'Sửa cảm biến' : 'Thêm cảm biến'}
         icon={Activity}
         maxWidth="max-w-md"
         footer={
           <FormActions>
-            <Button type="button" variant="secondary" onClick={() => setDeviceModalOpen(false)}>Hủy</Button>
-            <Button type="submit" form="device-form" variant="primary" loading={savingDevice}>
-              {editingDevice ? 'Lưu thay đổi' : 'Thêm cảm biến'}
+            <Button type="button" variant="secondary" onClick={() => setSensorModalOpen(false)}>Hủy</Button>
+            <Button type="submit" form="sensor-form" variant="primary" loading={savingSensor}>
+              {editingSensor ? 'Lưu thay đổi' : 'Thêm cảm biến'}
             </Button>
           </FormActions>
         }
       >
-        <form id="device-form" onSubmit={handleSaveDevice} className="space-y-3">
-          <Field label="Loại cảm biến" htmlFor="device-sensor-type">
+        <form id="sensor-form" onSubmit={handleSaveSensor} className="space-y-3">
+          <Field label="Loại cảm biến" htmlFor="sensor-type">
             <Select
-              id="device-sensor-type"
-              value={deviceForm.sensorType}
+              id="sensor-type"
+              value={sensorForm.sensorType}
               onChange={e => {
                 const type = e.target.value
                 const cfg = SENSOR_TYPE_CONFIG[type]
-                setDeviceForm(p => ({
+                setSensorForm(p => ({
                   ...p,
                   sensorType: type,
                   model: cfg?.defaultModel || '',
@@ -877,20 +873,20 @@ export default function SensorClustersPage() {
           </Field>
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Model" htmlFor="device-model">
+            <Field label="Model" htmlFor="sensor-model">
               <TextInput
-                id="device-model"
-                value={deviceForm.model}
-                onChange={e => setDeviceForm(p => ({ ...p, model: e.target.value }))}
+                id="sensor-model"
+                value={sensorForm.model}
+                onChange={e => setSensorForm(p => ({ ...p, model: e.target.value }))}
                 placeholder="vd: HC-SR04"
                 className="font-mono"
               />
             </Field>
-            <Field label="Đơn vị" htmlFor="device-unit">
+            <Field label="Đơn vị" htmlFor="sensor-unit">
               <TextInput
-                id="device-unit"
-                value={deviceForm.unit}
-                onChange={e => setDeviceForm(p => ({ ...p, unit: e.target.value }))}
+                id="sensor-unit"
+                value={sensorForm.unit}
+                onChange={e => setSensorForm(p => ({ ...p, unit: e.target.value }))}
                 placeholder="vd: cm, %, mm/s"
                 className="font-mono"
               />
@@ -898,22 +894,22 @@ export default function SensorClustersPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Giá trị hiệu chỉnh" htmlFor="device-calibration">
+            <Field label="Giá trị hiệu chỉnh" htmlFor="sensor-calibration">
               <TextInput
-                id="device-calibration"
+                id="sensor-calibration"
                 type="number"
                 step="0.01"
-                value={deviceForm.calibrationOffset}
-                onChange={e => setDeviceForm(p => ({ ...p, calibrationOffset: Number(e.target.value) }))}
+                value={sensorForm.calibrationOffset}
+                onChange={e => setSensorForm(p => ({ ...p, calibrationOffset: Number(e.target.value) }))}
                 className="font-mono"
               />
             </Field>
-            {editingDevice && (
-              <Field label="Trạng thái" htmlFor="device-status">
+            {editingSensor && (
+              <Field label="Trạng thái" htmlFor="sensor-status">
                 <Select
-                  id="device-status"
-                  value={deviceForm.status}
-                  onChange={e => setDeviceForm(p => ({ ...p, status: e.target.value }))}
+                  id="sensor-status"
+                  value={sensorForm.status}
+                  onChange={e => setSensorForm(p => ({ ...p, status: e.target.value }))}
                 >
                   <option value="active">Hoạt động</option>
                   <option value="inactive">Ngừng</option>
@@ -935,7 +931,7 @@ export default function SensorClustersPage() {
         footer={
           <FormActions>
             <Button variant="secondary" onClick={() => setDeleteConfirm(null)}>Hủy</Button>
-            <Button variant="danger" loading={deletingCluster} onClick={handleDeleteCluster}>Xóa Sensor Node</Button>
+            <Button variant="danger" loading={deletingNode} onClick={handleDeleteNode}>Xóa Sensor Node</Button>
           </FormActions>
         }
       >

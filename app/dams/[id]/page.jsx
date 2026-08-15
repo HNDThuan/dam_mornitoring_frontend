@@ -29,7 +29,7 @@ import {
   Zap,
   Map,
 } from 'lucide-react'
-import { fetchThresholdConfigs, updateThresholdConfig, fetchSensorClusters, updateSensorCluster } from '@/lib/api'
+import { fetchThresholdConfigs, updateThresholdConfig, fetchNodes, updateNode } from '@/lib/api'
 import DamMap from '@/components/DamMap'
 
 export default function DamDetailPage() {
@@ -193,11 +193,11 @@ export default function DamDetailPage() {
 
       // Đồng bộ ngưỡng độ rung sang tất cả các Node thuộc Đập này để phát tin nhắn MQTT xuống Jetson TX2
       try {
-        const clusterRes = await fetchSensorClusters(id)
-        const nodeList = clusterRes?.clusters || clusterRes?.nodes || clusterRes || []
+        const nodeRes = await fetchNodes(undefined, undefined, id)
+        const nodeList = nodeRes?.nodes || []
         if (Array.isArray(nodeList) && nodeList.length > 0) {
           const nodePromises = nodeList.map(node =>
-            updateSensorCluster(node.id, {
+            updateNode(node.id, {
               warnHigh: Number(thresholdForm.vibWarn),
               vibrationThreshold: Number(thresholdForm.vibAlert),
               criticalHigh: Number(thresholdForm.vibCritical),

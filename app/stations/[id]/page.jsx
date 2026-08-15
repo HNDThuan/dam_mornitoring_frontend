@@ -35,7 +35,7 @@ import DamMap from "@/components/DamMap";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
 import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity, Zap } from "lucide-react";
-import { fetchThresholdConfigs, updateThresholdConfig, updateStation, fetchSensorClusters, updateSensorCluster } from "@/lib/api";
+import { fetchThresholdConfigs, updateThresholdConfig, updateStation, fetchNodes, updateNode } from "@/lib/api";
 
 const CHART_STYLE = {
   background: "#0e1622",
@@ -316,11 +316,11 @@ export default function StationDetailPage() {
 
       // Tự động đồng bộ ngưỡng độ rung sang các Node thuộc Trạm này để phát tin nhắn MQTT xuống Jetson TX2
       try {
-        const clusterRes = await fetchSensorClusters(st.damId, st.id)
-        const nodeList = clusterRes?.clusters || clusterRes?.nodes || clusterRes || []
+        const nodeRes = await fetchNodes(undefined, st.id, st.damId)
+        const nodeList = nodeRes?.nodes || []
         if (Array.isArray(nodeList) && nodeList.length > 0) {
           const nodePromises = nodeList.map(node =>
-            updateSensorCluster(node.id, {
+            updateNode(node.id, {
               warnHigh: Number(thresholdForm.vibWarn),
               vibrationThreshold: Number(thresholdForm.vibAlert),
               criticalHigh: Number(thresholdForm.vibCritical),
