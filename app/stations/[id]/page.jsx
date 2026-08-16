@@ -32,6 +32,7 @@ import {
 } from "@/lib/sensorHelpers";
 import CameraViewer from "@/components/CameraViewer";
 import DamMap from "@/components/DamMap";
+import LocationPickerMap from "@/components/LocationPickerMap";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
 import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity } from "lucide-react";
@@ -55,8 +56,17 @@ const STATUS_CL = {
 };
 
 // ── Connection status banner ───────────────────────────────────────────────────
-function ConnectionBanner({ connected, error }) {
-  if (connected)
+function ConnectionBanner({ connected, error, hasNodes, latest }) {
+  if (!hasNodes)
+    return (
+      <div className="flex items-center gap-2 px-3.5 py-2 bg-warning/10 border border-warning/30 rounded-lg mb-3">
+        <span className="w-2 h-2 rounded-full bg-warning" />
+        <span className="text-[10px] font-mono font-semibold tracking-wide text-warning">
+          TRẠM CHƯA ĐƯỢC KẾT NỐI VỚI SENSOR NODE NÀO — KHÔNG CÓ DỮ LIỆU CẢM BIẾN
+        </span>
+      </div>
+    );
+  if (connected && latest)
     return (
       <div className="flex items-center gap-2 px-3.5 py-2 bg-safe/10 border border-safe/30 rounded-lg mb-3">
         <LiveDot active />
@@ -130,49 +140,55 @@ function MetricCard({
       </div>
 
       {/* Sparkline */}
-      <div className="px-1 pt-1" style={{ height: 76 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
-          >
-            <defs>
-              <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.0} />
-              </linearGradient>
-            </defs>
-            <Tooltip
-              contentStyle={CHART_STYLE}
-              itemStyle={{ color: "#f1f5f9" }}
-              labelStyle={{ color: "#8b9cb8" }}
-              formatter={(v) => [`${v} ${unit}`, label]}
-              labelFormatter={(l) => `Thời gian: ${l}`}
-            />
-            {threshold && (
-              <ReferenceLine
-                y={threshold}
-                stroke="#fb4360"
-                strokeDasharray="3 3"
-                label={{
-                  value: `BĐ: ${threshold}`,
-                  fill: "#fb4360",
-                  fontSize: 8,
-                  position: "insideTopRight",
-                }}
+      <div className="px-1 pt-1 flex items-center justify-center" style={{ height: 76 }}>
+        {data && data.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{ top: 4, right: 4, bottom: 0, left: 4 }}
+            >
+              <defs>
+                <linearGradient id={`grad-${label}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={color} stopOpacity={0.0} />
+                </linearGradient>
+              </defs>
+              <Tooltip
+                contentStyle={CHART_STYLE}
+                itemStyle={{ color: "#f1f5f9" }}
+                labelStyle={{ color: "#8b9cb8" }}
+                formatter={(v) => [`${v} ${unit}`, label]}
+                labelFormatter={(l) => `Thời gian: ${l}`}
               />
-            )}
-            <Area
-              type="monotone"
-              dataKey="v"
-              stroke={color}
-              strokeWidth={1.5}
-              fill={`url(#grad-${label})`}
-              dot={false}
-              isAnimationActive={false}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+              {threshold && (
+                <ReferenceLine
+                  y={threshold}
+                  stroke="#fb4360"
+                  strokeDasharray="3 3"
+                  label={{
+                    value: `BĐ: ${threshold}`,
+                    fill: "#fb4360",
+                    fontSize: 8,
+                    position: "insideTopRight",
+                  }}
+                />
+              )}
+              <Area
+                type="monotone"
+                dataKey="v"
+                stroke={color}
+                strokeWidth={1.5}
+                fill={`url(#grad-${label})`}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="text-[10px] text-muted/50 font-mono italic">
+            Chưa có chuỗi dữ liệu
+          </div>
+        )}
       </div>
 
       {/* Stats row */}
@@ -242,19 +258,50 @@ export default function StationDetailPage() {
       km: st.km || '',
       status: st.status || 'safe',
     })
+    setStationErrors({})
     setEditingModalOpen(true)
   }
 
+  const [stationErrors, setStationErrors] = useState({})
+
+  const validateStationForm = () => {
+    const errs = {}
+    if (!stationForm.name || !stationForm.name.trim()) {
+      errs.name = 'Vui lòng nhập tên trạm quan trắc'
+    } else if (stationForm.name.trim().length < 3) {
+      errs.name = 'Tên trạm phải có ít nhất 3 ký tự'
+    }
+
+    const lat = Number(stationForm.latitude)
+    if (stationForm.latitude === '' || isNaN(lat)) {
+      errs.latitude = 'Vui lòng nhập vĩ độ hợp lệ'
+    } else if (lat < -90 || lat > 90) {
+      errs.latitude = 'Vĩ độ phải từ -90° đến 90°'
+    }
+
+    const lng = Number(stationForm.longitude)
+    if (stationForm.longitude === '' || isNaN(lng)) {
+      errs.longitude = 'Vui lòng nhập kinh độ hợp lệ'
+    } else if (lng < -180 || lng > 180) {
+      errs.longitude = 'Kinh độ phải từ -180° đến 180°'
+    }
+
+    setStationErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const handleSaveStation = async () => {
+    if (!validateStationForm()) return
+
     try {
       setSavingStation(true)
       await updateStation(st.id, {
-        name: stationForm.name,
-        location: stationForm.location,
+        name: stationForm.name.trim(),
+        location: stationForm.location.trim(),
         latitude: Number(stationForm.latitude),
         longitude: Number(stationForm.longitude),
-        river: stationForm.river,
-        km: stationForm.km,
+        river: stationForm.river.trim(),
+        km: stationForm.km.trim(),
         status: stationForm.status,
       })
       showToast('Cập nhật thông tin trạm quan trắc thành công!', 'success')
@@ -295,41 +342,33 @@ export default function StationDetailPage() {
   const amp = latest?.amp ?? st.vibration ?? 0;
   const percent = latest?.percent ?? 0;
 
-  // Build chart data từ history backend hoặc fallback mock
+  const hasConnectedNodes = useMemo(() => {
+    if (!st?.gateways) return false;
+    return st.gateways.some(g => g.nodes && g.nodes.length > 0);
+  }, [st]);
+
+  // Build chart data từ history backend (chỉ dùng dữ liệu thật, không tạo fake mock lines)
   const waterChartData = useMemo(() => {
     if (history?.waterLevel?.length)
       return historyToChartData(history, "waterLevel");
-    // fallback: flat mock line
-    return Array.from({ length: 20 }, (_, i) => ({
-      t: `${i}:00`,
-      v: +(waterLevel - 1 + i * 0.08).toFixed(2),
-    }));
-  }, [history, waterLevel]);
+    return [];
+  }, [history]);
 
   const humidChartData = useMemo(() => {
     if (history?.moisture?.length)
       return historyToChartData(history, "moisture");
-    return Array.from({ length: 20 }, (_, i) => ({
-      t: `${i}:00`,
-      v: +(moisture - 5 + i * 0.3).toFixed(1),
-    }));
-  }, [history, moisture]);
+    return [];
+  }, [history]);
 
   const vibChartData = useMemo(() => {
     if (history?.freq?.length) return historyToChartData(history, "freq");
-    return Array.from({ length: 20 }, (_, i) => ({
-      t: `${i}:00`,
-      v: +(2 + Math.sin(i / 3) * 1.5).toFixed(2),
-    }));
-  }, [history, freq]);
+    return [];
+  }, [history]);
 
   const ampChartData = useMemo(() => {
     if (history?.amp?.length) return historyToChartData(history, "amp");
-    return Array.from({ length: 20 }, (_, i) => ({
-      t: `${i}:00`,
-      v: +(2 + Math.sin(i / 3) * 1.5).toFixed(2),
-    }));
-  }, [history, amp]);
+    return [];
+  }, [history]);
 
   // Stats
   const waterStats = useMemo(() => calcStats(history?.waterLevel), [history]);
@@ -400,7 +439,7 @@ export default function StationDetailPage() {
       </div>
 
       {/* Connection banner */}
-      <ConnectionBanner connected={connected} error={error} />
+      <ConnectionBanner connected={connected} error={error} hasNodes={hasConnectedNodes} latest={latest} />
 
       {/* Toast Notification */}
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -706,13 +745,13 @@ export default function StationDetailPage() {
         </div>
       </div>
 
-      {/* ── MODAL: EDIT STATION ── */}
+      {/* ── MODAL: EDIT STATION (SPLIT-VIEW) ── */}
       <Modal
         open={editingModalOpen}
         onClose={() => setEditingModalOpen(false)}
         title={`Chỉnh sửa thông tin Trạm #${st.id}`}
         icon={Radio}
-        maxWidth="max-w-2xl"
+        maxWidth="max-w-4xl"
         footer={
           <FormActions>
             <Button variant="secondary" onClick={() => setEditingModalOpen(false)}>Hủy</Button>
@@ -720,18 +759,45 @@ export default function StationDetailPage() {
           </FormActions>
         }
       >
-        <div className="space-y-2.5">
-          <div className="grid grid-cols-2 gap-2.5">
-            <Field label="Tên Trạm quan trắc" required htmlFor="station-name">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          {/* CỘT TRÁI: Form nhập liệu */}
+          <div className="md:col-span-6 space-y-2.5">
+            <Field label="Tên Trạm quan trắc" required error={stationErrors.name} htmlFor="station-name">
               <TextInput
                 id="station-name"
                 required
+                autoFocus
+                error={stationErrors.name}
                 value={stationForm.name}
-                onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
+                onChange={e => {
+                  setStationForm(p => ({ ...p, name: e.target.value }))
+                  if (stationErrors.name) setStationErrors(p => ({ ...p, name: null }))
+                }}
                 placeholder="vd: Trạm Tân Ấp 1"
               />
             </Field>
-            <Field label="Địa danh / Vị trí" htmlFor="station-location">
+
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Tên Sông" htmlFor="station-river">
+                <TextInput
+                  id="station-river"
+                  value={stationForm.river}
+                  onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
+                  placeholder="vd: Sông Hồng"
+                />
+              </Field>
+              <Field label="Vị trí Km / Lý trình" htmlFor="station-km">
+                <TextInput
+                  id="station-km"
+                  value={stationForm.km}
+                  onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
+                  placeholder="vd: K25+500"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+
+            <Field label="Địa danh / Vị trí trạm" htmlFor="station-location">
               <TextInput
                 id="station-location"
                 value={stationForm.location}
@@ -739,50 +805,87 @@ export default function StationDetailPage() {
                 placeholder="vd: Hoàn Kiếm, Hà Nội"
               />
             </Field>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Vĩ độ (Latitude °N)" required error={stationErrors.latitude} htmlFor="station-lat">
+                <TextInput
+                  id="station-lat"
+                  type="number"
+                  step="0.0001"
+                  required
+                  error={stationErrors.latitude}
+                  value={stationForm.latitude}
+                  onChange={e => {
+                    setStationForm(p => ({ ...p, latitude: e.target.value }))
+                    if (stationErrors.latitude) setStationErrors(p => ({ ...p, latitude: null }))
+                  }}
+                  placeholder="vd: 21.0381"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Kinh độ (Longitude °E)" required error={stationErrors.longitude} htmlFor="station-lng">
+                <TextInput
+                  id="station-lng"
+                  type="number"
+                  step="0.0001"
+                  required
+                  error={stationErrors.longitude}
+                  value={stationForm.longitude}
+                  onChange={e => {
+                    setStationForm(p => ({ ...p, longitude: e.target.value }))
+                    if (stationErrors.longitude) setStationErrors(p => ({ ...p, longitude: null }))
+                  }}
+                  placeholder="vd: 105.8492"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2.5">
-            <Field label="Vĩ độ (Latitude °N)" required htmlFor="station-lat">
-              <TextInput
-                id="station-lat"
-                type="number"
-                step="0.0001"
-                required
-                value={stationForm.latitude}
-                onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
-                placeholder="vd: 21.0381"
-                className="font-mono"
+          {/* CỘT PHẢI: Bản đồ chọn tọa độ + Live Preview */}
+          <div className="md:col-span-6 space-y-3 flex flex-col justify-between">
+            <div>
+              <label className="text-[11px] font-bold text-tx mb-1.5 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                <span>Bản đồ chọn tọa độ GIS (Click hoặc kéo ghim)</span>
+              </label>
+              <LocationPickerMap
+                latitude={stationForm.latitude}
+                longitude={stationForm.longitude}
+                onChange={({ latitude, longitude }) => setStationForm(p => ({ ...p, latitude, longitude }))}
+                defaultCenter={[st.latitude ?? 21.0381, st.longitude ?? 105.8492]}
+                height="190px"
               />
-            </Field>
-            <Field label="Kinh độ (Longitude °E)" required htmlFor="station-lng">
-              <TextInput
-                id="station-lng"
-                type="number"
-                step="0.0001"
-                required
-                value={stationForm.longitude}
-                onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
-                placeholder="vd: 105.8492"
-                className="font-mono"
-              />
-            </Field>
-            <Field label="Tên Sông" htmlFor="station-river">
-              <TextInput
-                id="station-river"
-                value={stationForm.river}
-                onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
-                placeholder="vd: Sông Hồng"
-              />
-            </Field>
-            <Field label="Vị trí Km / Lý trình" htmlFor="station-km">
-              <TextInput
-                id="station-km"
-                value={stationForm.km}
-                onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
-                placeholder="vd: K25+500"
-                className="font-mono"
-              />
-            </Field>
+            </div>
+
+            {/* Live Preview Card */}
+            <div>
+              <div className="text-[10px] font-bold text-muted uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Xem trước thẻ trạm (Live Preview):</span>
+                <span className="text-accent text-[9px] font-mono">Tự động cập nhật</span>
+              </div>
+              <div className="bg-card2 border border-border border-t-2 border-t-sky-500 rounded-xl p-3 shadow-panel">
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="min-w-0 pr-2">
+                    <h4 className="text-sm font-bold text-tx truncate m-0">
+                      {stationForm.name || st.name}
+                    </h4>
+                    <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5 font-mono">
+                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                      <span className="truncate">
+                        {stationForm.latitude && stationForm.longitude
+                          ? `${Number(stationForm.latitude).toFixed(4)}°N, ${Number(stationForm.longitude).toFixed(4)}°E`
+                          : (stationForm.location || 'Chưa có tọa độ')}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge status={st.status} sm title={st.statusReason} />
+                </div>
+                <div className="text-[10px] text-muted mb-1.5 flex items-center justify-between">
+                  <div><span>{stationForm.river || st.river || 'Tuyến sông'}</span> • <Mono className="text-tx">{stationForm.km || st.km || 'K0+000'}</Mono></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </Modal>

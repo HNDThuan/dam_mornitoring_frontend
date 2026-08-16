@@ -11,13 +11,13 @@ export function useSensorData(stationId, clusterId) {
   const [error, setError]         = useState(null)
   const mountedRef = useRef(true)
 
-  // Lấy initial data qua REST khi mount
+  // Lấy initial data qua REST khi mount hoặc khi stationId/clusterId đổi
   const loadInitial = useCallback(async () => {
     try {
       const res = await fetchLatest(stationId, clusterId)
       if (!mountedRef.current) return
-      if (res.data)    setLatest(res.data)
-      if (res.history) setHistory(res.history)
+      setLatest(res?.data || null)
+      setHistory(res?.history || null)
       setError(null)
     } catch (err) {
       if (!mountedRef.current) return
@@ -28,6 +28,8 @@ export function useSensorData(stationId, clusterId) {
 
   useEffect(() => {
     mountedRef.current = true
+    setLatest(null)
+    setHistory(null)
     const socket = getSocket()
 
     // ── Socket events ──────────────────────────────────────────────
@@ -58,29 +60,40 @@ export function useSensorData(stationId, clusterId) {
       setError(null)
 
       setHistory(prev => {
-        if (!prev) return prev
+        if (!prev) return {
+          timestamps: [snap.timestamp],
+          freq:       [snap.freq],
+          amp:        [snap.amp],
+          waterLevel: [snap.waterLevel],
+          moisture:   [snap.moisture],
+          percent:    [snap.percent],
+        }
         const MAX = 60
         return {
-          timestamps: [...prev.timestamps, snap.timestamp].slice(-MAX),
-          freq:       [...prev.freq,       snap.freq].slice(-MAX),
-          amp:        [...prev.amp,        snap.amp].slice(-MAX),
-          waterLevel: [...prev.waterLevel, snap.waterLevel].slice(-MAX),
-          moisture:   [...prev.moisture,   snap.moisture].slice(-MAX),
-          percent:    [...prev.percent,    snap.percent].slice(-MAX),
+          timestamps: [...(prev.timestamps || []), snap.timestamp].slice(-MAX),
+          freq:       [...(prev.freq || []),       snap.freq].slice(-MAX),
+          amp:        [...(prev.amp || []),        snap.amp].slice(-MAX),
+          waterLevel: [...(prev.waterLevel || []), snap.waterLevel].slice(-MAX),
+          moisture:   [...(prev.moisture || []),   snap.moisture].slice(-MAX),
+          percent:    [...(prev.percent || []),    snap.percent].slice(-MAX),
         }
       })
     }
 
     // Backend gửi `update` event mỗi khi có sensor data mới
     const onUpdate = (snapshot) => {
-      if (!mountedRef.current) return
+      if (!mountedRef.current || !snapshot) return
 
-      // Lọc dữ liệu: Chỉ lọc nếu stationId hoặc clusterId không trùng khớp
-      if (stationId && snapshot.stationId && Number(snapshot.stationId) !== Number(stationId)) {
-        return
+      // Lọc dữ liệu: Nếu có stationId thì bắt buộc snapshot phải có stationId khớp
+      if (stationId != null) {
+        if (!snapshot.stationId || Number(snapshot.stationId) !== Number(stationId)) {
+          return
+        }
       }
-      if (!stationId && clusterId && snapshot.clusterId && snapshot.clusterId !== clusterId) {
-        return
+      if (clusterId != null) {
+        if (!snapshot.clusterId || snapshot.clusterId !== clusterId) {
+          return
+        }
       }
 
       latestRef.current = snapshot
@@ -89,10 +102,12 @@ export function useSensorData(stationId, clusterId) {
       }
     }
 
-    // Backend gửi `history` ngay khi client kết nối lần đầu
+    // Backend gửi `history` ngay khi client kết nối lần đầu (chỉ dùng nếu không lọc theo trạm cụ thể)
     const onHistory = (h) => {
       if (!mountedRef.current) return
-      setHistory(h)
+      if (stationId == null && clusterId == null) {
+        setHistory(h)
+      }
     }
 
     socket.on('connect',       onConnect)

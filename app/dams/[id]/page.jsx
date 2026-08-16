@@ -31,6 +31,7 @@ import {
 } from 'lucide-react'
 import { fetchThresholdConfigs, updateThresholdConfig, fetchNodes, updateNode } from '@/lib/api'
 import DamMap from '@/components/DamMap'
+import LocationPickerMap from '@/components/LocationPickerMap'
 
 export default function DamDetailPage() {
   const { id } = useParams()
@@ -273,7 +274,36 @@ export default function DamDetailPage() {
   })
 
   // Dam Handlers
+  const [damEditErrors, setDamEditErrors] = useState({})
+
+  const validateDamEditForm = () => {
+    const errs = {}
+    if (!damForm.name || !damForm.name.trim()) {
+      errs.name = 'Vui lòng nhập tên đập thủy điện'
+    } else if (damForm.name.trim().length < 3) {
+      errs.name = 'Tên đập phải có ít nhất 3 ký tự'
+    }
+
+    const lat = Number(damForm.latitude)
+    if (damForm.latitude === '' || isNaN(lat)) {
+      errs.latitude = 'Vui lòng nhập vĩ độ hợp lệ'
+    } else if (lat < -90 || lat > 90) {
+      errs.latitude = 'Vĩ độ phải từ -90° đến 90°'
+    }
+
+    const lng = Number(damForm.longitude)
+    if (damForm.longitude === '' || isNaN(lng)) {
+      errs.longitude = 'Vui lòng nhập kinh độ hợp lệ'
+    } else if (lng < -180 || lng > 180) {
+      errs.longitude = 'Kinh độ phải từ -180° đến 180°'
+    }
+
+    setDamEditErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
   const openEditDamModal = () => {
+    setDamEditErrors({})
     setDamForm({
       name: dam.name || '',
       location: dam.location || '',
@@ -286,11 +316,13 @@ export default function DamDetailPage() {
 
   const handleSaveDam = async (e) => {
     e.preventDefault()
+    if (!validateDamEditForm()) return
+
     try {
       setSavingDam(true)
       await updateDam(dam.id, {
-        name: damForm.name,
-        location: damForm.location,
+        name: damForm.name.trim(),
+        location: damForm.location.trim(),
         latitude: Number(damForm.latitude),
         longitude: Number(damForm.longitude),
         cameraUrl: damForm.cameraUrl,
@@ -329,7 +361,7 @@ export default function DamDetailPage() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // Form state
+  // Form state for Station
   const [stationForm, setStationForm] = useState({
     name: '',
     location: '',
@@ -339,9 +371,44 @@ export default function DamDetailPage() {
     km: '',
     damId: damId,
   })
+  const [stationErrors, setStationErrors] = useState({})
+
+  const validateStationForm = () => {
+    const errs = {}
+    if (!stationForm.name || !stationForm.name.trim()) {
+      errs.name = 'Vui lòng nhập tên trạm quan trắc'
+    } else if (stationForm.name.trim().length < 3) {
+      errs.name = 'Tên trạm phải có ít nhất 3 ký tự'
+    } else {
+      const isDuplicate = damStations.some(
+        s => s.name.trim().toLowerCase() === stationForm.name.trim().toLowerCase() && s.id !== editingStation?.id
+      )
+      if (isDuplicate) {
+        errs.name = 'Trạm quan trắc với tên này đã tồn tại trên đập này!'
+      }
+    }
+
+    const lat = Number(stationForm.latitude)
+    if (stationForm.latitude === '' || isNaN(lat)) {
+      errs.latitude = 'Vui lòng nhập vĩ độ hợp lệ'
+    } else if (lat < -90 || lat > 90) {
+      errs.latitude = 'Vĩ độ phải từ -90° đến 90°'
+    }
+
+    const lng = Number(stationForm.longitude)
+    if (stationForm.longitude === '' || isNaN(lng)) {
+      errs.longitude = 'Vui lòng nhập kinh độ hợp lệ'
+    } else if (lng < -180 || lng > 180) {
+      errs.longitude = 'Kinh độ phải từ -180° đến 180°'
+    }
+
+    setStationErrors(errs)
+    return Object.keys(errs).length === 0
+  }
 
   const openCreateStationModal = () => {
     setEditingStation(null)
+    setStationErrors({})
     setStationForm({
       name: '',
       location: dam.location || '',
@@ -356,6 +423,7 @@ export default function DamDetailPage() {
 
   const openEditStationModal = (st) => {
     setEditingStation(st)
+    setStationErrors({})
     setStationForm({
       name: st.name || '',
       location: st.location || '',
@@ -370,22 +438,28 @@ export default function DamDetailPage() {
 
   const handleSaveStation = async (e) => {
     e.preventDefault()
+    if (!validateStationForm()) return
+
     try {
       setSavingStation(true)
       if (editingStation) {
         await updateStation(editingStation.id, {
-          name: stationForm.name,
-          location: stationForm.location,
+          name: stationForm.name.trim(),
+          location: stationForm.location.trim(),
           latitude: Number(stationForm.latitude),
           longitude: Number(stationForm.longitude),
-          river: stationForm.river,
-          km: stationForm.km,
+          river: stationForm.river.trim(),
+          km: stationForm.km.trim(),
           damId: damId,
         })
         showToast('Cập nhật trạm quan trắc thành công!', 'success')
       } else {
         await createStation({
           ...stationForm,
+          name: stationForm.name.trim(),
+          location: stationForm.location.trim(),
+          river: stationForm.river.trim(),
+          km: stationForm.km.trim(),
           latitude: Number(stationForm.latitude),
           longitude: Number(stationForm.longitude),
           damId: damId,
@@ -589,15 +663,13 @@ export default function DamDetailPage() {
       {damStations.length > 0 ? (
         <div className="grid grid-cols-3 gap-3.5">
           {damStations.map(st => {
-            const stS = getStatus(st.status)
-            const live = liveStationMap[st.id] || {}
-            const isLiveStreamActive = Boolean(live.timestamp)
-
-            // Kiểm tra trung thực Sensor Node của trạm
             const gateways = st.gateways || []
             const allNodes = gateways.flatMap(g => g.nodes || [])
             const hasNodes = allNodes.length > 0
             const onlineNodes = allNodes.filter(n => n.status === 'online')
+
+            const live = liveStationMap[st.id] || {}
+            const isLiveStreamActive = Boolean(live.timestamp) && hasNodes
 
             let isConnected = false
             let connectionStatusLabel = 'CHƯA GẮN SENSOR NODE'
@@ -613,13 +685,19 @@ export default function DamDetailPage() {
               connectionStatusColor = 'text-danger'
             }
 
-            const currentWater = live.waterLevel ?? st.waterLevel ?? 0
-            const currentHumidity = live.humidity ?? st.humidity ?? 0
-            const currentVibration = live.vibration ?? st.vibration ?? null
+            const effectiveStatus = hasNodes ? (st.status || 'unknown') : 'unknown'
+            const effectiveStatusReason = hasNodes 
+              ? (st.statusReason || '') 
+              : (st.status === 'unknown' && st.statusReason ? st.statusReason : 'Chưa gắn Sensor Node vào trạm')
+            const stS = getStatus(effectiveStatus)
 
-            const isWaterBreached = st.statusReason?.toLowerCase().includes('mực nước')
-            const isHumidBreached = st.statusReason?.toLowerCase().includes('độ ẩm')
-            const isVibBreached = st.statusReason?.toLowerCase().includes('độ rung')
+            const currentWater = hasNodes && (isLiveStreamActive || isConnected || st.waterLevel > 0) ? (live.waterLevel ?? st.waterLevel ?? 0) : null
+            const currentHumidity = hasNodes && (isLiveStreamActive || isConnected || st.humidity > 0) ? (live.humidity ?? st.humidity ?? 0) : null
+            const currentVibration = hasNodes && (isLiveStreamActive || isConnected || st.vibration > 0) ? (live.vibration ?? st.vibration ?? null) : null
+
+            const isWaterBreached = effectiveStatusReason?.toLowerCase().includes('mực nước')
+            const isHumidBreached = effectiveStatusReason?.toLowerCase().includes('độ ẩm')
+            const isVibBreached = effectiveStatusReason?.toLowerCase().includes('độ rung')
 
             return (
               <div
@@ -646,12 +724,12 @@ export default function DamDetailPage() {
                         </span>
                       </div>
                     </div>
-                    <Badge status={st.status} sm title={st.statusReason} />
+                    <Badge status={effectiveStatus} sm title={effectiveStatusReason} />
                   </div>
 
                   <div className="text-[10px] text-muted mb-2 flex items-center justify-between">
                     <div><span>{st.river || 'Tuyến sông'}</span> • <Mono className="text-tx">{st.km || 'K0+000'}</Mono></div>
-                    {live.timestamp && (
+                    {live.timestamp && hasNodes && (
                       <Mono className="text-[8px] text-sky-400 font-bold">
                         {new Date(live.timestamp).toLocaleTimeString('vi-VN')}
                       </Mono>
@@ -670,16 +748,16 @@ export default function DamDetailPage() {
                   </div>
 
                   {/* Dòng hiển thị nguyên nhân trạng thái an toàn */}
-                  {st.statusReason && (
+                  {effectiveStatusReason && (
                     <div className={`text-[9px] px-2 py-1 rounded-md border flex items-start gap-1 mb-2 font-mono ${
-                      st.status === 'safe'
+                      effectiveStatus === 'safe'
                         ? 'bg-safe/5 text-safe/90 border-safe/20'
-                        : st.status === 'unknown'
+                        : effectiveStatus === 'unknown'
                           ? 'bg-card2/70 text-muted border-border/40'
                           : 'bg-danger/10 text-danger border-danger/30 font-semibold'
                     }`}>
                       <span className="shrink-0">ⓘ</span>
-                      <span className="leading-tight">{st.statusReason}</span>
+                      <span className="leading-tight">{effectiveStatusReason}</span>
                     </div>
                   )}
 
@@ -690,8 +768,8 @@ export default function DamDetailPage() {
                         <Activity className="w-2.5 h-2.5 text-sky-400" />
                         <span>Mực nước</span>
                       </div>
-                      <Mono className={`font-bold ${isWaterBreached ? 'text-danger' : isConnected ? stS.text : 'text-muted'}`}>
-                        {currentWater} m
+                      <Mono className={`font-bold ${isWaterBreached ? 'text-danger' : currentWater != null ? stS.text : 'text-muted'}`}>
+                        {currentWater != null ? `${currentWater} m` : '--'}
                       </Mono>
                     </div>
                     <div className={`p-1 rounded ${isHumidBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
@@ -699,8 +777,8 @@ export default function DamDetailPage() {
                         <Droplet className="w-2.5 h-2.5 text-indigo-400" />
                         <span>Độ ẩm</span>
                       </div>
-                      <Mono className={`font-bold ${isHumidBreached ? 'text-danger' : isConnected ? 'text-tx' : 'text-muted'}`}>
-                        {currentHumidity}%
+                      <Mono className={`font-bold ${isHumidBreached ? 'text-danger' : currentHumidity != null ? 'text-tx' : 'text-muted'}`}>
+                        {currentHumidity != null ? `${currentHumidity}%` : '--'}
                       </Mono>
                     </div>
                     <div className={`p-1 rounded ${isVibBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
@@ -708,8 +786,8 @@ export default function DamDetailPage() {
                         <Radio className="w-2.5 h-2.5 text-emerald-400" />
                         <span>Độ rung</span>
                       </div>
-                      <Mono className={`font-bold ${isConnected ? 'text-tx' : 'text-muted'}`}>
-                        {currentVibration > 0 ? `${currentVibration} mm/s` : '--'}
+                      <Mono className={`font-bold ${currentVibration != null ? 'text-tx' : 'text-muted'}`}>
+                        {currentVibration != null && currentVibration > 0 ? `${currentVibration} mm/s` : '--'}
                       </Mono>
                     </div>
                   </div>
@@ -756,13 +834,13 @@ export default function DamDetailPage() {
       {/* ── TOAST NOTIFICATION ── */}
       <Toast toast={toast} onClose={() => setToast(null)} />
 
-      {/* ── MODAL: CREATE / EDIT STATION ── */}
+      {/* ── MODAL: CREATE / EDIT STATION (SPLIT-VIEW) ── */}
       <Modal
         open={stationModalOpen}
         onClose={() => setStationModalOpen(false)}
         title={editingStation ? t('damsPage.editStation') : t('damDetail.addStation')}
         icon={Radio}
-        maxWidth="max-w-2xl"
+        maxWidth="max-w-4xl"
         footer={
           <FormActions>
             <Button type="button" variant="secondary" onClick={() => setStationModalOpen(false)}>
@@ -774,23 +852,52 @@ export default function DamDetailPage() {
           </FormActions>
         }
       >
-        <form id="station-form" onSubmit={handleSaveStation} className="space-y-2.5">
-          <div className="grid grid-cols-3 gap-2.5">
-            <Field label={t('admin.form.stationNameLabel')} required htmlFor="station-name">
-              <TextInput
-                id="station-name"
-                required
-                value={stationForm.name}
-                onChange={e => setStationForm(p => ({ ...p, name: e.target.value }))}
-                placeholder="vd: Trạm Tân Ấp 1"
-              />
-            </Field>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          {/* CỘT TRÁI: Form nhập liệu */}
+          <form id="station-form" onSubmit={handleSaveStation} className="md:col-span-6 space-y-2.5">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label={t('admin.form.stationNameLabel')} required error={stationErrors.name} htmlFor="station-name">
+                <TextInput
+                  id="station-name"
+                  required
+                  autoFocus
+                  error={stationErrors.name}
+                  value={stationForm.name}
+                  onChange={e => {
+                    setStationForm(p => ({ ...p, name: e.target.value }))
+                    if (stationErrors.name) setStationErrors(p => ({ ...p, name: null }))
+                  }}
+                  placeholder="vd: Trạm Tân Ấp 1"
+                />
+              </Field>
 
-            <Field label={t('admin.form.belongToDam')}>
-              <TextInput disabled value={`${dam.name} (${dam.id})`} className="font-semibold" />
-            </Field>
+              <Field label={t('admin.form.belongToDam')}>
+                <TextInput disabled value={`${dam.name} (${dam.id})`} className="font-semibold text-xs" />
+              </Field>
+            </div>
 
-            <Field label="Địa danh / Vị trí" htmlFor="station-location">
+            <div className="grid grid-cols-2 gap-2">
+              <Field label={t('admin.form.riverLabel')} htmlFor="station-river">
+                <TextInput
+                  id="station-river"
+                  value={stationForm.river}
+                  onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
+                  placeholder="vd: Sông Hồng"
+                />
+              </Field>
+
+              <Field label={t('admin.form.kmLabel')} htmlFor="station-km">
+                <TextInput
+                  id="station-km"
+                  value={stationForm.km}
+                  onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
+                  placeholder="vd: K25+500"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+
+            <Field label="Địa danh / Vị trí trạm" htmlFor="station-location">
               <TextInput
                 id="station-location"
                 value={stationForm.location}
@@ -798,62 +905,98 @@ export default function DamDetailPage() {
                 placeholder="vd: Hoàn Kiếm, Hà Nội"
               />
             </Field>
-          </div>
 
-          <div className="grid grid-cols-3 gap-2.5">
-            <Field label="Vĩ độ (Latitude °N)" required htmlFor="station-lat">
-              <TextInput
-                id="station-lat"
-                type="number"
-                step="0.0001"
-                required
-                value={stationForm.latitude}
-                onChange={e => setStationForm(p => ({ ...p, latitude: e.target.value }))}
-                placeholder="vd: 21.0381"
-                className="font-mono"
+            <div className="grid grid-cols-2 gap-2">
+              <Field label="Vĩ độ (Latitude °N)" required error={stationErrors.latitude} htmlFor="station-lat">
+                <TextInput
+                  id="station-lat"
+                  type="number"
+                  step="0.0001"
+                  required
+                  error={stationErrors.latitude}
+                  value={stationForm.latitude}
+                  onChange={e => {
+                    setStationForm(p => ({ ...p, latitude: e.target.value }))
+                    if (stationErrors.latitude) setStationErrors(p => ({ ...p, latitude: null }))
+                  }}
+                  placeholder="vd: 21.0381"
+                  className="font-mono"
+                />
+              </Field>
+
+              <Field label="Kinh độ (Longitude °E)" required error={stationErrors.longitude} htmlFor="station-lng">
+                <TextInput
+                  id="station-lng"
+                  type="number"
+                  step="0.0001"
+                  required
+                  error={stationErrors.longitude}
+                  value={stationForm.longitude}
+                  onChange={e => {
+                    setStationForm(p => ({ ...p, longitude: e.target.value }))
+                    if (stationErrors.longitude) setStationErrors(p => ({ ...p, longitude: null }))
+                  }}
+                  placeholder="vd: 105.8492"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+
+            <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
+              Mực nước, độ ẩm, độ rung và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
+            </div>
+          </form>
+
+          {/* CỘT PHẢI: Bản đồ chọn tọa độ + Live Preview Card */}
+          <div className="md:col-span-6 space-y-3 flex flex-col justify-between">
+            <div>
+              <label className="text-[11px] font-bold text-tx mb-1.5 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                <span>Bản đồ chọn tọa độ GIS (Click hoặc kéo ghim)</span>
+              </label>
+              <LocationPickerMap
+                latitude={stationForm.latitude}
+                longitude={stationForm.longitude}
+                onChange={({ latitude, longitude }) => setStationForm(p => ({ ...p, latitude, longitude }))}
+                defaultCenter={[dam.latitude ?? 21.0381, dam.longitude ?? 105.8492]}
+                height="190px"
               />
-            </Field>
+            </div>
 
-            <Field label="Kinh độ (Longitude °E)" required htmlFor="station-lng">
-              <TextInput
-                id="station-lng"
-                type="number"
-                step="0.0001"
-                required
-                value={stationForm.longitude}
-                onChange={e => setStationForm(p => ({ ...p, longitude: e.target.value }))}
-                placeholder="vd: 105.8492"
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label={t('admin.form.riverLabel')} htmlFor="station-river">
-              <TextInput
-                id="station-river"
-                value={stationForm.river}
-                onChange={e => setStationForm(p => ({ ...p, river: e.target.value }))}
-                placeholder="vd: Sông Hồng"
-              />
-            </Field>
+            {/* Live Preview Card */}
+            <div>
+              <div className="text-[10px] font-bold text-muted uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Xem trước thẻ trạm (Live Preview):</span>
+                <span className="text-accent text-[9px] font-mono">Tự động cập nhật</span>
+              </div>
+              <div className="bg-card2 border border-border border-t-2 border-t-sky-500 rounded-xl p-3 shadow-panel">
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="min-w-0 pr-2">
+                    <h4 className="text-sm font-bold text-tx truncate m-0">
+                      {stationForm.name || 'Tên Trạm Quan Trắc'}
+                    </h4>
+                    <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5 font-mono">
+                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                      <span className="truncate">
+                        {stationForm.latitude && stationForm.longitude
+                          ? `${Number(stationForm.latitude).toFixed(4)}°N, ${Number(stationForm.longitude).toFixed(4)}°E`
+                          : (stationForm.location || 'Chưa có tọa độ')}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge status={editingStation ? editingStation.status : 'unknown'} sm />
+                </div>
+                <div className="text-[10px] text-muted mb-1.5 flex items-center justify-between">
+                  <div><span>{stationForm.river || 'Tuyến sông'}</span> • <Mono className="text-tx">{stationForm.km || 'K0+000'}</Mono></div>
+                </div>
+                <div className="flex items-center justify-between py-1 px-2 bg-card3 rounded border border-border/40 text-[8px] font-mono text-muted">
+                  <span>SENSOR NODE:</span>
+                  <span className="text-muted font-bold">CHƯA GẮN SENSOR NODE</span>
+                </div>
+              </div>
+            </div>
           </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <Field label={t('admin.form.kmLabel')} htmlFor="station-km">
-              <TextInput
-                id="station-km"
-                value={stationForm.km}
-                onChange={e => setStationForm(p => ({ ...p, km: e.target.value }))}
-                placeholder="vd: K25+500"
-                className="font-mono"
-              />
-            </Field>
-
-          </div>
-
-          <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
-            Mực nước, độ ẩm, độ rung và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
-          </div>
-        </form>
+        </div>
       </Modal>
 
       {/* ── DELETE CONFIRM MODAL ── */}
@@ -880,13 +1023,13 @@ export default function DamDetailPage() {
         </p>
       </Modal>
 
-      {/* ── MODAL: EDIT DAM ── */}
+      {/* ── MODAL: EDIT DAM (SPLIT-VIEW) ── */}
       <Modal
         open={damModalOpen}
         onClose={() => setDamModalOpen(false)}
         title={`Chỉnh sửa thông tin Đập thủy điện (${dam.id})`}
         icon={Database}
-        maxWidth="max-w-3xl"
+        maxWidth="max-w-4xl"
         footer={
           <FormActions>
             <Button type="button" variant="secondary" onClick={() => setDamModalOpen(false)}>
@@ -898,18 +1041,23 @@ export default function DamDetailPage() {
           </FormActions>
         }
       >
-        <form id="dam-edit-form" onSubmit={handleSaveDam} className="space-y-2.5">
-          <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <form id="dam-edit-form" onSubmit={handleSaveDam} className="md:col-span-6 space-y-3">
             <Field label="Mã Đập Thủy Điện (ID)">
               <TextInput disabled readOnly value={dam.id} className="font-mono cursor-not-allowed select-none" />
             </Field>
 
-            <Field label="Tên Đập Thủy Điện" required htmlFor="dam-edit-name">
+            <Field label="Tên Đập Thủy Điện" required error={damEditErrors.name} htmlFor="dam-edit-name">
               <TextInput
                 id="dam-edit-name"
                 required
+                autoFocus
+                error={damEditErrors.name}
                 value={damForm.name}
-                onChange={e => setDamForm(p => ({ ...p, name: e.target.value }))}
+                onChange={e => {
+                  setDamForm(p => ({ ...p, name: e.target.value }))
+                  if (damEditErrors.name) setDamEditErrors(p => ({ ...p, name: null }))
+                }}
                 placeholder="vd: Đập Thủy điện Hòa Bình"
               />
             </Field>
@@ -922,39 +1070,95 @@ export default function DamDetailPage() {
                 placeholder="vd: Hòa Bình"
               />
             </Field>
-          </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <Field label="Vĩ độ (Latitude °N)" required htmlFor="dam-edit-lat">
-              <TextInput
-                id="dam-edit-lat"
-                type="number"
-                step="0.0001"
-                required
-                value={damForm.latitude}
-                onChange={e => setDamForm(p => ({ ...p, latitude: e.target.value }))}
-                placeholder="vd: 20.8167"
-                className="font-mono"
-              />
-            </Field>
-            <Field label="Kinh độ (Longitude °E)" required htmlFor="dam-edit-lng">
-              <TextInput
-                id="dam-edit-lng"
-                type="number"
-                step="0.0001"
-                required
-                value={damForm.longitude}
-                onChange={e => setDamForm(p => ({ ...p, longitude: e.target.value }))}
-                placeholder="vd: 105.3265"
-                className="font-mono"
-              />
-            </Field>
-          </div>
+            <div className="grid grid-cols-2 gap-2.5">
+              <Field label="Vĩ độ (Latitude °N)" required error={damEditErrors.latitude} htmlFor="dam-edit-lat">
+                <TextInput
+                  id="dam-edit-lat"
+                  type="number"
+                  step="0.0001"
+                  required
+                  error={damEditErrors.latitude}
+                  value={damForm.latitude}
+                  onChange={e => {
+                    setDamForm(p => ({ ...p, latitude: e.target.value }))
+                    if (damEditErrors.latitude) setDamEditErrors(p => ({ ...p, latitude: null }))
+                  }}
+                  placeholder="vd: 20.8167"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Kinh độ (Longitude °E)" required error={damEditErrors.longitude} htmlFor="dam-edit-lng">
+                <TextInput
+                  id="dam-edit-lng"
+                  type="number"
+                  step="0.0001"
+                  required
+                  error={damEditErrors.longitude}
+                  value={damForm.longitude}
+                  onChange={e => {
+                    setDamForm(p => ({ ...p, longitude: e.target.value }))
+                    if (damEditErrors.longitude) setDamEditErrors(p => ({ ...p, longitude: null }))
+                  }}
+                  placeholder="vd: 105.3265"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
 
-          <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
-            Mực nước, mức chứa và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
+            <div className="bg-card2/60 border border-border/60 rounded-lg p-2 text-[10px] text-muted">
+              Mực nước, mức chứa và trạng thái an toàn được hệ thống tự tính từ dữ liệu cảm biến — không nhập tay tại đây.
+            </div>
+          </form>
+
+          {/* CỘT PHẢI: Bản đồ chọn tọa độ + Live Preview */}
+          <div className="md:col-span-6 space-y-3 flex flex-col justify-between">
+            <div>
+              <label className="text-[11px] font-bold text-tx mb-1.5 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-sky-400" />
+                <span>Bản đồ chọn tọa độ GIS (Click hoặc kéo ghim)</span>
+              </label>
+              <LocationPickerMap
+                latitude={damForm.latitude}
+                longitude={damForm.longitude}
+                onChange={({ latitude, longitude }) => setDamForm(p => ({ ...p, latitude, longitude }))}
+                height="190px"
+              />
+            </div>
+
+            {/* Live Preview Card */}
+            <div>
+              <div className="text-[10px] font-bold text-muted uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Xem trước thẻ đập (Live Preview):</span>
+                <span className="text-accent text-[9px] font-mono">Tự động cập nhật</span>
+              </div>
+              <div className="bg-card2 border border-border border-l-4 border-l-safe rounded-xl p-3 shadow-panel">
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="min-w-0 pr-2">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="font-mono text-[9px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+                        {dam.id}
+                      </span>
+                      <h4 className="text-sm font-bold text-tx truncate m-0">
+                        {damForm.name || dam.name}
+                      </h4>
+                    </div>
+                    <div className="text-[9px] text-muted flex items-center gap-1 font-mono">
+                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                      <span className="truncate">
+                        {damForm.latitude && damForm.longitude
+                          ? `${Number(damForm.latitude).toFixed(4)}°N, ${Number(damForm.longitude).toFixed(4)}°E`
+                          : 'Chưa có tọa độ'}
+                        {damForm.location ? ` (${damForm.location})` : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <Badge status={dam.status} sm title={dam.statusReason} />
+                </div>
+              </div>
+            </div>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* ── MODAL: DELETE DAM CONFIRMATION ── */}

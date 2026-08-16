@@ -125,30 +125,38 @@ export default function DashboardPage() {
           {/* Station cards grid */}
           <div className="grid grid-cols-2 gap-2.5">
             {visibleStations.slice(0, 6).map(st => {
-              const s = getStatus(st.status)
+              const allNodes = (st.gateways || []).flatMap(g => g.nodes || [])
+              const isUnlinked = (st.gateways && st.gateways.length > 0 && allNodes.length === 0) || (st.gateways && st.gateways.length === 0)
+              const effectiveStatus = (st.status === 'unknown' || isUnlinked) ? 'unknown' : (st.status || 'unknown')
+              const effectiveReason = (effectiveStatus === 'unknown' && !st.statusReason) ? 'Chưa gắn Sensor Node vào trạm' : (st.statusReason || '')
+              const s = getStatus(effectiveStatus)
+              const hasVal = effectiveStatus !== 'unknown' && st.waterLevel > 0
+
               return (
                 <Link key={st.id} href={`/stations/${st.id}`}
                   className={`bg-card border border-border border-t-2 ${s.topBorder} rounded-xl p-3 cursor-pointer no-underline block
                     hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150 shadow-panel`}>
                   <div className="flex justify-between items-start mb-1.5">
                     <span className="text-[11px] font-semibold text-tx">{st.name}</span>
-                    <Badge status={st.status} sm title={st.statusReason} />
+                    <Badge status={effectiveStatus} sm title={effectiveReason} />
                   </div>
                   <div className="flex items-baseline gap-1 mb-1">
-                    <Mono className={`text-xl font-bold ${s.text}`}>{st.waterLevel}</Mono>
+                    <Mono className={`text-xl font-bold ${s.text}`}>{hasVal ? st.waterLevel : '--'}</Mono>
                     <span className="text-[9px] text-muted">m</span>
-                    <span className={`text-[9px] ${st.change > 0 ? 'text-danger' : st.change < 0 ? 'text-safe' : 'text-muted'} inline-flex items-center gap-0.5`}>
-                      {st.change > 0 ? <ChevronUp className="w-2.5 h-2.5 shrink-0" /> : st.change < 0 ? <ChevronDown className="w-2.5 h-2.5 shrink-0" /> : <Minus className="w-2.5 h-2.5 shrink-0" />}
-                      <span>{Math.abs(st.change)}m</span>
-                    </span>
+                    {hasVal && (
+                      <span className={`text-[9px] ${st.change > 0 ? 'text-danger' : st.change < 0 ? 'text-safe' : 'text-muted'} inline-flex items-center gap-0.5`}>
+                        {st.change > 0 ? <ChevronUp className="w-2.5 h-2.5 shrink-0" /> : st.change < 0 ? <ChevronDown className="w-2.5 h-2.5 shrink-0" /> : <Minus className="w-2.5 h-2.5 shrink-0" />}
+                        <span>{Math.abs(st.change)}m</span>
+                      </span>
+                    )}
                   </div>
                   <div className="text-[9px] text-muted mb-1.5 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-muted shrink-0" />
-                    <span className="truncate">{st.location}</span>
+                    <span className="truncate">{st.location || `${st.river || ''} ${st.km || ''}`}</span>
                   </div>
-                  {st.statusReason && st.status !== 'safe' && (
-                    <div className="text-[8px] text-muted font-mono truncate bg-card2/80 px-1.5 py-0.5 rounded border border-border/40" title={st.statusReason}>
-                      ⓘ {st.statusReason}
+                  {effectiveReason && effectiveStatus !== 'safe' && (
+                    <div className="text-[8px] text-muted font-mono truncate bg-card2/80 px-1.5 py-0.5 rounded border border-border/40" title={effectiveReason}>
+                      ⓘ {effectiveReason}
                     </div>
                   )}
                 </Link>
