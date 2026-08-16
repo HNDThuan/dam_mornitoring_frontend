@@ -200,16 +200,17 @@ export default function DamsPage() {
   // Counts per status
   const statusCounts = useMemo(() => ({
     all: visibleDams.length,
-    safe: visibleDams.filter(d => d.status === 'safe' || !d.status).length,
+    safe: visibleDams.filter(d => d.status === 'safe').length,
     warning: visibleDams.filter(d => d.status === 'warning').length,
     critical: visibleDams.filter(d => d.status === 'critical').length,
+    unknown: visibleDams.filter(d => d.status === 'unknown' || !d.status).length,
   }), [visibleDams])
 
   // Filter dams
   const filteredDams = useMemo(() => {
     return visibleDams.filter(d => {
       if (statusFilter !== 'all') {
-        const dStatus = d.status || 'safe'
+        const dStatus = d.status || 'unknown'
         if (dStatus !== statusFilter) return false
       }
       if (!search) return true
@@ -430,6 +431,7 @@ export default function DamsPage() {
                 ['safe', `An toàn (${statusCounts.safe})`],
                 ['warning', `Cảnh báo (${statusCounts.warning})`],
                 ['critical', `Nguy cấp (${statusCounts.critical})`],
+                ['unknown', `Không xác định (${statusCounts.unknown})`],
               ].map(([id, lb]) => (
                 <button
                   key={id}

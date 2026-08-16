@@ -20,6 +20,8 @@ export default function AlertsPage() {
 
   const [selId, setSelId] = useState(null)
   const [filter, setFilter] = useState('all') // 'all' | 'CRITICAL' | 'ALERT' | 'WARNING' | 'resolved'
+  const [selectedDam, setSelectedDam] = useState(isOperator && assignedDamId ? assignedDamId : 'all')
+  const [selectedStation, setSelectedStation] = useState('all')
   const [modes, setModes] = useState({ sms: false, zalo: false, email: true })
   const [msg, setMsg] = useState('')
   const [sent, setSent] = useState(false)
@@ -103,11 +105,68 @@ export default function AlertsPage() {
     return alarms
   }, [alarms, isOperator, assignedDamId])
 
-  // Tự chọn alarm đầu tiên nếu chưa chọn
+  // Danh sách trạm thuộc Đập được chọn (hoặc tất cả trạm)
+  const availableStations = useMemo(() => {
+    if (selectedDam === 'all') return stations
+    return stations.filter(s => s.damId === selectedDam)
+  }, [stations, selectedDam])
+
+  // Reset station filter nếu đập thay đổi và trạm không còn thuộc đập đó
+  useEffect(() => {
+    if (selectedStation !== 'all') {
+      const stillValid = availableStations.some(s => s.stationId === selectedStation)
+      if (!stillValid) setSelectedStation('all')
+    }
+  }, [selectedDam, availableStations, selectedStation])
+
+  // Lọc alarms theo Đập và Trạm được chọn
+  const damStationScopedAlarms = useMemo(() => {
+    return scopedAlarms.filter(a => {
+      // Lọc theo Đập
+      if (selectedDam !== 'all') {
+        const stationOfAlarm = stations.find(s =>
+          (a.stationId && s.stationId === a.stationId) ||
+          (a.stationCode && s.stationCode === a.stationCode) ||
+          (a.stationId && String(s.id) === String(a.stationId))
+        )
+        const aDamId = a.damId || stationOfAlarm?.damId
+        if (aDamId !== selectedDam) return false
+      }
+      // Lọc theo Trạm
+      if (selectedStation !== 'all') {
+        const match =
+          a.stationId === selectedStation ||
+          (stations.find(s => s.stationId === selectedStation)?.stationCode === a.stationCode) ||
+          (String(stations.find(s => s.stationId === selectedStation)?.id) === String(a.stationId))
+        if (!match) return false
+      }
+      return true
+    })
+  }, [scopedAlarms, selectedDam, selectedStation, stations])
+
+  // Filter alarms cho danh sách hiển thị
+  const shown = useMemo(() => {
+    if (filter === 'all') return damStationScopedAlarms
+    if (filter === 'resolved') return damStationScopedAlarms.filter(a => a.resolvedAt)
+    return damStationScopedAlarms.filter(a => a.severity === filter && !a.resolvedAt)
+  }, [damStationScopedAlarms, filter])
+
+  // Tự chọn alarm đầu tiên trong danh sách đã filter
   const sel = useMemo(() => {
-    if (selId) return scopedAlarms.find(a => a.id === selId) || scopedAlarms[0] || null
-    return scopedAlarms[0] || null
-  }, [selId, scopedAlarms])
+    if (selId) {
+      const found = shown.find(a => a.id === selId)
+      if (found) return found
+    }
+    return shown[0] || null
+  }, [selId, shown])
+
+  // Counts per severity (dựa trên bộ lọc Đập/Trạm đang chọn)
+  const counts = useMemo(() => ({
+    CRITICAL: damStationScopedAlarms.filter(a => a.severity === 'CRITICAL' && !a.resolvedAt).length,
+    ALERT: damStationScopedAlarms.filter(a => a.severity === 'ALERT' && !a.resolvedAt).length,
+    WARNING: damStationScopedAlarms.filter(a => a.severity === 'WARNING' && !a.resolvedAt).length,
+    resolved: damStationScopedAlarms.filter(a => a.resolvedAt).length,
+  }), [damStationScopedAlarms])
 
   // Cập nhật message template khi chọn alarm khác
   const defaultMsg = useMemo(() => {
@@ -135,21 +194,6 @@ export default function AlertsPage() {
       }
     }).catch(() => { })
   }, [sel])
-
-  // Filter alarms
-  const shown = useMemo(() => {
-    if (filter === 'all') return scopedAlarms
-    if (filter === 'resolved') return scopedAlarms.filter(a => a.resolvedAt)
-    return scopedAlarms.filter(a => a.severity === filter && !a.resolvedAt)
-  }, [scopedAlarms, filter])
-
-  // Counts per severity
-  const counts = useMemo(() => ({
-    CRITICAL: scopedAlarms.filter(a => a.severity === 'CRITICAL' && !a.resolvedAt).length,
-    ALERT: scopedAlarms.filter(a => a.severity === 'ALERT' && !a.resolvedAt).length,
-    WARNING: scopedAlarms.filter(a => a.severity === 'WARNING' && !a.resolvedAt).length,
-    resolved: scopedAlarms.filter(a => a.resolvedAt).length,
-  }), [scopedAlarms])
 
   // Sensor data rows cho bảng chi tiết (dùng real alarm data)
   const sensorRows = useMemo(() => {
@@ -225,8 +269,8 @@ export default function AlertsPage() {
 
   return (
     <>
-      <div className="grid gap-3 p-4 h-[calc(100vh-48px)] overflow-hidden"
-        style={{ gridTemplateColumns: '260px 1fr 285px' }}>
+      <div className="grid gap-3 p-3 h-[calc(100vh-98px)] overflow-hidden font-sans"
+        style={{ gridTemplateColumns: '330px minmax(0, 1fr) 340px' }}>
 
         {/* LEFT: Alert list */}
         <div className="overflow-y-auto">
@@ -235,6 +279,72 @@ export default function AlertsPage() {
             <Mono className="text-[9px] text-danger bg-danger-soft px-1.5 py-0.5 rounded-sm">
               {unresolvedCount} CHƯA XỬ LÝ
             </Mono>
+          </div>
+
+          {/* ── BỘ LỌC ĐẬP & TRẠM (DAM & STATION FILTERS) ── */}
+          <div className="bg-card border border-border/80 rounded-xl p-2.5 mb-2.5 space-y-2 shadow-sm">
+            {/* Lọc theo Đập */}
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-muted mb-1 font-semibold">
+                <span className="flex items-center gap-1 text-accent">
+                  <Database className="w-3 h-3 text-accent" />
+                  <span>Lọc theo Đập</span>
+                </span>
+                {selectedDam !== 'all' && !(isOperator && assignedDamId) && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDam('all')}
+                    className="text-[9px] text-muted hover:text-tx cursor-pointer bg-transparent border-none p-0"
+                  >
+                    Tất cả
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedDam}
+                onChange={(e) => setSelectedDam(e.target.value)}
+                disabled={isOperator && Boolean(assignedDamId)}
+                className="w-full bg-card2 border border-border rounded-lg px-2 py-1 text-[11px] text-tx outline-none focus:border-accent transition-colors cursor-pointer"
+              >
+                <option value="all">Tất cả các đập ({dams.length})</option>
+                {dams.map((d) => (
+                  <option key={d.damId} value={d.damId}>
+                    {d.damId} - {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Lọc theo Trạm */}
+            <div>
+              <div className="flex items-center justify-between text-[10px] text-muted mb-1 font-semibold">
+                <span className="flex items-center gap-1 text-sky-400">
+                  <Radio className="w-3 h-3 text-sky-400" />
+                  <span>Lọc theo Trạm</span>
+                </span>
+                {selectedStation !== 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStation('all')}
+                    className="text-[9px] text-muted hover:text-tx cursor-pointer bg-transparent border-none p-0"
+                  >
+                    Tất cả
+                  </button>
+                )}
+              </div>
+              <select
+                value={selectedStation}
+                onChange={(e) => setSelectedStation(e.target.value)}
+                className="w-full bg-card2 border border-border rounded-lg px-2 py-1 text-[11px] text-tx outline-none focus:border-accent transition-colors cursor-pointer"
+              >
+                <option value="all">Tất cả các trạm ({availableStations.length})</option>
+                {availableStations.map((st) => (
+                  <option key={st.stationId} value={st.stationId}>
+                    {st.stationCode ? `[${st.stationCode}] ` : ''}{st.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Filter buttons */}

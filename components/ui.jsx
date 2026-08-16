@@ -82,9 +82,29 @@ export function Panel({ title, right, children, className = '', bodyClassName, g
   )
 }
 
-/** KPI tile for top-of-dashboard summary rows */
-export function StatTile({ icon: Icon, label, value, unit, trend, status = 'info', className = '' }) {
+/** KPI tile for top-of-dashboard summary rows. Pass `compact` for a dense single-row chip variant. */
+export function StatTile({ icon: Icon, label, value, unit, trend, status = 'info', compact = false, className = '' }) {
   const s = getStatus(status)
+
+  if (compact) {
+    return (
+      <Card className={`px-3 py-2 flex items-center gap-2.5 ${className}`}>
+        {Icon && (
+          <div className={`shrink-0 w-7 h-7 rounded-md ${s.bg} border ${s.border} flex items-center justify-center`}>
+            <Icon className={`w-3.5 h-3.5 ${s.text}`} />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="text-[9px] text-muted font-bold tracking-[0.1em] uppercase truncate leading-tight">{label}</div>
+          <div className="flex items-baseline gap-1">
+            <Mono className={`text-base font-bold ${s.text} leading-tight`}>{value}</Mono>
+            {unit && <span className="text-[9px] text-muted">{unit}</span>}
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   return (
     <Card className={`p-3.5 relative overflow-hidden ${className}`}>
       <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full ${s.bg} blur-2xl opacity-60`} aria-hidden="true" />
