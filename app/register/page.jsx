@@ -190,7 +190,7 @@ export default function RegisterPage() {
               >
                 <option value="">{t('auth.register.selectDamPlaceholder')}</option>
                 {dams.map(d => (
-                  <option key={d.id} value={d.id}>
+                  <option key={d.damId} value={d.damId}>
                     {d.name} ({d.location})
                   </option>
                 ))}

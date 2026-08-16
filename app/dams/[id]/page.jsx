@@ -225,11 +225,11 @@ export default function DamDetailPage() {
         const nodeList = nodeRes?.nodes || []
         if (Array.isArray(nodeList) && nodeList.length > 0) {
           const nodePromises = nodeList.map(node =>
-            updateNode(node.id, {
+            updateNode(node.nodeId, {
               warnHigh: Number(thresholdForm.vibWarn),
               vibrationThreshold: Number(thresholdForm.vibAlert),
               criticalHigh: Number(thresholdForm.vibCritical),
-            }).catch(e => console.warn('[DamDetail] Không thể đồng bộ node:', node.id, e))
+            }).catch(e => console.warn('[DamDetail] Không thể đồng bộ node:', node.nodeId, e))
           )
           await Promise.all(nodePromises)
           console.log(`[DamDetail] Đã đồng bộ ngưỡng độ rung sang ${nodeList.length} Node(s) Jetson TX2 thuộc Đập ${id}`)
@@ -255,8 +255,8 @@ export default function DamDetailPage() {
   const damId = String(id)
   // Fallback khi chưa tải xong / không tìm thấy: KHÔNG bịa số đo, để 0 + trạng thái 'unknown'
   // thay vì hiển thị số liệu giả trông như thật.
-  const dam = dams.find(d => d.id === damId) || {
-    id: damId,
+  const dam = dams.find(d => d.damId === damId) || {
+    damId,
     name: `Đập ${damId}`,
     location: '',
     waterLevel: 0,
@@ -320,7 +320,7 @@ export default function DamDetailPage() {
 
     try {
       setSavingDam(true)
-      await updateDam(dam.id, {
+      await updateDam(dam.damId, {
         name: damForm.name.trim(),
         location: damForm.location.trim(),
         latitude: Number(damForm.latitude),
@@ -340,7 +340,7 @@ export default function DamDetailPage() {
   const handleConfirmDeleteDam = async () => {
     try {
       setDeletingDam(true)
-      await deleteDam(dam.id)
+      await deleteDam(dam.damId)
       showToast(`Đã xóa đập thủy điện ${dam.name}!`, 'success')
       setDeleteDamConfirm(false)
       setTimeout(() => {
@@ -381,7 +381,7 @@ export default function DamDetailPage() {
       errs.name = 'Tên trạm phải có ít nhất 3 ký tự'
     } else {
       const isDuplicate = damStations.some(
-        s => s.name.trim().toLowerCase() === stationForm.name.trim().toLowerCase() && s.id !== editingStation?.id
+        s => s.name.trim().toLowerCase() === stationForm.name.trim().toLowerCase() && s.stationId !== editingStation?.stationId
       )
       if (isDuplicate) {
         errs.name = 'Trạm quan trắc với tên này đã tồn tại trên đập này!'
@@ -443,7 +443,7 @@ export default function DamDetailPage() {
     try {
       setSavingStation(true)
       if (editingStation) {
-        await updateStation(editingStation.id, {
+        await updateStation(editingStation.stationId, {
           name: stationForm.name.trim(),
           location: stationForm.location.trim(),
           latitude: Number(stationForm.latitude),
@@ -532,7 +532,7 @@ export default function DamDetailPage() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="font-mono text-[10px] text-accent bg-accent/10 px-2.5 py-0.5 rounded border border-accent/20">
-                {dam.id}
+                {dam.damId}
               </span>
               <h1 className="text-xl font-bold text-tx tracking-wide m-0">{dam.name}</h1>
               <Badge status={dam.status} title={dam.statusReason} />
@@ -656,7 +656,7 @@ export default function DamDetailPage() {
         bodyClassName="p-0"
         className="[&_.leaflet-container]:rounded-b-xl"
       >
-        <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.id} height="320px" />
+        <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.damId} height="320px" />
       </Panel>
 
       {/* Stations Grid */}
@@ -668,7 +668,7 @@ export default function DamDetailPage() {
             const hasNodes = allNodes.length > 0
             const onlineNodes = allNodes.filter(n => n.status === 'online')
 
-            const live = liveStationMap[st.id] || {}
+            const live = liveStationMap[st.stationId] || {}
             const isLiveStreamActive = Boolean(live.timestamp) && hasNodes
 
             let isConnected = false
@@ -701,7 +701,7 @@ export default function DamDetailPage() {
 
             return (
               <div
-                key={st.id}
+                key={st.stationId}
                 className={`bg-card border border-border border-t-2 ${stS.topBorder} rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-panel hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150`}
               >
                 <div>
@@ -795,7 +795,7 @@ export default function DamDetailPage() {
 
                 <div className="flex justify-between items-center pt-2.5 border-t border-border/40">
                   <Link
-                    href={`/stations/${st.id}`}
+                    href={`/stations/${st.stationId}`}
                     className="inline-flex items-center gap-1.5 text-[10px] font-bold text-accent hover:underline no-underline"
                   >
                     <span>{t('damsPage.stationDetail')}</span>
@@ -812,7 +812,7 @@ export default function DamDetailPage() {
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => setDeleteConfirm({ id: st.id, name: st.name })}
+                        onClick={() => setDeleteConfirm({ id: st.stationId, name: st.name })}
                         className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger cursor-pointer transition-colors"
                         title="Xóa Trạm"
                       >
@@ -872,7 +872,7 @@ export default function DamDetailPage() {
               </Field>
 
               <Field label={t('admin.form.belongToDam')}>
-                <TextInput disabled value={`${dam.name} (${dam.id})`} className="font-semibold text-xs" />
+                <TextInput disabled value={`${dam.name} (${dam.damId})`} className="font-semibold text-xs" />
               </Field>
             </div>
 
@@ -1027,7 +1027,7 @@ export default function DamDetailPage() {
       <Modal
         open={damModalOpen}
         onClose={() => setDamModalOpen(false)}
-        title={`Chỉnh sửa thông tin Đập thủy điện (${dam.id})`}
+        title={`Chỉnh sửa thông tin Đập thủy điện (${dam.damId})`}
         icon={Database}
         maxWidth="max-w-4xl"
         footer={
@@ -1044,7 +1044,7 @@ export default function DamDetailPage() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <form id="dam-edit-form" onSubmit={handleSaveDam} className="md:col-span-6 space-y-3">
             <Field label="Mã Đập Thủy Điện (ID)">
-              <TextInput disabled readOnly value={dam.id} className="font-mono cursor-not-allowed select-none" />
+              <TextInput disabled readOnly value={dam.damId} className="font-mono cursor-not-allowed select-none" />
             </Field>
 
             <Field label="Tên Đập Thủy Điện" required error={damEditErrors.name} htmlFor="dam-edit-name">
@@ -1137,7 +1137,7 @@ export default function DamDetailPage() {
                   <div className="min-w-0 pr-2">
                     <div className="flex items-center gap-1.5 mb-1">
                       <span className="font-mono text-[9px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
-                        {dam.id}
+                        {dam.damId}
                       </span>
                       <h4 className="text-sm font-bold text-tx truncate m-0">
                         {damForm.name || dam.name}
@@ -1180,7 +1180,7 @@ export default function DamDetailPage() {
         }
       >
         <p className="text-xs text-muted leading-relaxed m-0">
-          Bạn có chắc chắn muốn xóa đập <strong className="text-tx">{dam.name}</strong> ({dam.id}) và toàn bộ các trạm trực thuộc? Thao tác này không thể hoàn tác.
+          Bạn có chắc chắn muốn xóa đập <strong className="text-tx">{dam.name}</strong> ({dam.damId}) và toàn bộ các trạm trực thuộc? Thao tác này không thể hoàn tác.
         </p>
       </Modal>
 

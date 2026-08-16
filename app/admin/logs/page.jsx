@@ -15,6 +15,7 @@ import {
   Shield,
   Clock,
   Activity,
+  Server,
 } from 'lucide-react'
 
 const CATEGORY_MAP = {
@@ -22,6 +23,7 @@ const CATEGORY_MAP = {
   AUTH: { label: 'Đăng nhập / Đăng ký', icon: KeyRound, color: 'text-indigo-400 border-indigo-500/40 bg-indigo-500/10' },
   DAM: { label: 'Hạ tầng Đập', icon: Building2, color: 'text-emerald-400 border-emerald-500/40 bg-emerald-500/10' },
   STATION: { label: 'Trạm quan trắc', icon: Activity, color: 'text-sky-400 border-sky-500/40 bg-sky-500/10' },
+  GATEWAY: { label: 'Gateway (Jetson TX2)', icon: Server, color: 'text-fuchsia-400 border-fuchsia-500/40 bg-fuchsia-500/10' },
   THRESHOLD: { label: 'Ngưỡng báo động', icon: Sliders, color: 'text-amber-400 border-amber-500/40 bg-amber-500/10' },
 }
 

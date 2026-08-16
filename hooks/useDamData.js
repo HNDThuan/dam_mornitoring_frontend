@@ -55,10 +55,10 @@ export function useDamData() {
     const socket = getSocket()
     const onStatusChanged = (evt) => {
       if (!mountedRef.current || !evt) return
-      if (evt.level === 'station' && evt.stationId != null) {
-        setStations(prev => prev.map(s => s.id === evt.stationId ? { ...s, status: evt.status, statusReason: evt.statusReason ?? s.statusReason } : s))
+      if (evt.level === 'station' && evt.stationId) {
+        setStations(prev => prev.map(s => s.stationId === evt.stationId ? { ...s, status: evt.status, statusReason: evt.statusReason ?? s.statusReason } : s))
       } else if (evt.level === 'dam' && evt.damId) {
-        setDams(prev => prev.map(d => d.id === evt.damId ? { ...d, status: evt.status, statusReason: evt.statusReason ?? d.statusReason } : d))
+        setDams(prev => prev.map(d => d.damId === evt.damId ? { ...d, status: evt.status, statusReason: evt.statusReason ?? d.statusReason } : d))
       }
     }
     // Dam.waterLevel = MAX(waterLevel) trong các Station thuộc Dam, fillPct suy ra từ đó
@@ -66,7 +66,7 @@ export function useDamData() {
     const onDamMetricsChanged = (evt) => {
       if (!mountedRef.current || !evt?.damId) return
       setDams(prev => prev.map(d =>
-        d.id === evt.damId ? { ...d, waterLevel: evt.waterLevel, fillPct: evt.fillPct ?? d.fillPct } : d
+        d.damId === evt.damId ? { ...d, waterLevel: evt.waterLevel, fillPct: evt.fillPct ?? d.fillPct } : d
       ))
     }
     // Số đo sống của từng Trạm (mực nước / độ ẩm / biên độ rung) để thẻ trạm ở mọi trang
@@ -80,7 +80,7 @@ export function useDamData() {
       lastStationPatchRef.current.set(stId, now)
 
       setStations(prev => prev.map(s => {
-        if (s.id !== stId) return s
+        if (s.stationId !== stId) return s
         const next = {
           waterLevel: snapshot.waterLevel,
           humidity: snapshot.moisture,

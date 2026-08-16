@@ -18,7 +18,7 @@ export default function DashboardPage() {
   const { dams, stations, loading, error } = useDamData()
   const { t } = useLanguage()
 
-  const visibleDams = isOperator && assignedDamId ? dams.filter(d => d.id === assignedDamId) : dams
+  const visibleDams = isOperator && assignedDamId ? dams.filter(d => d.damId === assignedDamId) : dams
   const visibleStations = isOperator && assignedDamId ? stations.filter(s => s.damId === assignedDamId) : stations
   const visibleAlarms = isOperator && assignedDamId ? alarms.filter(a => a.damId === assignedDamId || !a.damId) : alarms
 
@@ -57,7 +57,7 @@ export default function DashboardPage() {
               {visibleDams.map(d => {
                 const s = getStatus(d.status)
                 return (
-                  <div key={d.id}
+                  <div key={d.damId}
                     className={`bg-card2/60 border border-border border-l-[3px] ${s.leftBorder} rounded-lg p-2.5 hover:bg-card2 transition-colors`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[11px] font-semibold text-tx truncate pr-2">{d.name}</span>
@@ -133,7 +133,7 @@ export default function DashboardPage() {
               const hasVal = effectiveStatus !== 'unknown' && st.waterLevel > 0
 
               return (
-                <Link key={st.id} href={`/stations/${st.id}`}
+                <Link key={st.stationId} href={`/stations/${st.stationId}`}
                   className={`bg-card border border-border border-t-2 ${s.topBorder} rounded-xl p-3 cursor-pointer no-underline block
                     hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150 shadow-panel`}>
                   <div className="flex justify-between items-start mb-1.5">
@@ -182,7 +182,7 @@ export default function DashboardPage() {
               <>
                 <div className="flex items-center gap-3 mb-3">
                   {/* Station không có fillPct riêng — lấy mức chứa của Đập chứa nó (backend tự tính) */}
-                  <RadialGauge value={visibleDams.find(d => d.id === featured.damId)?.fillPct ?? 0} size={72} stroke={7} status={featured.status} label={`${featured.waterLevel}`} sublabel="mét" />
+                  <RadialGauge value={visibleDams.find(d => d.damId === featured.damId)?.fillPct ?? 0} size={72} stroke={7} status={featured.status} label={`${featured.waterLevel}`} sublabel="mét" />
                   <div className="min-w-0">
                     <div className="text-base font-bold text-tx truncate">{featured.name}</div>
                     <div className="text-[10px] text-muted flex items-center gap-1 mt-0.5 truncate">
@@ -229,11 +229,11 @@ export default function DashboardPage() {
                   const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
 
                   const station = visibleStations.find(st =>
-                    (al.stationId && String(st.id) === String(al.stationId)) ||
-                    String(st.id) === String(al.sensorId)
+                    (al.stationId && st.stationId === al.stationId) ||
+                    st.stationId === al.sensorId
                   ) || visibleStations.find(st => st.damId === al.damId) || visibleStations[0] || stations[0]
 
-                  const dam = visibleDams.find(d => d.id === al.damId) || visibleDams.find(d => d.id === station?.damId) || visibleDams[0] || dams[0]
+                  const dam = visibleDams.find(d => d.damId === al.damId) || visibleDams.find(d => d.damId === station?.damId) || visibleDams[0] || dams[0]
 
                   const damName = al.damName || dam?.name || 'Đập Thủy Điện'
                   const damLoc = dam?.location || 'Hà Nội'

@@ -105,7 +105,7 @@ function damMapPropsAreEqual(prevProps, nextProps) {
   if (pDams.length !== nDams.length) return false
   for (let i = 0; i < pDams.length; i++) {
     if (
-      pDams[i].id !== nDams[i].id ||
+      pDams[i].damId !== nDams[i].damId ||
       pDams[i].name !== nDams[i].name ||
       pDams[i].latitude !== nDams[i].latitude ||
       pDams[i].longitude !== nDams[i].longitude ||
@@ -124,7 +124,7 @@ function damMapPropsAreEqual(prevProps, nextProps) {
   if (pStations.length !== nStations.length) return false
   for (let i = 0; i < pStations.length; i++) {
     if (
-      pStations[i].id !== nStations[i].id ||
+      pStations[i].stationId !== nStations[i].stationId ||
       pStations[i].name !== nStations[i].name ||
       pStations[i].latitude !== nStations[i].latitude ||
       pStations[i].longitude !== nStations[i].longitude ||
@@ -147,7 +147,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
 
   // Filter dams & stations based on selectedDamId
   const displayDams = selectedDamId
-    ? dams.filter(d => d.id === selectedDamId)
+    ? dams.filter(d => d.damId === selectedDamId)
     : dams
 
   const displayStations = selectedDamId
@@ -157,7 +157,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
   // Calculate focused map center & zoom level
   const targetDam = displayDams.length === 1
     ? displayDams[0]
-    : (selectedDamId ? dams.find(d => d.id === selectedDamId) : null)
+    : (selectedDamId ? dams.find(d => d.damId === selectedDamId) : null)
 
   let mapCenter = [21.0381, 105.3265]
   let mapZoom = (selectedDamId || displayDams.length === 1) ? 12 : 8
@@ -229,11 +229,11 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
         {displayDams.map(dam => {
           const lat = dam.latitude ?? 20.8167
           const lng = dam.longitude ?? 105.3265
-          const damStations = stations.filter(st => st.damId === dam.id)
+          const damStations = stations.filter(st => st.damId === dam.damId)
 
           return (
             <Marker
-              key={`dam-${dam.id}`}
+              key={`dam-${dam.damId}`}
               position={[lat, lng]}
               icon={createDamIcon(dam.status)}
             >
@@ -242,7 +242,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   {/* Header Badges */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-2 mb-2">
                     <span className="font-mono text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded border border-emerald-500/30">
-                      {dam.id}
+                      {dam.damId}
                     </span>
                     <span className={`text-[10px] font- px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm ${dam.status === 'safe'
                         ? 'bg-emerald-500 text-white'
@@ -295,8 +295,8 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                       <div className="space-y-1 max-h-[110px] overflow-y-auto pr-1">
                         {damStations.map(st => (
                           <div
-                            key={st.id}
-                            onClick={() => router.push(`/stations/${st.id}`)}
+                            key={st.stationId}
+                            onClick={() => router.push(`/stations/${st.stationId}`)}
                             className="flex items-center justify-between p-2 bg-slate-800/90 hover:bg-slate-700 rounded-lg border border-slate-700/70 cursor-pointer transition-all group"
                           >
                             <span className="text-[11px] text-slate-100 font-bold truncate max-w-[150px] group-hover:text-sky-300">
@@ -313,7 +313,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
 
                   {/* Dam Action Button */}
                   <button
-                    onClick={() => router.push(`/dams/${dam.id}`)}
+                    onClick={() => router.push(`/dams/${dam.damId}`)}
                     className="w-full py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-black text-[12px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none shadow-lg active:scale-[0.98]"
                   >
                     <span>Xem chi tiết Đập</span>
@@ -332,7 +332,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
 
           return (
             <Marker
-              key={`station-${st.id}`}
+              key={`station-${st.stationId}`}
               position={[lat, lng]}
               icon={createStationIcon(st.status)}
             >
@@ -341,7 +341,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   {/* Header Badges */}
                   <div className="flex items-center justify-between gap-2 border-b border-slate-700/80 pb-2 mb-2">
                     <span className="font-mono text-[10px] font-bold text-sky-400 bg-sky-500/15 px-2 py-0.5 rounded border border-sky-500/30">
-                      Trạm #{st.id}
+                      {st.stationId}
                     </span>
                     <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm ${st.status === 'safe'
                         ? 'bg-emerald-500 text-slate-950'
@@ -386,7 +386,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
 
                   {/* Station Action Button */}
                   <button
-                    onClick={() => router.push(`/stations/${st.id}`)}
+                    onClick={() => router.push(`/stations/${st.stationId}`)}
                     className="w-full py-2 bg-sky-400 hover:bg-sky-300 text-slate-950 font-black text-[12px] rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer border-none shadow-lg active:scale-[0.98]"
                   >
                     <span>Xem chi tiết Trạm</span>

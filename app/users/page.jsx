@@ -59,7 +59,7 @@ export default function UsersPage() {
 
   const handleApproveQuick = async (user) => {
     try {
-      await apiApproveUser(user.id, { role: user.role || 'OPERATOR', assignedDamId: user.assignedDamId || dams[0]?.id, status: 'ACTIVE' }, token)
+      await apiApproveUser(user.id, { role: user.role || 'OPERATOR', assignedDamId: user.assignedDamId || dams[0]?.damId, status: 'ACTIVE' }, token)
       setActionSuccess(`Đã phê duyệt tài khoản "${user.username}" thành công!`)
       await loadData()
     } catch (err) {
@@ -166,7 +166,7 @@ export default function UsersPage() {
               </thead>
               <tbody className="divide-y divide-border/40">
                 {paginatedUsers.map((u) => {
-                  const damObj = dams.find((d) => d.id === u.assignedDamId)
+                  const damObj = dams.find((d) => d.damId === u.assignedDamId)
                   const isPending = u.status === 'PENDING_APPROVAL'
 
                   return (
@@ -308,7 +308,7 @@ export default function UsersPage() {
           >
             <option value="">-- Tất cả các đập (Dành cho Admin/Viewer) --</option>
             {dams.map((d) => (
-              <option key={d.id} value={d.id}>
+              <option key={d.damId} value={d.damId}>
                 {d.name} ({d.location})
               </option>
             ))}

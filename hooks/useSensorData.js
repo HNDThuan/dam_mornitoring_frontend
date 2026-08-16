@@ -85,8 +85,9 @@ export function useSensorData(stationId, clusterId) {
       if (!mountedRef.current || !snapshot) return
 
       // Lọc dữ liệu: Nếu có stationId thì bắt buộc snapshot phải có stationId khớp
+      // stationId nay là mã trạm dạng chuỗi (STA-001-01) — so sánh trực tiếp, không ép số.
       if (stationId != null) {
-        if (!snapshot.stationId || Number(snapshot.stationId) !== Number(stationId)) {
+        if (!snapshot.stationId || snapshot.stationId !== stationId) {
           return
         }
       }

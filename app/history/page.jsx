@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getStatus } from '@/lib/statusConfig'
+import { getStatus, SEVERITY_TO_STATUS } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Card, Panel, LiveDot, Pagination } from '@/components/ui'
 import { Field, Select, Button } from '@/components/form'
 import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert } from 'lucide-react'
@@ -89,7 +89,7 @@ export default function HistoryPage() {
 
   // Lọc dữ liệu Đập và Trạm phù hợp với phân quyền
   const availableDams = useMemo(() => {
-    if (isOperator && assignedDamId) return dams.filter(d => d.id === assignedDamId)
+    if (isOperator && assignedDamId) return dams.filter(d => d.damId === assignedDamId)
     return dams
   }, [dams, isOperator, assignedDamId])
 
@@ -160,11 +160,11 @@ export default function HistoryPage() {
     if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', fullLocation: '' }
 
     const station = stations.find(s =>
-      (alarm.stationId && String(s.id) === String(alarm.stationId)) ||
-      String(s.id) === String(alarm.sensorId)
+      (alarm.stationId && s.stationId === alarm.stationId) ||
+      s.stationId === alarm.sensorId
     ) || stations.find(s => s.damId === alarm.damId) || stations[0]
 
-    const dam = dams.find(d => d.id === alarm.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+    const dam = dams.find(d => d.damId === alarm.damId) || dams.find(d => d.damId === station?.damId) || dams[0]
     const damName = alarm.damName || dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
     const damLocation = dam?.location || 'Việt Nam'
 
@@ -188,7 +188,7 @@ export default function HistoryPage() {
           location: loc.fullLocation,
           sensorType: a.sensorType,
           level: `${a.measuredVal} ${SENSOR_TYPE_UNITS[a.sensorType] || ''}`,
-          alertLv: a.severity === 'CRITICAL' ? 'danger' : a.severity === 'ALERT' ? 'warning' : 'info',
+          alertLv: SEVERITY_TO_STATUS[a.severity] || 'info',
           statusLv: a.resolvedAt ? 'safe' : 'warning',
           statusLbl: a.resolvedAt ? 'ĐÃ XỬ LÝ' : 'CHỜ XỬ LÝ',
           rawAlarm: a,
@@ -199,7 +199,7 @@ export default function HistoryPage() {
     // Fallback: nếu chưa có sự kiện alarm, dùng bản ghi sensor readings từ CSDL
     return historyReadings.map(r => {
       const station = stations.find(s => s.damId === r.damId) || stations[0]
-      const dam = dams.find(d => d.id === r.damId) || dams[0]
+      const dam = dams.find(d => d.damId === r.damId) || dams[0]
       return {
         time: new Date(r.time).toLocaleString('vi-VN'),
         code: r.sensorId,
@@ -275,7 +275,7 @@ export default function HistoryPage() {
           >
             {!isOperator && <option value="all">-- Tất cả các Đập --</option>}
             {availableDams.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+              <option key={d.damId} value={d.damId}>{d.name}</option>
             ))}
           </Select>
         </Field>
@@ -289,7 +289,7 @@ export default function HistoryPage() {
           >
             <option value="all">-- Tất cả Trạm --</option>
             {availableStations.map(s => (
-              <option key={s.id} value={s.id}>{s.name} ({s.location || s.river})</option>
+              <option key={s.stationId} value={s.stationId}>{s.name} ({s.location || s.river})</option>
             ))}
           </Select>
         </Field>
@@ -442,11 +442,15 @@ export default function HistoryPage() {
             <div className="flex gap-3 mb-2">
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm bg-warning" />
-                <span className="text-[9px] text-muted">Cảnh báo</span>
+                <span className="text-[9px] text-muted">Cảnh báo (WARNING)</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2.5 h-2.5 rounded-sm bg-danger" />
-                <span className="text-[9px] text-muted">Khẩn cấp</span>
+                <span className="text-[9px] text-muted">Báo động (ALERT)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-sm bg-critical" />
+                <span className="text-[9px] text-muted">Nguy cấp (CRITICAL)</span>
               </div>
             </div>
             {barChartData.length > 0 ? (
@@ -456,8 +460,9 @@ export default function HistoryPage() {
                   <XAxis dataKey="d" tick={CHART_TICK_STYLE} tickLine={false} />
                   <YAxis tick={CHART_TICK_STYLE} tickLine={false} />
                   <Tooltip contentStyle={TOOLTIP_STYLE} />
-                  <Bar dataKey="warning" fill="#f59e0b" opacity={0.85} radius={[2, 2, 0, 0]} />
-                  <Bar dataKey="critical" fill="#fb4360" opacity={0.85} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="warning" name="Cảnh báo" fill="#f59e0b" opacity={0.85} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="alert" name="Báo động" fill="#fb4360" opacity={0.85} radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="critical" name="Nguy cấp" fill="#e11d48" opacity={0.85} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -523,7 +528,7 @@ export default function HistoryPage() {
                           <Badge status={r.alertLv} sm />
                         </td>
                         <td className="px-3 py-2">
-                          <Badge status={r.statusLv} sm />
+                          <Badge status={r.statusLv} label={r.statusLbl} sm />
                         </td>
                         <td className="px-3 py-2">
                           <button

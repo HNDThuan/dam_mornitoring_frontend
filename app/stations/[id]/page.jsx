@@ -33,9 +33,10 @@ import {
 import CameraViewer from "@/components/CameraViewer";
 import DamMap from "@/components/DamMap";
 import LocationPickerMap from "@/components/LocationPickerMap";
+import StationDevicesTab from "@/components/StationDevicesTab";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
-import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity } from "lucide-react";
+import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity, Cpu, Server } from "lucide-react";
 
 const CHART_STYLE = {
   background: "#0e1622",
@@ -217,9 +218,12 @@ export default function StationDetailPage() {
   const { dams, stations, refetch, updateStation, deleteStation } = useDamData();
   const { t, locale } = useLanguage();
   // Fallback khi chưa tải xong / không tìm thấy: KHÔNG bịa số đo, để 0 + trạng thái 'unknown'.
-  const defaultSt = { id: Number(id), name: 'Trạm Quan Trắc', location: '', latitude: 21.0381, longitude: 105.8492, river: '', km: '', status: 'unknown', waterLevel: 0, humidity: 0, vibration: 0 };
-  const st = stations.find((s) => s.id === Number(id)) || defaultSt;
+  const defaultSt = { stationId: String(id), name: 'Trạm Quan Trắc', location: '', latitude: 21.0381, longitude: 105.8492, river: '', km: '', status: 'unknown', waterLevel: 0, humidity: 0, vibration: 0 };
+  const st = stations.find((s) => s.stationId === String(id)) || defaultSt;
   const stStatus = getStatus(st.status);
+
+  // Tab State: 'monitoring' (Giám sát) | 'devices' (Thiết bị phần cứng)
+  const [activeTab, setActiveTab] = useState('monitoring');
 
   // Toast State
   const [toast, setToast] = useState(null) // { message, type }
@@ -295,7 +299,7 @@ export default function StationDetailPage() {
 
     try {
       setSavingStation(true)
-      await updateStation(st.id, {
+      await updateStation(st.stationId, {
         name: stationForm.name.trim(),
         location: stationForm.location.trim(),
         latitude: Number(stationForm.latitude),
@@ -317,7 +321,7 @@ export default function StationDetailPage() {
   const handleConfirmDelete = async () => {
     try {
       setDeleting(true)
-      await deleteStation(st.id)
+      await deleteStation(st.stationId)
       showToast(`Đã xóa trạm quan trắc ${st.name}!`, 'success')
       setDeleteConfirm(false)
       setTimeout(() => {
@@ -331,7 +335,7 @@ export default function StationDetailPage() {
   }
 
   // ── Real-time data từ backend (chỉ nhận dữ liệu đúng của Trạm này) ──
-  const { latest, history, connected, error } = useSensorData(Number(id));
+  const { latest, history, connected, error } = useSensorData(String(id));
   const { alarms, thresholds } = useAlarmData(st.damId)
 
   // Ưu tiên số đo sống từ WebSocket, fallback về giá trị mới nhất backend đã ghi vào Station.
@@ -458,7 +462,7 @@ export default function StationDetailPage() {
               className={`w-1.5 h-1.5 rounded-full animate-pulse-dot ${stStatus.dot}`}
             />
             <span className="text-[10px] text-muted">
-              Mã Trạm #{st.id}
+              {st.stationId}
               {latest?.timestamp && (
                 <>
                   {" "}
@@ -519,237 +523,279 @@ export default function StationDetailPage() {
         </div>
       </div>
 
-      {/* ── GIS MAP BẢN ĐỒ TỌA ĐỘ TRẠM ── */}
-      <Panel
-        title={
-          <span className="flex items-center gap-1.5 normal-case text-xs font-bold text-tx tracking-normal">
-            <MapPin className="w-4 h-4 text-info shrink-0" />
-            <span>Vị trí địa lý & Tọa độ GIS Trạm quan trắc</span>
-          </span>
-        }
-        right={
-          <span className="font-mono text-[10px] text-muted flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-muted shrink-0" />
-            <span>Tọa độ: {st.latitude != null && st.longitude != null ? `${st.latitude}°N, ${st.longitude}°E` : (st.location || 'Chưa cập nhật')}</span>
-          </span>
-        }
-        bodyClassName="p-0"
-        className="mb-4 [&_.leaflet-container]:rounded-b-xl"
-      >
-        <DamMap dams={dams.filter(d => d.id === st.damId)} stations={[st]} height="320px" />
-      </Panel>
+      {/* ── TAB SWITCHER: GIÁM SÁT VS THIẾT BỊ PHẦN CỨNG ── */}
+      <div className="flex items-center gap-2 mb-4 border-b border-border/70 pb-3">
+        <button
+          onClick={() => setActiveTab('monitoring')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            activeTab === 'monitoring'
+              ? 'bg-accent text-white border-accent shadow-glow'
+              : 'bg-card text-muted border-border hover:text-tx hover:bg-card2'
+          }`}
+        >
+          <Activity className="w-4 h-4" />
+          <span>Giám Sát & Trực Quan Hóa (Live Telemetry & GIS)</span>
+        </button>
 
-      {/* ── 3 Metric Cards ── */}
-      <div className="grid grid-cols-4 gap-3 mb-3">
-        {/* Mực nước */}
-        <MetricCard
-          label={t('dashboard.waterLevel')}
-          value={waterLevel.toFixed(2)}
-          unit="m"
-          delta={waterDelta.delta ? `${waterDelta.delta}m` : null}
-          deltaUp={waterDelta.up}
-          statusLabel={waterSt.label}
-          statusCl={STATUS_CL[waterSt.level]}
-          color={mainColor}
-          data={waterChartData}
-          threshold={waterThreshold}
-          stats={[
-            { lb: t('stationDetail.average'), val: `${waterStats.avg}m`, cl: "text-tx" },
-            {
-              lb: t('stationDetail.peak24h'),
-              val: `${waterStats.max}m`,
-              cl: `text-${waterSt.level === "danger" ? "danger" : "warning"}`,
-            },
-            { lb: "BĐ3", val: fmtThreshold(waterThreshold, 'm'), cl: "text-danger" },
-          ]}
-        />
-
-        {/* Độ ẩm */}
-        <MetricCard
-          label={t('stationDetail.moistureLeak')}
-          value={moisture.toFixed(1)}
-          unit="%"
-          delta={humidDelta.delta ? `${humidDelta.delta}%` : null}
-          deltaUp={humidDelta.up}
-          statusLabel={humidSt.label}
-          statusCl={STATUS_CL[humidSt.level]}
-          color="#38bdf8"
-          data={humidChartData}
-          threshold={humThreshold}
-          stats={[
-            { lb: t('stationDetail.average'), val: `${humidStats.avg}%`, cl: "text-tx" },
-            { lb: t('stationDetail.maxHigh'), val: `${humidStats.max}%`, cl: "text-info" },
-            { lb: t('stationDetail.threshold'), val: fmtThreshold(humThreshold, '%'), cl: "text-warning" },
-          ]}
-        />
-
-        {/* Tần số rung (Hz) — ThresholdConfig chỉ có ngưỡng cho BIÊN ĐỘ (mm/s), không có ngưỡng
-            cho tần số, nên card này không gắn ngưỡng thay vì mượn nhầm ngưỡng khác đơn vị. */}
-        <MetricCard
-          label={t('stationDetail.vibFreq')}
-          value={freq.toFixed(2)}
-          unit="Hz"
-          delta={vibDelta.delta ? `${vibDelta.delta}Hz` : null}
-          deltaUp={vibDelta.up}
-          statusLabel={vibSt.label}
-          statusCl={STATUS_CL[vibSt.level]}
-          color="#818cf8"
-          data={vibChartData}
-          stats={[
-            { lb: t('stationDetail.average'), val: `${vibStats.avg} Hz`, cl: "text-tx" },
-            { lb: t('stationDetail.peak24h'), val: `${vibStats.max} Hz`, cl: "text-warning" },
-          ]}
-        />
-
-        <MetricCard
-          label={t('stationDetail.vibAmp')}
-          value={amp.toFixed(2)} unit="mm/s"
-          delta={ampDelta.delta ? `${ampDelta.delta}mm/s` : null}
-          deltaUp={ampDelta.up}
-          statusLabel={vibSt.label}
-          statusCl={STATUS_CL[vibSt.level]}
-          color="#f59e0b"
-          data={ampChartData}
-          threshold={vibThreshold}
-          stats={[
-            { lb: t('stationDetail.average'), val: `${ampStats.avg} mm/s`, cl: 'text-tx' },
-            { lb: t('stationDetail.peak24h'), val: `${ampStats.max} mm/s`, cl: 'text-warning' },
-            { lb: 'BĐ', val: fmtThreshold(vibThreshold, ' mm/s'), cl: 'text-danger' },
-          ]}
-        />
+        <button
+          onClick={() => setActiveTab('devices')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            activeTab === 'devices'
+              ? 'bg-accent text-white border-accent shadow-glow'
+              : 'bg-card text-muted border-border hover:text-tx hover:bg-card2'
+          }`}
+        >
+          <Cpu className="w-4 h-4" />
+          <span>Thiết Bị & Cấu Hình Phần Cứng (Gateways, Nodes, Sensors)</span>
+        </button>
       </div>
 
-      {/* ── Bottom 2-col ── */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* Camera */}
-        <CameraViewer />
-
-        {/* Right: Amplitude + Events */}
-        <div className="flex flex-col gap-3">
-          {/* Amplitude / Pressure card */}
+      {/* ── TAB 1: GIÁM SÁT & TRỰC QUAN HÓA ── */}
+      {activeTab === 'monitoring' && (
+        <>
+          {/* ── GIS MAP BẢN ĐỒ TỌA ĐỘ TRẠM ── */}
           <Panel
             title={
-              <span className="normal-case tracking-normal">
-                <div className="text-[12px] font-semibold text-tx">
-                  Biên độ rung & Mức chứa
-                </div>
-                <div className="text-[9px] text-muted mt-0.5 font-normal">
-                  Dữ liệu cảm biến thời gian thực
-                </div>
+              <span className="flex items-center gap-1.5 normal-case text-xs font-bold text-tx tracking-normal">
+                <MapPin className="w-4 h-4 text-info shrink-0" />
+                <span>Vị trí địa lý & Tọa độ GIS Trạm quan trắc</span>
               </span>
             }
             right={
-              latest && (
-                <span className="flex items-center gap-1.5">
-                  <LiveDot active />
-                  <span className="font-mono text-[9px] text-safe font-bold">LIVE</span>
-                </span>
-              )
+              <span className="font-mono text-[10px] text-muted flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-muted shrink-0" />
+                <span>Tọa độ: {st.latitude != null && st.longitude != null ? `${st.latitude}°N, ${st.longitude}°E` : (st.location || 'Chưa cập nhật')}</span>
+              </span>
             }
+            bodyClassName="p-0"
+            className="mb-4 [&_.leaflet-container]:rounded-b-xl"
           >
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              {[
-                {
-                  lb: "Biên độ rung",
-                  val: `${amp.toFixed(2)} mm`,
-                  sub: "Amplitude sensor",
-                  cl: "text-accent",
-                },
-                {
-                  lb: "Mức chứa",
-                  val: `${percent}%`,
-                  sub: "Theo mực nước hiện tại",
-                  cl: "text-info",
-                },
-                {
-                  lb: "Tần số rung",
-                  val: `${freq.toFixed(2)} Hz`,
-                  sub: "Vibration frequency",
-                  cl: "text-accent",
-                },
-              ].map(({ lb, val, sub, cl }) => (
-                <div key={lb} className="bg-card2/70 rounded-lg px-3 py-2 border border-border/50">
-                  <div className="text-[8px] text-muted uppercase tracking-wide mb-1">
-                    {lb}
-                  </div>
-                  <Mono className={`text-[13px] font-semibold ${cl}`}>
-                    {val}
-                  </Mono>
-                  <div className="text-[8px] text-muted mt-0.5">{sub}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Percent fill gauge */}
-            <div className="flex items-center gap-3 bg-card2/50 border border-border/50 rounded-lg px-3 py-2.5">
-              <RadialGauge
-                value={percent}
-                size={52}
-                stroke={5}
-                status={percent > 90 ? "danger" : percent > 75 ? "warning" : "safe"}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-[9px] text-muted uppercase tracking-wide mb-1">Mức chứa hồ</div>
-                <div className="h-1.5 bg-border rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${Math.min(percent, 100)}%`,
-                      background:
-                        percent > 90
-                          ? "#fb4360"
-                          : percent > 75
-                            ? "#f59e0b"
-                            : "#22c55e",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
+            <DamMap dams={dams.filter(d => d.damId === st.damId)} stations={[st]} height="320px" />
           </Panel>
 
-          {/* Events */}
-          <Panel
-            title={<span className="normal-case tracking-normal text-[12px] font-semibold text-tx">Cảnh Báo & Sự Kiện</span>}
-            right={<Link href="/alerts" className="text-[10px] text-accent cursor-pointer font-semibold hover:underline no-underline">Xem tất cả</Link>}
-            className="flex-1"
-          >
-            {alarms.length === 0 && (
-              <div className="text-center py-4 text-[10px] text-muted flex items-center justify-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5 text-safe shrink-0" />
-                <span>Không có cảnh báo nào — Hệ thống ổn định</span>
-              </div>
-            )}
-            {alarms.slice(0, 5).map((al, i) => {
-              const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
-              const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
-              const bgCl = al.severity === 'CRITICAL' ? 'bg-danger/10' : al.severity === 'ALERT' ? 'bg-warning/10' : 'bg-info/10'
-              return (
-                <div key={al.id || i} className="flex gap-2.5 mb-3 last:mb-0">
-                  <div className={`w-7 h-7 rounded-full ${bgCl} flex items-center justify-center shrink-0 mt-0.5 text-sm`}>
-                    {sevInfo.icon && <sevInfo.icon className="w-4 h-4 text-current" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[11px] font-semibold text-tx">
-                        {typeLb}: {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
-                      </span>
-                      <Mono className="text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</Mono>
+          {/* ── 3 Metric Cards ── */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            {/* Mực nước */}
+            <MetricCard
+              label={t('dashboard.waterLevel')}
+              value={waterLevel.toFixed(2)}
+              unit="m"
+              delta={waterDelta.delta ? `${waterDelta.delta}m` : null}
+              deltaUp={waterDelta.up}
+              statusLabel={waterSt.label}
+              statusCl={STATUS_CL[waterSt.level]}
+              color={mainColor}
+              data={waterChartData}
+              threshold={waterThreshold}
+              stats={[
+                { lb: t('stationDetail.average'), val: `${waterStats.avg}m`, cl: "text-tx" },
+                {
+                  lb: t('stationDetail.peak24h'),
+                  val: `${waterStats.max}m`,
+                  cl: `text-${waterSt.level === "danger" ? "danger" : "warning"}`,
+                },
+                { lb: "BĐ3", val: fmtThreshold(waterThreshold, 'm'), cl: "text-danger" },
+              ]}
+            />
+
+            {/* Độ ẩm */}
+            <MetricCard
+              label={t('stationDetail.moistureLeak')}
+              value={moisture.toFixed(1)}
+              unit="%"
+              delta={humidDelta.delta ? `${humidDelta.delta}%` : null}
+              deltaUp={humidDelta.up}
+              statusLabel={humidSt.label}
+              statusCl={STATUS_CL[humidSt.level]}
+              color="#38bdf8"
+              data={humidChartData}
+              threshold={humThreshold}
+              stats={[
+                { lb: t('stationDetail.average'), val: `${humidStats.avg}%`, cl: "text-tx" },
+                { lb: t('stationDetail.maxHigh'), val: `${humidStats.max}%`, cl: "text-info" },
+                { lb: t('stationDetail.threshold'), val: fmtThreshold(humThreshold, '%'), cl: "text-warning" },
+              ]}
+            />
+
+            {/* Tần số rung (Hz) — ThresholdConfig chỉ có ngưỡng cho BIÊN ĐỘ (mm/s), không có ngưỡng
+                cho tần số, nên card này không gắn ngưỡng thay vì mượn nhầm ngưỡng khác đơn vị. */}
+            <MetricCard
+              label={t('stationDetail.vibFreq')}
+              value={freq.toFixed(2)}
+              unit="Hz"
+              delta={vibDelta.delta ? `${vibDelta.delta}Hz` : null}
+              deltaUp={vibDelta.up}
+              statusLabel={vibSt.label}
+              statusCl={STATUS_CL[vibSt.level]}
+              color="#818cf8"
+              data={vibChartData}
+              stats={[
+                { lb: t('stationDetail.average'), val: `${vibStats.avg} Hz`, cl: "text-tx" },
+                { lb: t('stationDetail.peak24h'), val: `${vibStats.max} Hz`, cl: "text-warning" },
+              ]}
+            />
+
+            <MetricCard
+              label={t('stationDetail.vibAmp')}
+              value={amp.toFixed(2)} unit="mm/s"
+              delta={ampDelta.delta ? `${ampDelta.delta}mm/s` : null}
+              deltaUp={ampDelta.up}
+              statusLabel={vibSt.label}
+              statusCl={STATUS_CL[vibSt.level]}
+              color="#f59e0b"
+              data={ampChartData}
+              threshold={vibThreshold}
+              stats={[
+                { lb: t('stationDetail.average'), val: `${ampStats.avg} mm/s`, cl: 'text-tx' },
+                { lb: t('stationDetail.peak24h'), val: `${ampStats.max} mm/s`, cl: 'text-warning' },
+                { lb: 'BĐ', val: fmtThreshold(vibThreshold, ' mm/s'), cl: 'text-danger' },
+              ]}
+            />
+          </div>
+
+          {/* ── Bottom 2-col ── */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Camera */}
+            <CameraViewer />
+
+            {/* Right: Amplitude + Events */}
+            <div className="flex flex-col gap-3">
+              {/* Amplitude / Pressure card */}
+              <Panel
+                title={
+                  <span className="normal-case tracking-normal">
+                    <div className="text-[12px] font-semibold text-tx">
+                      Biên độ rung & Mức chứa
                     </div>
-                    <p className="text-[9px] text-muted leading-relaxed">{al.notes}</p>
+                    <div className="text-[9px] text-muted mt-0.5 font-normal">
+                      Dữ liệu cảm biến thời gian thực
+                    </div>
+                  </span>
+                }
+                right={
+                  latest && (
+                    <span className="flex items-center gap-1.5">
+                      <LiveDot active />
+                      <span className="font-mono text-[9px] text-safe font-bold">LIVE</span>
+                    </span>
+                  )
+                }
+              >
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  {[
+                    {
+                      lb: "Biên độ rung",
+                      val: `${amp.toFixed(2)} mm`,
+                      sub: "Amplitude sensor",
+                      cl: "text-accent",
+                    },
+                    {
+                      lb: "Mức chứa",
+                      val: `${percent}%`,
+                      sub: "Theo mực nước hiện tại",
+                      cl: "text-info",
+                    },
+                    {
+                      lb: "Tần số rung",
+                      val: `${freq.toFixed(2)} Hz`,
+                      sub: "Vibration frequency",
+                      cl: "text-accent",
+                    },
+                  ].map(({ lb, val, sub, cl }) => (
+                    <div key={lb} className="bg-card2/70 rounded-lg px-3 py-2 border border-border/50">
+                      <div className="text-[8px] text-muted uppercase tracking-wide mb-1">
+                        {lb}
+                      </div>
+                      <Mono className={`text-[13px] font-semibold ${cl}`}>
+                        {val}
+                      </Mono>
+                      <div className="text-[8px] text-muted mt-0.5">{sub}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Percent fill gauge */}
+                <div className="flex items-center gap-3 bg-card2/50 border border-border/50 rounded-lg px-3 py-2.5">
+                  <RadialGauge
+                    value={percent}
+                    size={52}
+                    stroke={5}
+                    status={percent > 90 ? "danger" : percent > 75 ? "warning" : "safe"}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[9px] text-muted uppercase tracking-wide mb-1">Mức chứa hồ</div>
+                    <div className="h-1.5 bg-border rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{
+                          width: `${Math.min(percent, 100)}%`,
+                          background:
+                            percent > 90
+                              ? "#fb4360"
+                              : percent > 75
+                                ? "#f59e0b"
+                                : "#22c55e",
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
-              )
-            })}
-          </Panel>
-        </div>
-      </div>
+              </Panel>
+
+              {/* Events */}
+              <Panel
+                title={<span className="normal-case tracking-normal text-[12px] font-semibold text-tx">Cảnh Báo & Sự Kiện</span>}
+                right={<Link href="/alerts" className="text-[10px] text-accent cursor-pointer font-semibold hover:underline no-underline">Xem tất cả</Link>}
+                className="flex-1"
+              >
+                {alarms.length === 0 && (
+                  <div className="text-center py-4 text-[10px] text-muted flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-safe shrink-0" />
+                    <span>Không có cảnh báo nào — Hệ thống ổn định</span>
+                  </div>
+                )}
+                {alarms.slice(0, 5).map((al, i) => {
+                  const sevInfo = SEVERITY_MAP[al.severity] || SEVERITY_MAP.WARNING
+                  const typeLb = SENSOR_TYPE_LABELS[al.sensorType] || al.sensorType
+                  const bgCl = al.severity === 'CRITICAL' ? 'bg-danger/10' : al.severity === 'ALERT' ? 'bg-warning/10' : 'bg-info/10'
+                  return (
+                    <div key={al.id || i} className="flex gap-2.5 mb-3 last:mb-0">
+                      <div className={`w-7 h-7 rounded-full ${bgCl} flex items-center justify-center shrink-0 mt-0.5 text-sm`}>
+                        {sevInfo.icon && <sevInfo.icon className="w-4 h-4 text-current" />}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="text-[11px] font-semibold text-tx">
+                            {typeLb}: {al.measuredVal} {SENSOR_TYPE_UNITS[al.sensorType] || ''}
+                          </span>
+                          <Mono className="text-[8px] text-muted">{timeAgo(al.triggeredAt)} TRƯỚC</Mono>
+                        </div>
+                        <p className="text-[9px] text-muted leading-relaxed">{al.notes}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </Panel>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── TAB 2: THIẾT BỊ & CẤU HÌNH PHẦN CỨNG ── */}
+      {activeTab === 'devices' && (
+        <StationDevicesTab
+          stationId={st.stationId}
+          damId={st.damId}
+          stationName={st.name}
+          onDataChange={() => refetch(true)}
+        />
+      )}
 
       {/* ── MODAL: EDIT STATION (SPLIT-VIEW) ── */}
       <Modal
         open={editingModalOpen}
         onClose={() => setEditingModalOpen(false)}
-        title={`Chỉnh sửa thông tin Trạm #${st.id}`}
+        title={`Chỉnh sửa thông tin Trạm ${st.stationId}`}
         icon={Radio}
         maxWidth="max-w-4xl"
         footer={
@@ -916,7 +962,7 @@ export default function StationDetailPage() {
       <Modal
         open={thresholdModalOpen}
         onClose={() => setThresholdModalOpen(false)}
-        title={`Ngưỡng Cảnh Báo — ${dams.find(d => d.id === st.damId)?.name || `Đập ${st.damId || ''}`}`}
+        title={`Ngưỡng Cảnh Báo — ${dams.find(d => d.damId === st.damId)?.name || `Đập ${st.damId || ''}`}`}
         icon={Sliders}
         maxWidth="max-w-2xl"
         footer={

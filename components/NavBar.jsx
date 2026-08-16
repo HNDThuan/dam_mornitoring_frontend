@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
-import { Home, TrendingUp, AlertTriangle, Calendar, Database, Globe, Cpu, Users, LogOut, ShieldCheck, User, FileText, Eye, ChevronDown, UserCircle } from 'lucide-react'
+import { Home, TrendingUp, AlertTriangle, Calendar, Database, Globe, Server, Users, LogOut, ShieldCheck, User, FileText, Eye, ChevronDown, UserCircle } from 'lucide-react'
 
 export default function NavBar() {
   const pathname = usePathname()
@@ -23,7 +23,7 @@ export default function NavBar() {
   if (isAdmin || isOperator) {
     NAV.push({ href: '/alerts', label: t('nav.alerts'), icon: AlertTriangle, badge: unresolvedCount })
     NAV.push({ href: '/history', label: t('nav.history'), icon: Calendar, badge: 0 })
-    NAV.push({ href: '/admin/nodes', label: t('nav.sensorNodes') || 'Sensor Node', icon: Cpu, badge: 0 })
+    NAV.push({ href: '/admin/gateways', label: t('nav.gateways') || 'Gateway & Thiết bị', icon: Server, badge: 0 })
   }
 
   if (isAdmin) {

@@ -79,7 +79,7 @@ export default function DamsPage() {
       errs.name = 'Tên đập phải có ít nhất 3 ký tự'
     } else {
       const isDuplicate = dams.some(
-        d => d.name.trim().toLowerCase() === damForm.name.trim().toLowerCase() && d.id !== editingDam?.id
+        d => d.name.trim().toLowerCase() === damForm.name.trim().toLowerCase() && d.damId !== editingDam?.damId
       )
       if (isDuplicate) {
         errs.name = 'Tên đập thủy điện này đã tồn tại trên hệ thống'
@@ -124,7 +124,7 @@ export default function DamsPage() {
     setEditingDam(dam)
     setDamErrors({})
     setDamForm({
-      id: dam.id,
+      id: dam.damId,
       name: dam.name || '',
       location: dam.location || '',
       latitude: dam.latitude ?? 20.8167,
@@ -141,7 +141,7 @@ export default function DamsPage() {
     try {
       setSavingDam(true)
       if (editingDam) {
-        await updateDam(editingDam.id, {
+        await updateDam(editingDam.damId, {
           name: damForm.name.trim(),
           location: damForm.location.trim(),
           latitude: Number(damForm.latitude),
@@ -158,7 +158,7 @@ export default function DamsPage() {
           cameraUrl: damForm.cameraUrl,
         }
         const res = await createDam(payload)
-        const newId = res?.dam?.id || ''
+        const newId = res?.dam?.damId || ''
         showToast(`Tạo đập thủy điện thành công! (Mã: ${newId})`, 'success')
       }
       setDamModalOpen(false)
@@ -187,14 +187,14 @@ export default function DamsPage() {
   }
 
   // Scope dams and stations for operators
-  const visibleDams = isOperator && assignedDamId ? dams.filter(d => d.id === assignedDamId) : dams
+  const visibleDams = isOperator && assignedDamId ? dams.filter(d => d.damId === assignedDamId) : dams
   const visibleStations = isOperator && assignedDamId ? stations.filter(s => s.damId === assignedDamId) : stations
 
   // Filter dams
   const filteredDams = visibleDams.filter(d => {
     if (!search) return true
     const q = search.toLowerCase()
-    return d.name.toLowerCase().includes(q) || d.id.toLowerCase().includes(q) || (d.location && d.location.toLowerCase().includes(q))
+    return d.name.toLowerCase().includes(q) || d.damId.toLowerCase().includes(q) || (d.location && d.location.toLowerCase().includes(q))
   })
 
   return (
@@ -261,19 +261,19 @@ export default function DamsPage() {
       <div className="grid grid-cols-2 gap-3">
         {filteredDams.map(dam => {
           const s = getStatus(dam.status)
-          const damStations = visibleStations.filter(st => st.damId === dam.id)
+          const damStations = visibleStations.filter(st => st.damId === dam.damId)
 
           return (
             <div
-              key={dam.id}
-              onClick={() => router.push(`/dams/${dam.id}`)}
+              key={dam.damId}
+              onClick={() => router.push(`/dams/${dam.damId}`)}
               className={`bg-card border border-border border-l-4 ${s.leftBorder} rounded-xl p-4 cursor-pointer hover:border-accent/60 hover:-translate-y-0.5 transition-all duration-150 shadow-panel group`}
             >
               <div className="flex justify-between items-start mb-2">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="font-mono text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
-                      {dam.id}
+                      {dam.damId}
                     </span>
                     <h2 className="text-base font-bold text-tx group-hover:text-accent transition-colors m-0">
                       {dam.name}
@@ -304,7 +304,7 @@ export default function DamsPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
-                        setDeleteConfirm({ id: dam.id, name: dam.name })
+                        setDeleteConfirm({ id: dam.damId, name: dam.name })
                       }}
                       className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger transition-colors cursor-pointer"
                       title="Xóa Đập"

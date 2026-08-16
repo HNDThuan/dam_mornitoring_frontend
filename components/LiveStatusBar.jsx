@@ -55,15 +55,16 @@ export default function LiveStatusBar() {
   // 2. Khởi tạo trạm được chọn từ localStorage hoặc mặc định trạm đầu tiên khi nạp danh sách
   useEffect(() => {
     if (stations.length > 0 && selectedStationId == null) {
-      const match = pathname.match(/^\/stations\/(\d+)$/)
+      // URL trạm nay mang mã theo chuẩn đặt tên (/stations/STA-001-01), không còn id số.
+      const match = pathname.match(/^\/stations\/([^/]+)$/)
       if (match && match[1]) {
-        setSelectedStationId(Number(match[1]))
+        setSelectedStationId(decodeURIComponent(match[1]))
       } else {
         const saved = typeof window !== 'undefined' ? localStorage.getItem('livebar_station_id') : null
-        if (saved && stations.some(s => s.id === Number(saved))) {
-          setSelectedStationId(Number(saved))
+        if (saved && stations.some(s => s.stationId === saved)) {
+          setSelectedStationId(saved)
         } else {
-          setSelectedStationId(stations[0].id)
+          setSelectedStationId(stations[0].stationId)
         }
       }
     }
@@ -87,7 +88,7 @@ export default function LiveStatusBar() {
   // Trạm hiện tại đang được chọn
   const currentStation = useMemo(() => {
     if (!stations || stations.length === 0) return null
-    return stations.find(s => s.id === Number(selectedStationId)) || stations[0]
+    return stations.find(s => s.stationId === selectedStationId) || stations[0]
   }, [stations, selectedStationId])
 
   // Tính số lượng Node cảm biến gắn vào trạm
@@ -99,7 +100,7 @@ export default function LiveStatusBar() {
   const hasNodes = nodeCount > 0
 
   // 4. Lấy dữ liệu cảm biến thời gian thực đúng cho trạm đã chọn
-  const { latest, connected, error } = useSensorData(currentStation?.id)
+  const { latest, connected, error } = useSensorData(currentStation?.stationId)
 
   const handleSelectStation = (stId) => {
     setSelectedStationId(stId)
@@ -117,14 +118,14 @@ export default function LiveStatusBar() {
   // Phân nhóm trạm theo Đập để hiển thị trong menu chọn
   const stationsByDam = dams.map(dam => ({
     dam,
-    stationList: stations.filter(st => st.damId === dam.id)
+    stationList: stations.filter(st => st.damId === dam.damId)
   })).filter(g => g.stationList.length > 0)
 
   // Trường hợp có trạm không thuộc đập nào trong dams
-  const orphanedStations = stations.filter(st => !dams.some(d => d.id === st.damId))
+  const orphanedStations = stations.filter(st => !dams.some(d => d.damId === st.damId))
   if (orphanedStations.length > 0) {
     stationsByDam.push({
-      dam: { id: 'other', name: 'Trạm độc lập / Khác' },
+      dam: { damId: 'other', name: 'Trạm độc lập / Khác' },
       stationList: orphanedStations
     })
   }
@@ -185,7 +186,7 @@ export default function LiveStatusBar() {
               </div>
             ) : (
               stationsByDam.map(({ dam, stationList }) => (
-                <div key={dam.id} className="mb-2 last:mb-0">
+                <div key={dam.damId} className="mb-2 last:mb-0">
                   <div className="px-2 py-1 text-[10px] font-bold text-accent2 flex items-center gap-1.5">
                     <Layers className="w-3 h-3" />
                     <span className="truncate">{dam.name}</span>
@@ -193,14 +194,14 @@ export default function LiveStatusBar() {
 
                   <div className="space-y-1 mt-0.5">
                     {stationList.map(st => {
-                      const isSelected = currentStation?.id === st.id
+                      const isSelected = currentStation?.stationId === st.stationId
                       const stNodeCount = st.gateways?.reduce((acc, g) => acc + (g.nodes?.length || 0), 0) ?? 0
                       const stHasNodes = stNodeCount > 0
 
                       return (
                         <div
-                          key={st.id}
-                          onClick={() => handleSelectStation(st.id)}
+                          key={st.stationId}
+                          onClick={() => handleSelectStation(st.stationId)}
                           className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] cursor-pointer transition-all ${
                             isSelected
                               ? 'bg-accent/15 text-accent font-bold border border-accent/30'
@@ -213,7 +214,7 @@ export default function LiveStatusBar() {
                               {isSelected && <Check className="w-3 h-3 text-accent shrink-0" />}
                             </div>
                             <span className="text-[9.5px] text-muted truncate">
-                              {st.location || (st.river ? `${st.river} ${st.km ? `- ${st.km}` : ''}` : `Mã: #${st.id}`)}
+                              {st.location || (st.river ? `${st.river} ${st.km ? `- ${st.km}` : ''}` : `Mã: ${st.stationId}`)}
                             </span>
                           </div>
 
@@ -241,7 +242,7 @@ export default function LiveStatusBar() {
             {currentStation && (
               <div className="pt-2 mt-1 border-t border-border/50">
                 <Link
-                  href={`/stations/${currentStation.id}`}
+                  href={`/stations/${currentStation.stationId}`}
                   onClick={() => setDropdownOpen(false)}
                   className="flex items-center justify-center gap-1.5 w-full py-1.5 px-2 rounded-lg bg-card2/80 hover:bg-card2 text-[11px] font-bold text-accent no-underline transition-colors border border-border/60"
                 >

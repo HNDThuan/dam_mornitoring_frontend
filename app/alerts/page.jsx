@@ -48,11 +48,11 @@ export default function AlertsPage() {
     if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', river: '', km: '', fullLocation: '' }
 
     const station = stations.find(s =>
-      (alarm.stationId && String(s.id) === String(alarm.stationId)) ||
-      String(s.id) === String(alarm.sensorId)
+      (alarm.stationId && s.stationId === alarm.stationId) ||
+      s.stationId === alarm.sensorId
     ) || stations.find(s => s.damId === alarm.damId) || stations[0]
 
-    const dam = dams.find(d => d.id === alarm.damId) || dams.find(d => d.id === station?.damId) || dams[0]
+    const dam = dams.find(d => d.damId === alarm.damId) || dams.find(d => d.damId === station?.damId) || dams[0]
     const damName = alarm.damName || dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
     const damLocation = dam?.location || 'Việt Nam'
 

@@ -26,7 +26,7 @@ export function useAlarmData(damId = 'all') {
         try {
             setLoading(true)
             const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
-            const targetDamForThresh = !damId || damId === 'all' ? 'dam_1' : damId
+            const targetDamForThresh = !damId || damId === 'all' ? 'DAM-001' : damId
             const [alarmsRes, threshRes] = await Promise.all([
                 fetchAlarmEvents(damId, 50, undefined, undefined, token),
                 fetchThresholdConfigs(targetDamForThresh),
@@ -88,7 +88,16 @@ export function useAlarmData(damId = 'all') {
                 return next
             })
         }
+        const onAlarmResolved = ({ id, resolvedAt }) => {
+            if (!mountedRef.current) return
+            setAlarms(prev => prev.map(a => 
+                a.id === id ? { ...a, resolvedAt } : a
+            ))
+        }
+
         socket.on('alarm', onAlarm)
+        socket.on('alarm_resolved', onAlarmResolved)
+
         // Khởi tải dữ liệu
         loadInitial()
         // Đảm bảo socket đang kết nối
@@ -96,6 +105,7 @@ export function useAlarmData(damId = 'all') {
         return () => {
             mountedRef.current = false
             socket.off('alarm', onAlarm)
+            socket.off('alarm_resolved', onAlarmResolved)
         }
     }, [loadInitial, damId])
     // ── Derived: đếm chính xác số lượng alarm chưa xử lý ──
