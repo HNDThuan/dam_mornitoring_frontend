@@ -36,7 +36,8 @@ import LocationPickerMap from "@/components/LocationPickerMap";
 import StationDevicesTab from "@/components/StationDevicesTab";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
-import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity, Cpu, Server } from "lucide-react";
+import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity, Cpu, Server, Save, Zap } from "lucide-react";
+import { updateThresholdConfig } from "@/lib/api";
 
 const CHART_STYLE = {
   background: "#0e1622",
@@ -232,10 +233,39 @@ export default function StationDetailPage() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  // Threshold Modal State — CHỈ HIỂN THỊ (read-only). Ngưỡng cảnh báo dùng CHUNG cho mọi Trạm
-  // thuộc cùng 1 Đập (ThresholdConfig chỉ khóa theo damId, không có stationId) — sửa thật ở trang Đập
-  // để tránh 2 form khác tên field (BĐ1/2/3 ở đây vs waterWarn/... ở trang Đập) cùng ghi đè 1 bản ghi.
+  // Threshold Modal State & Form cho Trạm
   const [thresholdModalOpen, setThresholdModalOpen] = useState(false)
+  const [savingThresholds, setSavingThresholds] = useState(false)
+  const [threshForm, setThreshForm] = useState({
+    water_level: { warnHigh: 42.5, alertHigh: 50.0, criticalHigh: 55.0, tankHeight: 50.0 },
+    vibration: { warnHigh: 2.5, alertHigh: 15.0, criticalHigh: 25.0, sustainedSeconds: 3 },
+    humidity: { warnHigh: 75.0, alertHigh: 85.0, criticalHigh: 95.0 },
+  })
+
+  const openThresholdModal = () => {
+    if (thresholds) {
+      setThreshForm({
+        water_level: {
+          warnHigh: thresholds.water_level?.warnHigh ?? 42.5,
+          alertHigh: thresholds.water_level?.alertHigh ?? 50.0,
+          criticalHigh: thresholds.water_level?.criticalHigh ?? 55.0,
+          tankHeight: thresholds.water_level?.tankHeight ?? 50.0,
+        },
+        vibration: {
+          warnHigh: thresholds.vibration?.warnHigh ?? 2.5,
+          alertHigh: thresholds.vibration?.alertHigh ?? 15.0,
+          criticalHigh: thresholds.vibration?.criticalHigh ?? 25.0,
+          sustainedSeconds: thresholds.vibration?.sustainedSeconds ?? 3,
+        },
+        humidity: {
+          warnHigh: thresholds.humidity?.warnHigh ?? 75.0,
+          alertHigh: thresholds.humidity?.alertHigh ?? 85.0,
+          criticalHigh: thresholds.humidity?.criticalHigh ?? 95.0,
+        },
+      })
+    }
+    setThresholdModalOpen(true)
+  }
 
   // Edit / Delete Modal State
   const [editingModalOpen, setEditingModalOpen] = useState(false)
@@ -336,7 +366,49 @@ export default function StationDetailPage() {
 
   // ── Real-time data từ backend (chỉ nhận dữ liệu đúng của Trạm này) ──
   const { latest, history, connected, error } = useSensorData(String(id));
-  const { alarms, thresholds } = useAlarmData(st.damId)
+  const { alarms, thresholds, refetch: refetchAlarmData } = useAlarmData(st.damId, String(id))
+
+  const handleSaveThresholds = async () => {
+    try {
+      setSavingThresholds(true)
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
+
+      if (thresholds?.water_level?.id) {
+        await updateThresholdConfig(thresholds.water_level.id, {
+          warnHigh: Number(threshForm.water_level.warnHigh),
+          alertHigh: Number(threshForm.water_level.alertHigh),
+          criticalHigh: Number(threshForm.water_level.criticalHigh),
+          tankHeight: Number(threshForm.water_level.tankHeight),
+        }, token)
+      }
+
+      if (thresholds?.vibration?.id) {
+        await updateThresholdConfig(thresholds.vibration.id, {
+          warnHigh: Number(threshForm.vibration.warnHigh),
+          alertHigh: Number(threshForm.vibration.alertHigh),
+          criticalHigh: Number(threshForm.vibration.criticalHigh),
+          sustainedSeconds: Number(threshForm.vibration.sustainedSeconds),
+        }, token)
+      }
+
+      if (thresholds?.humidity?.id) {
+        await updateThresholdConfig(thresholds.humidity.id, {
+          warnHigh: Number(threshForm.humidity.warnHigh),
+          alertHigh: Number(threshForm.humidity.alertHigh),
+          criticalHigh: Number(threshForm.humidity.criticalHigh),
+        }, token)
+      }
+
+      showToast(`Đã lưu cấu hình ngưỡng riêng của Trạm ${st.name} & tự động đồng bộ xuống tất cả Gateway/Node!`, 'success')
+      setThresholdModalOpen(false)
+      refetchAlarmData?.()
+      refetch?.(true)
+    } catch (err) {
+      showToast(err.message || 'Lỗi khi lưu cấu hình ngưỡng', 'error')
+    } finally {
+      setSavingThresholds(false)
+    }
+  }
 
   // Ưu tiên số đo sống từ WebSocket, fallback về giá trị mới nhất backend đã ghi vào Station.
   // Không bịa số mặc định khi chưa có dữ liệu — để 0 và UI hiển thị theo trạng thái 'unknown'.
@@ -491,12 +563,12 @@ export default function StationDetailPage() {
           {!isViewer && (
             <>
               <button
-                onClick={() => setThresholdModalOpen(true)}
+                onClick={openThresholdModal}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-warning/40 rounded-lg text-warning text-[11px] font-bold bg-warning/10 hover:bg-warning/20 transition-colors cursor-pointer"
-                title="Cấu hình Ngưỡng Cảnh Báo cho Trạm"
+                title="Cấu hình Ngưỡng Cảnh Báo riêng cho Trạm này"
               >
                 <Sliders className="w-3.5 h-3.5 shrink-0" />
-                <span>Cấu hình Ngưỡng Cảnh Báo</span>
+                <span>Cấu hình Ngưỡng Trạm</span>
               </button>
               <button
                 onClick={openEditModal}
@@ -958,65 +1030,255 @@ export default function StationDetailPage() {
           </p>
         </div>
       </Modal>
-      {/* ── MODAL: THRESHOLD CONFIG (READ-ONLY — dùng chung cho cả Đập) ── */}
+      {/* ── MODAL: THRESHOLD CONFIG (RIÊNG CHO TỪNG TRẠM & ĐỒNG BỘ PHẦN CỨNG) ── */}
       <Modal
         open={thresholdModalOpen}
         onClose={() => setThresholdModalOpen(false)}
-        title={`Ngưỡng Cảnh Báo — ${dams.find(d => d.damId === st.damId)?.name || `Đập ${st.damId || ''}`}`}
+        title={`Cấu Hình Ngưỡng Cảnh Báo Riêng — ${st.name} (${st.stationId})`}
         icon={Sliders}
         maxWidth="max-w-2xl"
         footer={
           <FormActions>
-            <Button variant="secondary" onClick={() => setThresholdModalOpen(false)}>Đóng</Button>
-            <Button variant="primary" onClick={() => router.push(`/dams/${st.damId}`)}>
-              Sửa tại trang Đập →
+            <Button variant="secondary" onClick={() => setThresholdModalOpen(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              loading={savingThresholds}
+              onClick={handleSaveThresholds}
+            >
+              <Zap className="w-3.5 h-3.5 shrink-0" />
+              <span>Lưu & Đồng Bộ Thiết Bị</span>
             </Button>
           </FormActions>
         }
       >
-        <div className="space-y-2.5">
-          {/* Banner giải thích: ngưỡng dùng chung cho cả Đập */}
-          <div className="bg-card2 border border-warning/30 rounded-lg p-2 text-[10px] text-warning flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            <span>Ngưỡng cảnh báo áp dụng CHUNG cho mọi trạm thuộc đập này (không có ngưỡng riêng theo từng trạm). Sửa tại trang Đập để thay đổi cho tất cả trạm.</span>
-          </div>
-
-          {/* 1. Mực Nước (m) */}
-          <div className="bg-card2 border border-info/30 rounded-lg p-2.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-info font-bold text-[11px]">
-              <Droplet className="w-3.5 h-3.5" />
-              <span>Mực Nước Mức Báo Động (m)</span>
-            </div>
-            <div className="grid grid-cols-3 gap-2.5 text-center">
-              <div><Label className="mb-1">Chú Ý (BĐ1)</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.water_level?.warnHigh ?? '—'}</Mono></div>
-              <div><Label className="mb-1">Cảnh Báo (BĐ2)</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.water_level?.alertHigh ?? '—'}</Mono></div>
-              <div><Label className="mb-1">Nguy Cấp (BĐ3)</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.water_level?.criticalHigh ?? '—'}</Mono></div>
+        <div className="space-y-4">
+          {/* Banner giải thích: ngưỡng riêng cho trạm & đồng bộ phần cứng */}
+          <div className="bg-accent/10 border border-accent/30 rounded-xl p-3 text-xs text-accent flex items-start gap-2.5">
+            <Zap className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-tx mb-0.5">Cấu hình ngưỡng độc lập theo Trạm</div>
+              <div className="text-[11px] text-muted leading-relaxed">
+                Ngưỡng cài đặt tại đây áp dụng riêng cho <strong>{st.name}</strong>. Khi lưu, hệ thống sẽ tự động cập nhật cấu hình tới toàn bộ <strong>Sensor Node (ESP32)</strong> và phát bản tin MQTT đồng bộ xuống <strong>Gateway Jetson TX2</strong> trong trạm này.
+              </div>
             </div>
           </div>
 
-          {/* 2. Độ Rung (mm/s) */}
-          <div className="bg-card2 border border-orange-500/30 rounded-lg p-2.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-orange-400 font-bold text-[11px]">
-              <Activity className="w-3.5 h-3.5" />
-              <span>Độ Rung Báo Động (Vibration mm/s)</span>
+          {/* 1. Mực Nước Hồ (m) */}
+          <div className="bg-card2/80 border border-info/30 rounded-xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between border-b border-border/50 pb-2">
+              <div className="flex items-center gap-2 text-info font-bold text-xs">
+                <Droplet className="w-4 h-4" />
+                <span>1. Ngưỡng Mực Nước Hồ (Mét)</span>
+              </div>
+              <span className="text-[10px] font-mono text-muted">Báo động BĐ1 / BĐ2 / BĐ3</span>
             </div>
-            <div className="grid grid-cols-3 gap-2.5 text-center">
-              <div><Label className="mb-1">Chú Ý</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.vibration?.warnHigh ?? '—'}</Mono></div>
-              <div><Label className="mb-1">Cảnh Báo</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.vibration?.alertHigh ?? '—'}</Mono></div>
-              <div><Label className="mb-1">Nguy Cấp</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.vibration?.criticalHigh ?? '—'}</Mono></div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <Field label="Chú Ý (BĐ1)" required htmlFor="th-w-warn">
+                <TextInput
+                  id="th-w-warn"
+                  type="number"
+                  step="0.1"
+                  value={threshForm.water_level.warnHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      water_level: { ...p.water_level, warnHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-yellow-400"
+                />
+              </Field>
+
+              <Field label="Cảnh Báo (BĐ2)" required htmlFor="th-w-alert">
+                <TextInput
+                  id="th-w-alert"
+                  type="number"
+                  step="0.1"
+                  value={threshForm.water_level.alertHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      water_level: { ...p.water_level, alertHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-orange-400"
+                />
+              </Field>
+
+              <Field label="Nguy Cấp (BĐ3)" required htmlFor="th-w-crit">
+                <TextInput
+                  id="th-w-crit"
+                  type="number"
+                  step="0.1"
+                  value={threshForm.water_level.criticalHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      water_level: { ...p.water_level, criticalHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-danger"
+                />
+              </Field>
+
+              <Field label="Cao Trình Hồ (m)" hint="Tính % chứa" htmlFor="th-w-tank">
+                <TextInput
+                  id="th-w-tank"
+                  type="number"
+                  step="0.5"
+                  value={threshForm.water_level.tankHeight}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      water_level: { ...p.water_level, tankHeight: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-tx"
+                />
+              </Field>
+            </div>
+          </div>
+
+          {/* 2. Độ Rung Thân Đập (Vibration mm/s) */}
+          <div className="bg-card2/80 border border-orange-500/30 rounded-xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between border-b border-border/50 pb-2">
+              <div className="flex items-center gap-2 text-orange-400 font-bold text-xs">
+                <Activity className="w-4 h-4" />
+                <span>2. Ngưỡng Rung Thân Đập & Kích Hoạt AI Camera (mm/s)</span>
+              </div>
+              <span className="text-[10px] font-mono text-orange-400/80 bg-orange-400/10 px-2 py-0.5 rounded border border-orange-400/20">
+                Đồng bộ ESP32 & Jetson TX2
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <Field label="Mức Chú Ý" required htmlFor="th-v-warn">
+                <TextInput
+                  id="th-v-warn"
+                  type="number"
+                  step="0.1"
+                  value={threshForm.vibration.warnHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      vibration: { ...p.vibration, warnHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-yellow-400"
+                />
+              </Field>
+
+              <Field label="Mức Cảnh Báo" required htmlFor="th-v-alert">
+                <TextInput
+                  id="th-v-alert"
+                  type="number"
+                  step="0.5"
+                  value={threshForm.vibration.alertHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      vibration: { ...p.vibration, alertHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-orange-400"
+                />
+              </Field>
+
+              <Field label="Mức Nguy Cấp" required htmlFor="th-v-crit">
+                <TextInput
+                  id="th-v-crit"
+                  type="number"
+                  step="0.5"
+                  value={threshForm.vibration.criticalHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      vibration: { ...p.vibration, criticalHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-danger"
+                />
+              </Field>
+
+              <Field label="Duy Trì (Giây)" hint="Tránh nhiễu" htmlFor="th-v-sec">
+                <TextInput
+                  id="th-v-sec"
+                  type="number"
+                  step="1"
+                  value={threshForm.vibration.sustainedSeconds}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      vibration: { ...p.vibration, sustainedSeconds: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-tx"
+                />
+              </Field>
             </div>
           </div>
 
           {/* 3. Độ Ẩm Rò Rỉ Móng (%) */}
-          <div className="bg-card2 border border-emerald-500/30 rounded-lg p-2.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-[11px]">
-              <Droplet className="w-3.5 h-3.5" />
-              <span>Độ Ẩm Rò Rỉ Móng (%)</span>
+          <div className="bg-card2/80 border border-emerald-500/30 rounded-xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between border-b border-border/50 pb-2">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                <Droplet className="w-4 h-4" />
+                <span>3. Ngưỡng Độ Ẩm Rò Rỉ Thấm Móng Đập (%)</span>
+              </div>
+              <span className="text-[10px] font-mono text-muted">Phát hiện thấm rỉ sớm</span>
             </div>
-            <div className="grid grid-cols-3 gap-2.5 text-center">
-              <div><Label className="mb-1">Chú Ý</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.humidity?.warnHigh ?? '—'}</Mono></div>
-              <div><Label className="mb-1">Cảnh Báo</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.humidity?.alertHigh ?? '—'}</Mono></div>
-              <div><Label className="mb-1">Nguy Cấp</Label><Mono className="text-sm font-bold text-tx block">{thresholds?.humidity?.criticalHigh ?? '—'}</Mono></div>
+
+            <div className="grid grid-cols-3 gap-2.5">
+              <Field label="Mức Chú Ý (%)" required htmlFor="th-h-warn">
+                <TextInput
+                  id="th-h-warn"
+                  type="number"
+                  step="1"
+                  value={threshForm.humidity.warnHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      humidity: { ...p.humidity, warnHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-yellow-400"
+                />
+              </Field>
+
+              <Field label="Mức Cảnh Báo (%)" required htmlFor="th-h-alert">
+                <TextInput
+                  id="th-h-alert"
+                  type="number"
+                  step="1"
+                  value={threshForm.humidity.alertHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      humidity: { ...p.humidity, alertHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-orange-400"
+                />
+              </Field>
+
+              <Field label="Mức Nguy Cấp (%)" required htmlFor="th-h-crit">
+                <TextInput
+                  id="th-h-crit"
+                  type="number"
+                  step="1"
+                  value={threshForm.humidity.criticalHigh}
+                  onChange={(e) =>
+                    setThreshForm((p) => ({
+                      ...p,
+                      humidity: { ...p.humidity, criticalHigh: e.target.value },
+                    }))
+                  }
+                  className="font-mono text-center font-bold text-danger"
+                />
+              </Field>
             </div>
           </div>
         </div>

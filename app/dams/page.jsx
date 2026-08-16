@@ -21,7 +21,7 @@ import {
   Radio,
   MapPin,
   Lock,
-  Map,
+  Map as MapIcon,
 } from 'lucide-react'
 import DamPinMap from '@/components/DamMap'
 import LocationPickerMap from '@/components/LocationPickerMap'
@@ -247,7 +247,7 @@ export default function DamsPage() {
       <Panel
         title={
           <span className="flex items-center gap-1.5">
-            <Map className="w-3 h-3" /> Bản đồ giám sát
+            <MapIcon className="w-3 h-3" /> Bản đồ giám sát
           </span>
         }
         right={<span className="flex items-center gap-1.5"><LiveDot active /><span className="text-[10px] font-mono text-safe font-bold">LIVE</span></span>}

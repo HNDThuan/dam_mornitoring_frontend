@@ -8,7 +8,7 @@ import { fetchAlarmEvents, fetchThresholdConfigs, resolveAlarmEvent as apiResolv
  * - Lắng nghe event `alarm` từ WebSocket để nhận alarm mới real-time
  * - Lấy threshold configs từ backend
  */
-export function useAlarmData(damId = 'all') {
+export function useAlarmData(damId = 'all', stationId = null) {
     const [alarms, setAlarms] = useState([])
     const [thresholds, setThresholds] = useState(null)   // { vibration, water_level, humidity }
     const [loading, setLoading] = useState(true)
@@ -26,10 +26,10 @@ export function useAlarmData(damId = 'all') {
         try {
             setLoading(true)
             const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null
-            const targetDamForThresh = !damId || damId === 'all' ? 'DAM-001' : damId
+            const threshTarget = stationId || (!damId || damId === 'all' ? 'STA-001-01' : { damId })
             const [alarmsRes, threshRes] = await Promise.all([
                 fetchAlarmEvents(damId, 50, undefined, undefined, token),
-                fetchThresholdConfigs(targetDamForThresh),
+                fetchThresholdConfigs(threshTarget, true),
             ])
             if (!mountedRef.current) return
             setAlarms(alarmsRes?.alarms || [])
@@ -41,7 +41,7 @@ export function useAlarmData(damId = 'all') {
         } finally {
             if (mountedRef.current) setLoading(false)
         }
-    }, [damId])
+    }, [damId, stationId])
     // ── Resolve alarm ──
     const resolveAlarm = useCallback(async (id) => {
         try {

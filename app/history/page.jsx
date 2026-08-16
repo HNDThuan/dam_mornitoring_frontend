@@ -5,7 +5,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, R
 import { getStatus, SEVERITY_TO_STATUS } from '@/lib/statusConfig'
 import { Mono, Badge, Divider, Card, Panel, LiveDot, Pagination } from '@/components/ui'
 import { Field, Select, Button } from '@/components/form'
-import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert } from 'lucide-react'
+import { Download, AlertTriangle, Droplet, Clock, Search, Check, RefreshCw, Filter, ShieldAlert, MapPin } from 'lucide-react'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
 import { useAuth } from '@/context/AuthContext'
@@ -19,9 +19,9 @@ const CHART_TICK_STYLE = { fontSize: 8, fill: '#5b6b85' }
 
 export default function HistoryPage() {
   const { user, isOperator, assignedDamId } = useAuth()
-  const damIdForHistory = isOperator && assignedDamId ? assignedDamId : 'all'
+  const activeDamId = isOperator && assignedDamId ? assignedDamId : 'all'
 
-  const { alarms, loading: alarmsLoading } = useAlarmData(damIdForHistory)
+  const { alarms, loading: alarmsLoading } = useAlarmData(activeDamId)
   const { dams, stations, loading: damLoading } = useDamData()
 
   // State Bộ lọc nâng cao
@@ -31,6 +31,16 @@ export default function HistoryPage() {
   const [timeRange, setTimeRange] = useState('7d') // '24h' | '7d' | '30d' | 'all'
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
+
+  // Cập nhật selectedDamId khi auth state load xong
+  useEffect(() => {
+    if (isOperator && assignedDamId) {
+      setSelectedDamId(assignedDamId)
+    }
+  }, [isOperator, assignedDamId])
+
+  // Đập đang được chọn thực tế (Nếu là Operator thì khóa cứng vào assignedDamId)
+  const effectiveDamId = isOperator && assignedDamId ? assignedDamId : selectedDamId
 
   // State Dữ liệu Thật từ Backend DB
   const [historyReadings, setHistoryReadings] = useState([])
@@ -59,7 +69,7 @@ export default function HistoryPage() {
     try {
       const [readingsRes, kpiRes] = await Promise.all([
         fetchLongTermHistory({
-          damId: selectedDamId,
+          damId: effectiveDamId !== 'all' ? effectiveDamId : undefined,
           stationId: selectedStationId !== 'all' ? selectedStationId : undefined,
           type: sensorType,
           startDate: dateParams.startDate,
@@ -67,7 +77,7 @@ export default function HistoryPage() {
           limit: 150,
         }),
         fetchHistoryKpi({
-          damId: selectedDamId,
+          damId: effectiveDamId !== 'all' ? effectiveDamId : undefined,
           startDate: dateParams.startDate,
           endDate: dateParams.endDate,
         }),
@@ -85,7 +95,7 @@ export default function HistoryPage() {
   useEffect(() => {
     loadHistoryData()
     setPage(1)
-  }, [selectedDamId, selectedStationId, sensorType, dateParams])
+  }, [effectiveDamId, selectedStationId, sensorType, dateParams])
 
   // Lọc dữ liệu Đập và Trạm phù hợp với phân quyền
   const availableDams = useMemo(() => {
@@ -94,20 +104,20 @@ export default function HistoryPage() {
   }, [dams, isOperator, assignedDamId])
 
   const availableStations = useMemo(() => {
-    if (selectedDamId && selectedDamId !== 'all') {
-      return stations.filter(s => s.damId === selectedDamId)
+    if (effectiveDamId && effectiveDamId !== 'all') {
+      return stations.filter(s => s.damId === effectiveDamId)
     }
     if (isOperator && assignedDamId) {
       return stations.filter(s => s.damId === assignedDamId)
     }
     return stations
-  }, [stations, selectedDamId, isOperator, assignedDamId])
+  }, [stations, effectiveDamId, isOperator, assignedDamId])
 
   // Scoped alarms thực tế từ CSDL
   const scopedAlarms = useMemo(() => {
     let list = alarms
-    if (selectedDamId && selectedDamId !== 'all') {
-      list = list.filter(a => a.damId === selectedDamId)
+    if (effectiveDamId && effectiveDamId !== 'all') {
+      list = list.filter(a => a.damId === effectiveDamId)
     }
     if (selectedStationId && selectedStationId !== 'all') {
       list = list.filter(a => String(a.stationId) === String(selectedStationId) || String(a.sensorId) === String(selectedStationId))
@@ -127,7 +137,7 @@ export default function HistoryPage() {
       list = list.filter(a => new Date(a.triggeredAt).getTime() >= startMs)
     }
     return list
-  }, [alarms, selectedDamId, selectedStationId, sensorType, dateParams])
+  }, [alarms, effectiveDamId, selectedStationId, sensorType, dateParams])
 
   // Biến đổi dữ liệu CSDL cho Biểu đồ Đường (LineChart)
   const lineChartData = useMemo(() => {
@@ -264,20 +274,26 @@ export default function HistoryPage() {
       >
         {/* 1. Chọn Đập Thủy Điện */}
         <Field label="Đập Thủy Điện" htmlFor="filter-dam" className="mb-3">
-          <Select
-            id="filter-dam"
-            value={selectedDamId}
-            onChange={e => {
-              setSelectedDamId(e.target.value)
-              setSelectedStationId('all')
-            }}
-            disabled={isOperator && Boolean(assignedDamId)}
-          >
-            {!isOperator && <option value="all">-- Tất cả các Đập --</option>}
-            {availableDams.map(d => (
-              <option key={d.damId} value={d.damId}>{d.name}</option>
-            ))}
-          </Select>
+          {isOperator && assignedDamId ? (
+            <div className="px-3 py-2 bg-accent/10 border border-accent/30 rounded-lg text-accent text-xs font-bold flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 shrink-0" />
+              <span>{dams.find(d => d.damId === assignedDamId)?.name || `Đập ${assignedDamId}`}</span>
+            </div>
+          ) : (
+            <Select
+              id="filter-dam"
+              value={selectedDamId}
+              onChange={e => {
+                setSelectedDamId(e.target.value)
+                setSelectedStationId('all')
+              }}
+            >
+              <option value="all">-- Tất cả các Đập --</option>
+              {availableDams.map(d => (
+                <option key={d.damId} value={d.damId}>{d.name}</option>
+              ))}
+            </Select>
+          )}
         </Field>
 
         {/* 2. Chọn Trạm Quan Trắc */}
@@ -346,12 +362,12 @@ export default function HistoryPage() {
               </span>
             </h1>
             <Mono className="text-[9px] text-muted">
-              Đang xem dữ liệu Đập: <strong className="text-tx">{selectedDamId === 'all' ? 'Tất cả đập' : selectedDamId}</strong> | Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}
+              Đang xem dữ liệu Đập: <strong className="text-tx">{effectiveDamId === 'all' ? 'Tất cả đập' : (dams.find(d => d.damId === effectiveDamId)?.name || effectiveDamId)}</strong> | Cập nhật lúc {new Date().toLocaleTimeString('vi-VN')}
             </Mono>
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => exportAlarmsToExcel(scopedAlarms, selectedDamId || 'Dam')}
+              onClick={() => exportAlarmsToExcel(scopedAlarms, effectiveDamId || 'Dam')}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[10px] font-bold cursor-pointer hover:bg-safe/20 transition-colors"
             >
               <Download className="w-3.5 h-3.5 text-safe shrink-0" />

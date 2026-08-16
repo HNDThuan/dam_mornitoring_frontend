@@ -89,7 +89,6 @@ const EMPTY_GATEWAY_FORM = {
   macAddress: '',
   firmwareVersion: 'L4T-r32.7.3',
   stationId: '',
-  status: 'offline',
 }
 
 const EMPTY_NODE_FORM = {
@@ -244,7 +243,6 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
       macAddress: gw.macAddress || '',
       firmwareVersion: gw.firmwareVersion || '',
       stationId: gw.stationId || stationId,
-      status: gw.status || 'offline',
     })
     setGatewayModalOpen(true)
   }
@@ -267,7 +265,6 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
           macAddress: gatewayForm.macAddress?.trim() || undefined,
           firmwareVersion: gatewayForm.firmwareVersion?.trim() || null,
           stationId: stationId,
-          status: gatewayForm.status,
         })
         showToast(`Cập nhật Gateway ${editingGateway.gatewayId} thành công`)
       } else {
@@ -278,7 +275,6 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
           macAddress: gatewayForm.macAddress.trim(),
           firmwareVersion: gatewayForm.firmwareVersion?.trim() || 'L4T-r32.7.3',
           stationId: stationId,
-          status: gatewayForm.status || 'offline',
         })
         showToast('Tạo Gateway mới thành công')
       }
@@ -929,11 +925,10 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                     {/* Mapped Camera Badge / Button */}
                                     <button
                                       onClick={(e) => openMapCameraModal(node, gw, e)}
-                                      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold border transition-colors cursor-pointer ${
-                                        mappedCam
+                                      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold border transition-colors cursor-pointer ${mappedCam
                                           ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/30 hover:bg-emerald-400/20'
                                           : 'bg-card text-muted border-border hover:text-tx'
-                                      }`}
+                                        }`}
                                       title="Cấu hình Camera AI chụp ảnh khi Node này rung bất thường"
                                     >
                                       <CameraIcon className="w-2.5 h-2.5" />
@@ -1157,29 +1152,15 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <Field label="Firmware Version" htmlFor="gw-fw">
-              <TextInput
-                id="gw-fw"
-                value={gatewayForm.firmwareVersion}
-                onChange={(e) => setGatewayForm((p) => ({ ...p, firmwareVersion: e.target.value }))}
-                placeholder="vd: L4T-r32.7.3"
-                className="font-mono"
-              />
-            </Field>
-
-            <Field label="Trạng thái" htmlFor="gw-status">
-              <Select
-                id="gw-status"
-                value={gatewayForm.status}
-                onChange={(e) => setGatewayForm((p) => ({ ...p, status: e.target.value }))}
-              >
-                <option value="online">Online</option>
-                <option value="offline">Offline</option>
-                <option value="error">Error</option>
-              </Select>
-            </Field>
-          </div>
+          <Field label="Firmware Version" htmlFor="gw-fw">
+            <TextInput
+              id="gw-fw"
+              value={gatewayForm.firmwareVersion}
+              onChange={(e) => setGatewayForm((p) => ({ ...p, firmwareVersion: e.target.value }))}
+              placeholder="vd: L4T-r32.7.3"
+              className="font-mono"
+            />
+          </Field>
 
           <Field label="Mô tả ghi chú" htmlFor="gw-desc">
             <TextInput

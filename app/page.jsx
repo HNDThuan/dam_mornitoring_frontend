@@ -7,7 +7,7 @@ import { useDamData } from '@/hooks/useDamData'
 import { useLanguage } from '@/context/LanguageContext'
 import { useAuth } from '@/context/AuthContext'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo } from '@/lib/sensorHelpers'
-import { MapPin, Map, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle, Database, AlertTriangle, AlertOctagon, ShieldCheck, BellRing, Siren } from 'lucide-react'
+import { MapPin, Map as MapIcon, ArrowUp, ChevronUp, ChevronDown, Minus, CheckCircle, Database, AlertTriangle, AlertOctagon, ShieldCheck, BellRing, Siren } from 'lucide-react'
 
 import DamMap from '@/components/DamMap'
 
@@ -112,7 +112,7 @@ export default function DashboardPage() {
           <Panel
             title={
               <span className="flex items-center gap-1.5">
-                <Map className="w-3 h-3" /> Bản đồ giám sát
+                <MapIcon className="w-3 h-3" /> Bản đồ giám sát
               </span>
             }
             right={<span className="flex items-center gap-1.5"><LiveDot active /><span className="text-[10px] font-mono text-safe font-bold">LIVE</span></span>}
