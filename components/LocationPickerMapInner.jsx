@@ -125,9 +125,9 @@ export default function LocationPickerMapInner({
   }
 
   return (
-    <div className="relative rounded-xl overflow-hidden border border-border/80 shadow-inner group">
+    <div className="relative rounded-xl overflow-hidden border border-border/80 shadow-inner group isolate">
       {/* Top Floating Controls */}
-      <div className="absolute top-2.5 left-2.5 right-2.5 z-[1000] flex justify-between items-center pointer-events-none">
+      <div className="absolute top-2.5 left-2.5 right-2.5 z-[400] flex justify-between items-center pointer-events-none">
         {/* Coordinates Badge */}
         <div className="pointer-events-auto bg-slate-900/90 backdrop-blur-md border border-slate-700/80 px-2.5 py-1 rounded-lg shadow-lg flex items-center gap-1.5 text-[10px] font-mono text-slate-200">
           <MapPin className="w-3 h-3 text-sky-400 shrink-0" />
@@ -161,12 +161,12 @@ export default function LocationPickerMapInner({
       </div>
 
       {gpsError && (
-        <div className="absolute bottom-2 left-2.5 z-[1000] bg-danger/90 text-white text-[9px] px-2 py-0.5 rounded shadow">
+        <div className="absolute bottom-2 left-2.5 z-[400] bg-danger/90 text-white text-[9px] px-2 py-0.5 rounded shadow">
           {gpsError}
         </div>
       )}
 
-      <div className="absolute bottom-1 right-2 z-[1000] text-[8px] text-slate-400 bg-slate-900/80 px-1.5 py-0.5 rounded pointer-events-none">
+      <div className="absolute bottom-1 right-2 z-[400] text-[8px] text-slate-400 bg-slate-900/80 px-1.5 py-0.5 rounded pointer-events-none">
         Click hoặc kéo ghim để chọn vị trí
       </div>
 

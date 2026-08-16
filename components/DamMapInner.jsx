@@ -170,17 +170,17 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
   }
 
   return (
-    <div className="relative w-full rounded-xl overflow-hidden border border-border shadow-2xl bg-card" style={{ height }}>
-      {/* ── MAP LAYER SWITCHER TOGGLE ── */}
-      <div className="absolute top-3 right-3 z-[1000] bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-lg p-1 flex items-center gap-1 shadow-xl text-[11px] font-semibold">
+    <div className="relative w-full rounded-xl overflow-hidden border border-border shadow-2xl bg-card isolate" style={{ height }}>
+      {/* ── MAP LAYER SWITCHER TOGGLE (Subtle & Non-intrusive) ── */}
+      <div className="absolute top-2.5 right-2.5 z-[400] bg-slate-900/80 backdrop-blur-md border border-slate-700/60 rounded-lg p-0.5 flex items-center gap-0.5 shadow-md text-[10px] font-medium">
         <button
           onClick={() => setActiveLayer('terrain')}
-          className={`px-2.5 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer border-none ${activeLayer === 'terrain'
-            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-sm'
+          className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer border-none ${activeLayer === 'terrain'
+            ? 'bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40 shadow-sm'
             : 'text-slate-400 hover:text-white bg-transparent'
             }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
             <line x1="8" y1="2" x2="8" y2="18" />
             <line x1="16" y1="6" x2="16" y2="22" />
@@ -189,12 +189,12 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
         </button>
         <button
           onClick={() => setActiveLayer('satellite')}
-          className={`px-2.5 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer border-none ${activeLayer === 'satellite'
-            ? 'bg-sky-500/20 text-sky-400 border border-sky-500/40 shadow-sm'
+          className={`px-2 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer border-none ${activeLayer === 'satellite'
+            ? 'bg-sky-500/20 text-sky-300 font-bold border border-sky-500/40 shadow-sm'
             : 'text-slate-400 hover:text-white bg-transparent'
             }`}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
             <path d="M2 12h20" />

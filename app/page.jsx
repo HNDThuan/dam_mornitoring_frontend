@@ -45,7 +45,7 @@ export default function DashboardPage() {
       </div>
 
       {/* ── MAIN GRID ── */}
-      <div className="grid gap-3.5" style={{ gridTemplateColumns: '260px 1fr 280px' }}>
+      <div className="grid items-start gap-3.5 grid-cols-1 lg:grid-cols-[260px_1fr_280px]">
         {/* ── LEFT ── */}
         <div className="space-y-3">
           <Panel
@@ -53,7 +53,7 @@ export default function DashboardPage() {
             right={<Mono className="text-[10px] text-muted">{visibleDams.length} {t('dashboard.damCount')}</Mono>}
             bodyClassName="p-2.5"
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 max-h-[460px] overflow-y-auto pr-1">
               {visibleDams.map(d => {
                 const s = getStatus(d.status)
                 return (
@@ -123,7 +123,7 @@ export default function DashboardPage() {
           </Panel>
 
           {/* Station cards grid */}
-          <div className="grid grid-cols-2 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {visibleStations.slice(0, 6).map(st => {
               const allNodes = (st.gateways || []).flatMap(g => g.nodes || [])
               const isUnlinked = (st.gateways && st.gateways.length > 0 && allNodes.length === 0) || (st.gateways && st.gateways.length === 0)

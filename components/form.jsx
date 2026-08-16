@@ -114,7 +114,7 @@ export function Modal({ open, onClose, title, icon: Icon, children, footer, maxW
   if (!open) return null
   return (
     <div
-      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div
@@ -179,7 +179,7 @@ export function Toast({ toast, onClose }) {
   const cfg = TOAST_CONFIG[toast.type] || TOAST_CONFIG.success
   const Icon = cfg.icon
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm w-[calc(100vw-2rem)] sm:w-auto">
+    <div className="fixed bottom-4 right-4 z-[10000] max-w-sm w-[calc(100vw-2rem)] sm:w-auto">
       <div className={`flex items-center gap-3 pl-3 pr-2.5 py-2.5 rounded-xl shadow-2xl text-white animate-toast-in ${cfg.bg}`}>
         <span className="w-7 h-7 rounded-full bg-white/25 flex items-center justify-center shrink-0">
           <Icon className="w-4 h-4 text-white" />
