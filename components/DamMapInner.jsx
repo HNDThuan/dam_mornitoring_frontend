@@ -110,6 +110,7 @@ function damMapPropsAreEqual(prevProps, nextProps) {
       pDams[i].latitude !== nDams[i].latitude ||
       pDams[i].longitude !== nDams[i].longitude ||
       pDams[i].status !== nDams[i].status ||
+      pDams[i].statusReason !== nDams[i].statusReason ||
       pDams[i].waterLevel !== nDams[i].waterLevel ||
       pDams[i].fillPct !== nDams[i].fillPct
     ) {
@@ -128,6 +129,7 @@ function damMapPropsAreEqual(prevProps, nextProps) {
       pStations[i].latitude !== nStations[i].latitude ||
       pStations[i].longitude !== nStations[i].longitude ||
       pStations[i].status !== nStations[i].status ||
+      pStations[i].statusReason !== nStations[i].statusReason ||
       pStations[i].damId !== nStations[i].damId ||
       pStations[i].waterLevel !== nStations[i].waterLevel ||
       pStations[i].humidity !== nStations[i].humidity
@@ -264,7 +266,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   </div>
 
                   {/* Dam Metrics Box */}
-                  <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80 text-center mb-3 shadow-inner">
+                  <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80 text-center mb-2 shadow-inner">
                     <div>
                       <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Mực nước</div>
                       <div className="font-extrabold text-emerald-400 font-mono text-xs">{dam.waterLevel}m</div>
@@ -274,6 +276,14 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                       <div className="font-extrabold text-amber-400 font-mono text-xs">{dam.fillPct}%</div>
                     </div>
                   </div>
+
+                  {/* Dam Status Reason */}
+                  {dam.statusReason && (
+                    <div className="text-[9px] text-slate-300 bg-slate-800/90 p-1.5 rounded-md border border-slate-700/70 mb-3 font-mono leading-tight">
+                      <span className="text-amber-400 font-bold">ⓘ Lý do: </span>
+                      <span>{dam.statusReason}</span>
+                    </div>
+                  )}
 
                   {/* List of Stations under this Dam */}
                   {damStations.length > 0 && (
@@ -355,7 +365,7 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                   </div>
 
                   {/* Station Metrics Box */}
-                  <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80 text-center mb-3 shadow-inner">
+                  <div className="grid grid-cols-2 gap-1.5 bg-slate-900/90 p-2.5 rounded-lg border border-slate-700/80 text-center mb-2 shadow-inner">
                     <div>
                       <div className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Mực nước</div>
                       <div className="font-extrabold text-sky-400 font-mono text-xs">{st.waterLevel} m</div>
@@ -365,6 +375,14 @@ const DamMapInner = memo(function DamMapInner({ dams = [], stations = [], select
                       <div className="font-extrabold text-emerald-400 font-mono text-xs">{st.humidity}%</div>
                     </div>
                   </div>
+
+                  {/* Station Status Reason */}
+                  {st.statusReason && (
+                    <div className="text-[9px] text-slate-300 bg-slate-800/90 p-1.5 rounded-md border border-slate-700/70 mb-3 font-mono leading-tight">
+                      <span className="text-sky-400 font-bold">ⓘ Lý do: </span>
+                      <span>{st.statusReason}</span>
+                    </div>
+                  )}
 
                   {/* Station Action Button */}
                   <button

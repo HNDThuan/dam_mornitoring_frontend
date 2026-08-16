@@ -239,7 +239,7 @@ export default function DamsPage() {
                     <h2 className="text-base font-bold text-tx group-hover:text-accent transition-colors m-0">
                       {dam.name}
                     </h2>
-                    <Badge status={dam.status} sm />
+                    <Badge status={dam.status} sm title={dam.statusReason} />
                   </div>
                   <div className="text-[10px] text-muted flex items-center gap-1 font-mono">
                     <MapPin className="w-3 h-3 text-muted shrink-0" />
@@ -284,6 +284,11 @@ export default function DamsPage() {
                     <div className="text-[8px] text-muted uppercase tracking-wide mb-0.5">{t('damsPage.waterLevel')}</div>
                     <Mono className={`text-[14px] font-bold ${s.text}`}>{dam.waterLevel} m</Mono>
                   </div>
+                  {dam.statusReason && (
+                    <div className="mt-1 text-[8px] text-muted font-mono truncate" title={dam.statusReason}>
+                      ⓘ {dam.statusReason}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -412,7 +412,7 @@ export default function StationDetailPage() {
             <h1 className="text-xl font-bold text-tx tracking-wide m-0">
               {st.name} ({st.river} — {st.km})
             </h1>
-            <Badge status={st.status} />
+            <Badge status={st.status} title={st.statusReason} />
           </div>
           <div className="flex items-center gap-2">
             <div
@@ -429,6 +429,18 @@ export default function StationDetailPage() {
               )}
             </span>
           </div>
+          {st.statusReason && (
+            <div className={`mt-2 text-[10px] flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono ${
+              st.status === 'safe'
+                ? 'bg-safe/5 text-safe/90 border-safe/20'
+                : st.status === 'unknown'
+                  ? 'bg-card2 text-muted border-border/50'
+                  : 'bg-danger/10 text-danger border-danger/30 font-semibold'
+            }`}>
+              <span className="shrink-0">ⓘ</span>
+              <span><strong>Lý do an toàn:</strong> {st.statusReason}</span>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons: Sửa, Xóa, Xuất báo cáo */}

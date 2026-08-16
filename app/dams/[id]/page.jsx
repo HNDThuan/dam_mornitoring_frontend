@@ -461,12 +461,24 @@ export default function DamDetailPage() {
                 {dam.id}
               </span>
               <h1 className="text-xl font-bold text-tx tracking-wide m-0">{dam.name}</h1>
-              <Badge status={dam.status} />
+              <Badge status={dam.status} title={dam.statusReason} />
             </div>
             {dam.location && (
               <div className="text-[11px] text-muted flex items-center gap-1 mt-1">
                 <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
                 <span>{dam.location}</span>
+              </div>
+            )}
+            {dam.statusReason && (
+              <div className={`mt-2 text-[10px] flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono ${
+                dam.status === 'safe'
+                  ? 'bg-safe/5 text-safe/90 border-safe/20'
+                  : dam.status === 'unknown'
+                    ? 'bg-card2 text-muted border-border/50'
+                    : 'bg-danger/10 text-danger border-danger/30 font-semibold'
+              }`}>
+                <span className="shrink-0">ⓘ</span>
+                <span><strong>Lý do:</strong> {dam.statusReason}</span>
               </div>
             )}
           </div>
@@ -582,31 +594,32 @@ export default function DamDetailPage() {
             const isLiveStreamActive = Boolean(live.timestamp)
 
             // Kiểm tra trung thực Sensor Node của trạm
-            const clusters = st.sensorClusters || []
-            const hasClusters = clusters.length > 0
-            const onlineClusters = clusters.filter(c => c.status === 'online')
+            const gateways = st.gateways || []
+            const allNodes = gateways.flatMap(g => g.nodes || [])
+            const hasNodes = allNodes.length > 0
+            const onlineNodes = allNodes.filter(n => n.status === 'online')
 
             let isConnected = false
-            let connectionStatusLabel = 'DISCONNECTED (CHƯA GẮN NODE)'
-            let connectionStatusColor = 'text-danger'
-            let statusDotColor = 'bg-danger'
+            let connectionStatusLabel = 'CHƯA GẮN SENSOR NODE'
+            let connectionStatusColor = 'text-muted'
 
-            if (isLiveStreamActive || onlineClusters.length > 0) {
+            if (isLiveStreamActive || onlineNodes.length > 0) {
               isConnected = true
-              connectionStatusLabel = 'NODE ONLINE (ĐANG TRUYỀN DATA)'
+              connectionStatusLabel = 'SENSOR NODE ONLINE'
               connectionStatusColor = 'text-safe'
-              statusDotColor = 'bg-safe animate-pulse'
-            } else if (hasClusters) {
+            } else if (hasNodes) {
               isConnected = false
               connectionStatusLabel = 'MẤT KẾT NỐI (OFFLINE)'
               connectionStatusColor = 'text-danger'
-              statusDotColor = 'bg-danger'
             }
 
             const currentWater = live.waterLevel ?? st.waterLevel ?? 0
             const currentHumidity = live.humidity ?? st.humidity ?? 0
-            // Biên độ rung thật (Station.vibration) — trước đây đọc nhầm st.bd3 (cột NGƯỠNG báo động).
             const currentVibration = live.vibration ?? st.vibration ?? null
+
+            const isWaterBreached = st.statusReason?.toLowerCase().includes('mực nước')
+            const isHumidBreached = st.statusReason?.toLowerCase().includes('độ ẩm')
+            const isVibBreached = st.statusReason?.toLowerCase().includes('độ rung')
 
             return (
               <div
@@ -633,7 +646,7 @@ export default function DamDetailPage() {
                         </span>
                       </div>
                     </div>
-                    <Badge status={st.status} sm />
+                    <Badge status={st.status} sm title={st.statusReason} />
                   </div>
 
                   <div className="text-[10px] text-muted mb-2 flex items-center justify-between">
@@ -656,27 +669,41 @@ export default function DamDetailPage() {
                     </div>
                   </div>
 
+                  {/* Dòng hiển thị nguyên nhân trạng thái an toàn */}
+                  {st.statusReason && (
+                    <div className={`text-[9px] px-2 py-1 rounded-md border flex items-start gap-1 mb-2 font-mono ${
+                      st.status === 'safe'
+                        ? 'bg-safe/5 text-safe/90 border-safe/20'
+                        : st.status === 'unknown'
+                          ? 'bg-card2/70 text-muted border-border/40'
+                          : 'bg-danger/10 text-danger border-danger/30 font-semibold'
+                    }`}>
+                      <span className="shrink-0">ⓘ</span>
+                      <span className="leading-tight">{st.statusReason}</span>
+                    </div>
+                  )}
+
                   {/* Dữ liệu thu được từ Cảm biến Mực nước, Độ ẩm, Độ rung */}
                   <div className="grid grid-cols-3 gap-1 bg-card2 p-2.5 rounded-lg text-[10px] my-2 border border-border/40">
-                    <div>
+                    <div className={`p-1 rounded ${isWaterBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
                       <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
                         <Activity className="w-2.5 h-2.5 text-sky-400" />
                         <span>Mực nước</span>
                       </div>
-                      <Mono className={`font-bold ${isConnected ? stS.text : 'text-muted'}`}>
+                      <Mono className={`font-bold ${isWaterBreached ? 'text-danger' : isConnected ? stS.text : 'text-muted'}`}>
                         {currentWater} m
                       </Mono>
                     </div>
-                    <div>
+                    <div className={`p-1 rounded ${isHumidBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
                       <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
                         <Droplet className="w-2.5 h-2.5 text-indigo-400" />
                         <span>Độ ẩm</span>
                       </div>
-                      <Mono className={`font-bold ${isConnected ? 'text-tx' : 'text-muted'}`}>
+                      <Mono className={`font-bold ${isHumidBreached ? 'text-danger' : isConnected ? 'text-tx' : 'text-muted'}`}>
                         {currentHumidity}%
                       </Mono>
                     </div>
-                    <div>
+                    <div className={`p-1 rounded ${isVibBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
                       <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
                         <Radio className="w-2.5 h-2.5 text-emerald-400" />
                         <span>Độ rung</span>

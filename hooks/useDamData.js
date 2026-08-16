@@ -56,9 +56,9 @@ export function useDamData() {
     const onStatusChanged = (evt) => {
       if (!mountedRef.current || !evt) return
       if (evt.level === 'station' && evt.stationId != null) {
-        setStations(prev => prev.map(s => s.id === evt.stationId ? { ...s, status: evt.status } : s))
+        setStations(prev => prev.map(s => s.id === evt.stationId ? { ...s, status: evt.status, statusReason: evt.statusReason ?? s.statusReason } : s))
       } else if (evt.level === 'dam' && evt.damId) {
-        setDams(prev => prev.map(d => d.id === evt.damId ? { ...d, status: evt.status } : d))
+        setDams(prev => prev.map(d => d.id === evt.damId ? { ...d, status: evt.status, statusReason: evt.statusReason ?? d.statusReason } : d))
       }
     }
     // Dam.waterLevel = MAX(waterLevel) trong các Station thuộc Dam, fillPct suy ra từ đó

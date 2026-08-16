@@ -61,7 +61,7 @@ export default function DashboardPage() {
                     className={`bg-card2/60 border border-border border-l-[3px] ${s.leftBorder} rounded-lg p-2.5 hover:bg-card2 transition-colors`}>
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-[11px] font-semibold text-tx truncate pr-2">{d.name}</span>
-                      <Badge status={d.status} sm />
+                      <Badge status={d.status} sm title={d.statusReason} />
                     </div>
                     <div className="flex items-center gap-3">
                       <RadialGauge value={d.fillPct} size={48} stroke={5} status={d.status} />
@@ -76,6 +76,11 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+                    {d.statusReason && d.status !== 'safe' && (
+                      <div className="mt-1.5 text-[8px] text-muted font-mono truncate border-t border-border/40 pt-1" title={d.statusReason}>
+                        ⓘ {d.statusReason}
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -127,7 +132,7 @@ export default function DashboardPage() {
                     hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150 shadow-panel`}>
                   <div className="flex justify-between items-start mb-1.5">
                     <span className="text-[11px] font-semibold text-tx">{st.name}</span>
-                    <Badge status={st.status} sm />
+                    <Badge status={st.status} sm title={st.statusReason} />
                   </div>
                   <div className="flex items-baseline gap-1 mb-1">
                     <Mono className={`text-xl font-bold ${s.text}`}>{st.waterLevel}</Mono>
@@ -139,8 +144,13 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-[9px] text-muted mb-1.5 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-muted shrink-0" />
-                    <span>{st.location}</span>
+                    <span className="truncate">{st.location}</span>
                   </div>
+                  {st.statusReason && st.status !== 'safe' && (
+                    <div className="text-[8px] text-muted font-mono truncate bg-card2/80 px-1.5 py-0.5 rounded border border-border/40" title={st.statusReason}>
+                      ⓘ {st.statusReason}
+                    </div>
+                  )}
                 </Link>
               )
             })}
