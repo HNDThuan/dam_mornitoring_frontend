@@ -668,30 +668,30 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
             return (
               <div
                 key={gw.gatewayId}
-                className="bg-card border border-border rounded-xl overflow-hidden shadow-panel transition-all"
+                className="bg-[#0b1322] border-2 border-indigo-500/30 hover:border-indigo-500/50 rounded-2xl overflow-hidden shadow-2xl transition-all"
               >
                 {/* ── GATEWAY HEADER ROW ── */}
                 <div
                   onClick={() => toggleGateway(gw.gatewayId)}
-                  className="px-4 py-3.5 bg-card2/50 hover:bg-card2 border-b border-border/70 flex items-center justify-between cursor-pointer select-none transition-colors"
+                  className="px-4 py-3.5 bg-gradient-to-r from-slate-900/90 via-[#0e172a] to-slate-900/90 hover:from-slate-800 hover:to-slate-800 border-b border-indigo-500/30 flex items-center justify-between cursor-pointer select-none transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <button className="text-muted hover:text-tx p-0.5 bg-transparent border-none cursor-pointer">
+                    <button className="text-slate-400 hover:text-white p-1 bg-transparent border-none cursor-pointer">
                       {isGwExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-accent" />
+                        <ChevronDown className="w-4 h-4 text-indigo-400" />
                       ) : (
                         <ChevronRight className="w-4 h-4" />
                       )}
                     </button>
 
-                    <div className="w-8 h-8 rounded-lg bg-accent/10 border border-accent/30 flex items-center justify-center shrink-0">
-                      <Server className="w-4 h-4 text-accent" />
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center shrink-0 shadow-sm">
+                      <Server className="w-5 h-5 text-indigo-300" />
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-tx">{gw.name}</span>
-                        <Mono className="text-[10px] text-accent font-semibold bg-accent/10 border border-accent/20 px-1.5 py-0.2 rounded">
+                        <span className="text-sm font-extrabold text-white tracking-wide">{gw.name}</span>
+                        <Mono className="text-[11px] text-indigo-300 font-bold bg-indigo-500/20 border border-indigo-500/40 px-2 py-0.5 rounded-md">
                           {gw.gatewayId}
                         </Mono>
                         <span
@@ -701,24 +701,26 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                           {gwStatus.label}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5 text-[10px] text-muted">
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-slate-400 font-mono">
                         <span>
-                          MAC: <Mono className="text-tx">{gw.macAddress || '—'}</Mono>
+                          MAC: <strong className="text-slate-200">{gw.macAddress || '—'}</strong>
                         </span>
                         <span>•</span>
                         <span>
-                          Firmware: <Mono className="text-tx">{gw.firmwareVersion || '—'}</Mono>
+                          Firmware: <strong className="text-slate-200">{gw.firmwareVersion || '—'}</strong>
                         </span>
                         {gw.lastSeenAt && (
                           <>
                             <span>•</span>
                             <span>
                               Cập nhật:{' '}
-                              {new Date(gw.lastSeenAt).toLocaleTimeString('vi-VN', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                              })}
+                              <strong className="text-slate-200">
+                                {new Date(gw.lastSeenAt).toLocaleTimeString('vi-VN', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit',
+                                })}
+                              </strong>
                             </span>
                           </>
                         )}
@@ -727,30 +729,30 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                   </div>
 
                   {/* Actions for Gateway */}
-                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                     {!isViewer && (
                       <>
                         <button
                           onClick={(e) => openCreateNodeModal(gw.gatewayId, e)}
-                          className="flex items-center gap-1 px-2.5 py-1 bg-info/10 text-info border border-info/30 rounded-lg text-[10px] font-bold hover:bg-info/20 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-[11px] font-bold shadow-sm transition-all cursor-pointer border-none"
                           title="Thêm Sensor Node ESP32 vào Gateway này"
                         >
-                          <Plus className="w-3 h-3" />
+                          <Plus className="w-3.5 h-3.5" />
                           <span>Thêm Node</span>
                         </button>
 
                         <button
                           onClick={(e) => openCreateCameraModal(gw.gatewayId, e)}
-                          className="flex items-center gap-1 px-2.5 py-1 bg-emerald-400/10 text-emerald-400 border border-emerald-400/30 rounded-lg text-[10px] font-bold hover:bg-emerald-400/20 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[11px] font-bold shadow-sm transition-all cursor-pointer border-none"
                           title="Gắn Camera CSI/RTSP vào Gateway này"
                         >
-                          <Video className="w-3 h-3" />
+                          <Video className="w-3.5 h-3.5" />
                           <span>Gắn Camera</span>
                         </button>
 
                         <button
                           onClick={(e) => openEditGatewayModal(gw, e)}
-                          className="p-1.5 text-muted hover:text-accent bg-card2 hover:bg-white/5 border border-border rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors cursor-pointer"
                           title="Sửa thông tin Gateway"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -765,7 +767,7 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                               name: gw.name,
                             })
                           }}
-                          className="p-1.5 text-muted hover:text-danger bg-card2 hover:bg-danger/10 border border-border rounded-lg transition-colors cursor-pointer"
+                          className="p-1.5 text-slate-300 hover:text-rose-300 bg-slate-800 hover:bg-rose-950/60 border border-slate-700 rounded-lg transition-colors cursor-pointer"
                           title="Xóa Gateway"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -777,38 +779,46 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
 
                 {/* ── GATEWAY CONTENT (EXPANDABLE) ── */}
                 {isGwExpanded && (
-                  <div className="p-4 space-y-4 bg-card/30">
+                  <div className="p-4 space-y-5 bg-[#080e1a]">
                     {/* SECTION 1: CAMERAS GẮN VÀO GATEWAY */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted uppercase tracking-wider">
-                          <Video className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Camera Giám Sát AI Trực Thuộc ({gw.cameras?.length || 0})</span>
+                    <div className="bg-[#0c1e1c]/60 border border-emerald-500/25 rounded-xl p-3.5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Video className="w-4 h-4 text-emerald-400" />
+                            Camera Giám Sát AI Trực Thuộc
+                          </span>
+                          <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold">
+                            {gw.cameras?.length || 0}
+                          </span>
                         </div>
                       </div>
 
                       {gw.cameras && gw.cameras.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {gw.cameras.map((cam) => {
                             const camSt = CAMERA_STATUS_CONFIG[cam.status] || CAMERA_STATUS_CONFIG.active
                             return (
                               <div
                                 key={cam.cameraId}
-                                className="bg-card2 border border-border/80 rounded-lg p-2.5 flex items-start justify-between"
+                                className="bg-[#0d2623] border border-emerald-500/35 hover:border-emerald-500/60 rounded-xl p-3 flex items-start justify-between shadow-md transition-all"
                               >
-                                <div className="flex items-start gap-2 min-w-0">
-                                  <div className="w-7 h-7 rounded bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center shrink-0 mt-0.5">
-                                    <CameraIcon className="w-3.5 h-3.5 text-emerald-400" />
+                                <div className="flex items-start gap-2.5 min-w-0">
+                                  <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0 mt-0.5">
+                                    <CameraIcon className="w-4 h-4 text-emerald-300" />
                                   </div>
                                   <div className="min-w-0">
-                                    <div className="text-xs font-bold text-tx truncate">{cam.name}</div>
+                                    <div className="text-xs font-bold text-white truncate">{cam.name}</div>
                                     <div className="flex items-center gap-1.5 mt-0.5">
-                                      <Mono className="text-[9px] text-emerald-400">{cam.cameraId}</Mono>
-                                      <span className="text-[9px] text-muted">({cam.cameraType || 'CSI'})</span>
-                                      <span className="text-[8px] font-mono text-muted">{cam.resolution}</span>
+                                      <Mono className="text-[10px] text-emerald-300 font-bold bg-emerald-950 px-1.5 py-0.2 rounded border border-emerald-500/30">
+                                        {cam.cameraId}
+                                      </Mono>
+                                      <span className="text-[9px] font-semibold text-emerald-200/90">({cam.cameraType || 'CSI'})</span>
+                                      <span className="text-[9px] font-mono text-slate-300">{cam.resolution}</span>
                                     </div>
                                     {cam.streamUrl && (
-                                      <div className="text-[9px] font-mono text-muted truncate max-w-[180px] mt-0.5" title={cam.streamUrl}>
+                                      <div className="text-[9px] font-mono text-emerald-300/90 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/20 truncate max-w-[200px] mt-1" title={cam.streamUrl}>
                                         {cam.streamUrl}
                                       </div>
                                     )}
@@ -819,7 +829,7 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                   <div className="flex items-center gap-1 shrink-0 ml-2">
                                     <button
                                       onClick={() => openEditCameraModal(cam, gw.gatewayId)}
-                                      className="p-1 text-muted hover:text-accent bg-transparent border-none cursor-pointer"
+                                      className="p-1.5 text-slate-300 hover:text-emerald-300 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-500/30 rounded-lg cursor-pointer transition-colors"
                                       title="Sửa Camera"
                                     >
                                       <Pencil className="w-3 h-3" />
@@ -832,7 +842,7 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                           name: cam.name,
                                         })
                                       }
-                                      className="p-1 text-muted hover:text-danger bg-transparent border-none cursor-pointer"
+                                      className="p-1.5 text-slate-300 hover:text-rose-300 bg-emerald-950/60 hover:bg-rose-950/80 border border-emerald-500/30 rounded-lg cursor-pointer transition-colors"
                                       title="Xóa Camera"
                                     >
                                       <Trash2 className="w-3 h-3" />
@@ -844,23 +854,29 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                           })}
                         </div>
                       ) : (
-                        <div className="text-[10px] text-muted italic bg-card2/40 border border-border/50 rounded-lg p-2.5 text-center">
-                          Chưa có Camera nào gắn vào Gateway này. (Click "+ Gắn Camera" để thêm)
+                        <div className="text-[11px] text-emerald-400/80 bg-emerald-950/30 border border-emerald-500/20 rounded-xl p-3 text-center">
+                          Chưa có Camera nào gắn vào Gateway này. (Bấm nút <strong>"+ Gắn Camera"</strong> ở trên để thêm)
                         </div>
                       )}
                     </div>
 
                     {/* SECTION 2: SENSOR NODES (ESP32) */}
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-muted uppercase tracking-wider">
-                          <Cpu className="w-3.5 h-3.5 text-info" />
-                          <span>Danh Sách Sensor Nodes ESP32 ({gw.nodes?.length || 0})</span>
+                    <div className="bg-[#091526]/80 border border-sky-500/25 rounded-xl p-3.5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                          <span className="text-xs font-extrabold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <Cpu className="w-4 h-4 text-sky-400" />
+                            Danh Sách Sensor Nodes ESP32
+                          </span>
+                          <span className="bg-sky-500/20 text-sky-300 border border-sky-500/40 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold">
+                            {gw.nodes?.length || 0}
+                          </span>
                         </div>
                       </div>
 
                       {gw.nodes && gw.nodes.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {gw.nodes.map((node) => {
                             const isNodeExpanded = expandedNodes.has(node.nodeId)
                             const nodeSt = STATUS_CONFIG[node.status] || STATUS_CONFIG.offline
@@ -871,67 +887,67 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                             return (
                               <div
                                 key={node.nodeId}
-                                className="bg-card2 border border-border rounded-xl overflow-hidden shadow-sm"
+                                className="bg-[#0b1626] border-2 border-sky-500/30 hover:border-sky-500/50 rounded-xl overflow-hidden shadow-lg transition-all"
                               >
                                 {/* Node header */}
                                 <div
                                   onClick={() => toggleNode(node.nodeId)}
-                                  className="px-3.5 py-2.5 bg-card3/40 hover:bg-card3 border-b border-border/60 flex items-center justify-between cursor-pointer select-none transition-colors"
+                                  className="px-4 py-3 bg-gradient-to-r from-[#11213b] via-[#142847] to-[#11213b] hover:from-[#172e52] hover:to-[#172e52] border-b border-sky-500/25 flex items-center justify-between cursor-pointer select-none transition-colors"
                                 >
-                                  <div className="flex items-center gap-2.5">
-                                    <button className="text-muted hover:text-tx p-0.5 bg-transparent border-none cursor-pointer">
+                                  <div className="flex items-center gap-3">
+                                    <button className="text-slate-400 hover:text-white p-0.5 bg-transparent border-none cursor-pointer">
                                       {isNodeExpanded ? (
-                                        <ChevronDown className="w-3.5 h-3.5 text-info" />
+                                        <ChevronDown className="w-4 h-4 text-sky-400" />
                                       ) : (
-                                        <ChevronRight className="w-3.5 h-3.5" />
+                                        <ChevronRight className="w-4 h-4" />
                                       )}
                                     </button>
 
-                                    <div className="w-6 h-6 rounded-md bg-info/10 border border-info/20 flex items-center justify-center shrink-0">
-                                      <Cpu className="w-3.5 h-3.5 text-info" />
+                                    <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center shrink-0 shadow-sm">
+                                      <Cpu className="w-4 h-4 text-sky-300" />
                                     </div>
 
                                     <div>
                                       <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-tx">{node.name}</span>
-                                        <Mono className="text-[10px] text-info font-semibold bg-info/10 border border-info/20 px-1.5 py-0.2 rounded">
+                                        <span className="text-xs font-extrabold text-white tracking-wide">{node.name}</span>
+                                        <Mono className="text-[10px] text-sky-300 font-bold bg-sky-500/20 border border-sky-500/40 px-2 py-0.2 rounded">
                                           {node.nodeId}
                                         </Mono>
                                         <span
-                                          className={`inline-flex items-center gap-1 text-[8px] font-mono font-bold px-1.5 py-0.2 rounded-full border ${nodeSt.text} ${nodeSt.bg} ${nodeSt.border}`}
+                                          className={`inline-flex items-center gap-1 text-[8px] font-mono font-bold px-2 py-0.2 rounded-full border ${nodeSt.text} ${nodeSt.bg} ${nodeSt.border}`}
                                         >
                                           <span className={`w-1 h-1 rounded-full ${nodeSt.dot}`} />
                                           {nodeSt.label}
                                         </span>
                                       </div>
-                                      <div className="flex items-center gap-2 text-[9px] text-muted mt-0.5">
+                                      <div className="flex items-center gap-3 text-[10px] text-slate-400 font-mono mt-0.5">
                                         <span>
-                                          Vị trí: <strong className="text-tx">{node.installLocation || 'Thân đập'}</strong>
+                                          Vị trí: <strong className="text-slate-200">{node.installLocation || 'Thân đập'}</strong>
                                         </span>
                                         <span>•</span>
                                         <span>
-                                          MAC: <Mono className="text-tx">{node.macAddress || '—'}</Mono>
+                                          MAC: <strong className="text-slate-200">{node.macAddress || '—'}</strong>
                                         </span>
                                         <span>•</span>
                                         <span>
-                                          Firmware: <Mono className="text-tx">{node.firmwareVersion || 'v1.0'}</Mono>
+                                          Firmware: <strong className="text-slate-200">{node.firmwareVersion || 'v1.0'}</strong>
                                         </span>
                                       </div>
                                     </div>
                                   </div>
 
                                   {/* Node Quick Actions */}
-                                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                     {/* Mapped Camera Badge / Button */}
                                     <button
                                       onClick={(e) => openMapCameraModal(node, gw, e)}
-                                      className={`flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold border transition-colors cursor-pointer ${mappedCam
-                                          ? 'bg-emerald-400/10 text-emerald-400 border-emerald-400/30 hover:bg-emerald-400/20'
-                                          : 'bg-card text-muted border-border hover:text-tx'
+                                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border transition-all cursor-pointer ${mappedCam
+                                          ? 'bg-purple-950/80 text-purple-300 border-purple-500/50 hover:bg-purple-900 shadow-sm'
+                                          : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
                                         }`}
                                       title="Cấu hình Camera AI chụp ảnh khi Node này rung bất thường"
                                     >
-                                      <CameraIcon className="w-2.5 h-2.5" />
+                                      <CameraIcon className="w-3 h-3 text-purple-400" />
                                       <span>
                                         {mappedCam ? `Cam AI: ${mappedCam.name || mappedCam.cameraId}` : 'Chưa gán Cam AI'}
                                       </span>
@@ -941,17 +957,17 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                       <>
                                         <button
                                           onClick={(e) => openAddSensorModal(node.nodeId, e)}
-                                          className="flex items-center gap-1 px-2 py-1 bg-warning/10 text-warning border border-warning/30 rounded text-[9px] font-bold hover:bg-warning/20 transition-colors cursor-pointer"
+                                          className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[10px] font-bold shadow-sm transition-all cursor-pointer border-none"
                                           title="Thêm cảm biến (Rung, Mực nước, Độ ẩm) cho Node này"
                                         >
-                                          <Plus className="w-2.5 h-2.5" />
+                                          <Plus className="w-3 h-3" />
                                           <span>Thêm Sensor</span>
                                         </button>
 
                                         <button
                                           onClick={(e) => openEditNodeModal(node, gw.gatewayId, e)}
-                                          className="p-1 text-muted hover:text-info bg-card hover:bg-white/5 border border-border rounded transition-colors cursor-pointer"
-                                          title="Sửa thông tin Node & Ngưỡng AI"
+                                          className="p-1.5 text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg transition-colors cursor-pointer"
+                                          title="Sửa thông tin Node"
                                         >
                                           <Pencil className="w-3 h-3" />
                                         </button>
@@ -963,9 +979,10 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                               kind: 'node',
                                               id: node.nodeId,
                                               name: node.name,
+                                              parentId: gw.gatewayId,
                                             })
                                           }}
-                                          className="p-1 text-muted hover:text-danger bg-card hover:bg-danger/10 border border-border rounded transition-colors cursor-pointer"
+                                          className="p-1.5 text-slate-300 hover:text-rose-300 bg-slate-800 hover:bg-rose-950/80 border border-slate-700 rounded-lg transition-colors cursor-pointer"
                                           title="Xóa Node"
                                         >
                                           <Trash2 className="w-3 h-3" />
@@ -977,36 +994,36 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
 
                                 {/* Node Body (Sensors + Thresholds Config) */}
                                 {isNodeExpanded && (
-                                  <div className="p-3 space-y-2.5 bg-card/20">
+                                  <div className="p-3.5 space-y-3 bg-[#070e1a]">
                                     {/* AI Vibration Thresholds Summary */}
-                                    <div className="flex flex-wrap items-center gap-2 p-2 bg-card rounded-lg border border-border/50 text-[9px]">
-                                      <span className="font-bold text-muted uppercase flex items-center gap-1">
-                                        <Sliders className="w-3 h-3 text-warning" />
+                                    <div className="flex flex-wrap items-center gap-2.5 p-2.5 bg-[#0d1726] rounded-xl border border-slate-700/80 text-[10px]">
+                                      <span className="font-extrabold text-amber-400 uppercase flex items-center gap-1.5 tracking-wide">
+                                        <Sliders className="w-3.5 h-3.5 text-amber-400" />
                                         Ngưỡng Rung AI:
                                       </span>
-                                      <span className="font-mono text-warning bg-warning-soft px-1.5 py-0.5 rounded border border-warning-soft">
+                                      <span className="font-mono text-amber-300 font-bold bg-amber-500/20 px-2.5 py-0.5 rounded-md border border-amber-500/40">
                                         Cảnh báo: ≥ {node.warnHigh ?? 2.5} mm/s
                                       </span>
-                                      <span className="font-mono text-critical bg-critical-soft px-1.5 py-0.5 rounded border border-critical-soft">
+                                      <span className="font-mono text-rose-300 font-bold bg-rose-500/20 px-2.5 py-0.5 rounded-md border border-rose-500/40">
                                         Nguy cấp: ≥ {node.criticalHigh ?? 25.0} mm/s
                                       </span>
-                                      <span className="font-mono text-muted bg-card2 px-1.5 py-0.5 rounded border border-border">
-                                        Bộ lọc lọc ảo: {node.alertMinCount ?? 4} mẫu / {node.alertMinDurationSec ?? 6.0}s
+                                      <span className="font-mono text-sky-300 font-bold bg-sky-500/20 px-2.5 py-0.5 rounded-md border border-sky-500/40">
+                                        Bộ lọc lọc ảo: {node.alertMinCount ?? 4} mẫu / {node.alertMinDurationSec ?? 3.0}s
                                       </span>
                                     </div>
 
                                     {/* Sensors Table */}
                                     {node.sensors && node.sensors.length > 0 ? (
-                                      <div className="overflow-x-auto">
+                                      <div className="overflow-x-auto rounded-xl border border-slate-700/80 bg-[#070e1a]">
                                         <table className="w-full border-collapse text-left">
                                           <thead>
-                                            <tr className="border-b border-border/60 text-[8px] text-muted uppercase tracking-wider bg-card2/70">
-                                              <th className="py-1.5 px-2.5">Loại Cảm Biến</th>
-                                              <th className="py-1.5 px-2.5">Model Phần Cứng</th>
-                                              <th className="py-1.5 px-2.5">Hiệu Chuẩn (Offset)</th>
-                                              <th className="py-1.5 px-2.5">Đơn Vị</th>
-                                              <th className="py-1.5 px-2.5">Trạng Thái</th>
-                                              {!isViewer && <th className="py-1.5 px-2.5 text-right">Thao Tác</th>}
+                                            <tr className="border-b border-slate-700 text-[9px] text-slate-300 font-bold uppercase tracking-wider bg-[#131f33]">
+                                              <th className="py-2 px-3">Loại Cảm Biến</th>
+                                              <th className="py-2 px-3">Model Phần Cứng</th>
+                                              <th className="py-2 px-3">Hiệu Chuẩn (Offset)</th>
+                                              <th className="py-2 px-3">Đơn Vị</th>
+                                              <th className="py-2 px-3">Trạng Thái</th>
+                                              {!isViewer && <th className="py-2 px-3 text-right">Thao Tác</th>}
                                             </tr>
                                           </thead>
                                           <tbody>
@@ -1018,35 +1035,37 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                               return (
                                                 <tr
                                                   key={sensor.id}
-                                                  className="border-b border-border/30 hover:bg-card2/40 transition-colors text-[10px]"
+                                                  className="border-b border-slate-800/80 odd:bg-[#070e1a] even:bg-[#0b1424] hover:bg-slate-800/50 transition-colors text-[11px]"
                                                 >
-                                                  <td className="py-1.5 px-2.5">
-                                                    <span className="flex items-center gap-1.5 font-semibold text-tx">
-                                                      <Icon className={`w-3.5 h-3.5 ${sCfg.color}`} />
+                                                  <td className="py-2 px-3">
+                                                    <span className="flex items-center gap-2 font-bold text-white">
+                                                      <Icon className={`w-4 h-4 ${sCfg.color}`} />
                                                       <span>{sCfg.label}</span>
                                                     </span>
                                                   </td>
-                                                  <td className="py-1.5 px-2.5 font-mono text-tx">
-                                                    {sensor.model || sCfg.defaultModel}
+                                                  <td className="py-2 px-3 font-mono font-semibold text-slate-200">
+                                                    <span className="bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/80">
+                                                      {sensor.model || sCfg.defaultModel}
+                                                    </span>
                                                   </td>
-                                                  <td className="py-1.5 px-2.5 font-mono text-tx">
+                                                  <td className="py-2 px-3 font-mono font-bold text-cyan-300">
                                                     {sensor.calibrationOffset > 0 ? `+${sensor.calibrationOffset}` : sensor.calibrationOffset || 0}
                                                   </td>
-                                                  <td className="py-1.5 px-2.5 font-mono text-muted">
+                                                  <td className="py-2 px-3 font-mono font-semibold text-slate-300">
                                                     {sensor.unit || sCfg.unit}
                                                   </td>
-                                                  <td className="py-1.5 px-2.5">
-                                                    <span className={`inline-flex items-center gap-1 text-[8px] font-mono font-bold ${sSt.text}`}>
-                                                      <span className={`w-1.5 h-1.5 rounded-full ${sSt.dot}`} />
+                                                  <td className="py-2 px-3">
+                                                    <span className={`inline-flex items-center gap-1.5 text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30`}>
+                                                      <span className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />
                                                       {sSt.label}
                                                     </span>
                                                   </td>
                                                   {!isViewer && (
-                                                    <td className="py-1.5 px-2.5 text-right">
-                                                      <div className="inline-flex items-center gap-1">
+                                                    <td className="py-2 px-3 text-right">
+                                                      <div className="inline-flex items-center gap-1.5">
                                                         <button
                                                           onClick={() => openEditSensorModal(sensor, node.nodeId)}
-                                                          className="p-1 text-muted hover:text-accent bg-transparent border-none cursor-pointer"
+                                                          className="p-1.5 text-slate-400 hover:text-sky-300 bg-slate-800/80 hover:bg-slate-700 rounded-lg border border-slate-700 cursor-pointer transition-colors"
                                                           title="Sửa cảm biến"
                                                         >
                                                           <Pencil className="w-3 h-3" />
@@ -1060,7 +1079,7 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                                               parentId: node.nodeId,
                                                             })
                                                           }
-                                                          className="p-1 text-muted hover:text-danger bg-transparent border-none cursor-pointer"
+                                                          className="p-1.5 text-slate-400 hover:text-rose-300 bg-slate-800/80 hover:bg-rose-950/80 rounded-lg border border-slate-700 cursor-pointer transition-colors"
                                                           title="Xóa cảm biến"
                                                         >
                                                           <Trash2 className="w-3 h-3" />
@@ -1075,8 +1094,8 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                                         </table>
                                       </div>
                                     ) : (
-                                      <div className="text-[10px] text-muted italic bg-card/40 border border-border/40 rounded p-2 text-center">
-                                        Node này chưa có cảm biến nào. (Click "+ Thêm Sensor" để khai báo cảm biến Rung/Mực nước/Độ ẩm)
+                                      <div className="text-[11px] text-slate-400 bg-slate-900/60 border border-slate-800 rounded-xl p-3 text-center">
+                                        Node này chưa có cảm biến nào. (Bấm nút <strong>"+ Thêm Sensor"</strong> ở trên để khai báo cảm biến Rung/Mực nước/Độ ẩm)
                                       </div>
                                     )}
                                   </div>
@@ -1086,8 +1105,8 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
                           })}
                         </div>
                       ) : (
-                        <div className="text-[10px] text-muted italic bg-card2/40 border border-border/50 rounded-lg p-3 text-center">
-                          Chưa có Sensor Node ESP32 nào gắn vào Gateway này. (Click "+ Thêm Node" để tạo)
+                        <div className="text-[11px] text-sky-400/80 bg-sky-950/30 border border-sky-500/20 rounded-xl p-3 text-center">
+                          Chưa có Sensor Node ESP32 nào gắn vào Gateway này. (Bấm nút <strong>"+ Thêm Node"</strong> ở trên để tạo)
                         </div>
                       )}
                     </div>
