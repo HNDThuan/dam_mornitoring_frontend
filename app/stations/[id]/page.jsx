@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -36,6 +36,7 @@ import LocationPickerMap from "@/components/LocationPickerMap";
 import StationDevicesTab from "@/components/StationDevicesTab";
 import { useAlarmData } from "@/hooks/useAlarmData";
 import { useAuth } from "@/context/AuthContext";
+import { exportStationReportToPDF } from "@/lib/exportHelpers";
 import { AlertTriangle, ChevronRight, Download, CheckCircle2, ChevronUp, ChevronDown, Minus, Camera, Maximize2, Pencil, Trash2, MapPin, Radio, Sliders, Droplet, Activity, Cpu, Server, Save, Zap } from "lucide-react";
 import { updateThresholdConfig } from "@/lib/api";
 
@@ -225,6 +226,13 @@ export default function StationDetailPage() {
 
   // Tab State: 'monitoring' (Giám sát) | 'devices' (Thiết bị phần cứng)
   const [activeTab, setActiveTab] = useState('monitoring');
+
+  // Khi là viewer hoặc chưa đăng nhập, tự động khóa ở tab 'monitoring'
+  useEffect(() => {
+    if (isViewer && activeTab !== 'monitoring') {
+      setActiveTab('monitoring');
+    }
+  }, [isViewer, activeTab]);
 
   // Toast State
   const [toast, setToast] = useState(null) // { message, type }
@@ -588,42 +596,48 @@ export default function StationDetailPage() {
               </button>
             </>
           )}
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-info to-accent shadow-glow hover:brightness-110 transition-all">
+          <button
+            onClick={() => exportStationReportToPDF(st, dam, latest, stationAlarms, user)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-[11px] font-bold border-none cursor-pointer bg-gradient-to-r from-info to-accent shadow-glow hover:brightness-110 transition-all"
+            title="Xuất phiếu báo cáo hiện trạng an toàn trạm quan trắc ra file PDF"
+          >
             <Download className="w-3.5 h-3.5 shrink-0" />
             <span>{t('stationDetail.exportReport')}</span>
           </button>
         </div>
       </div>
 
-      {/* ── TAB SWITCHER: GIÁM SÁT VS THIẾT BỊ PHẦN CỨNG ── */}
-      <div className="flex items-center gap-2 mb-4 border-b border-border/70 pb-3">
-        <button
-          onClick={() => setActiveTab('monitoring')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-            activeTab === 'monitoring'
-              ? 'bg-accent text-white border-accent shadow-glow'
-              : 'bg-card text-muted border-border hover:text-tx hover:bg-card2'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          <span>Giám Sát & Trực Quan Hóa (Live Telemetry & GIS)</span>
-        </button>
+      {/* ── TAB SWITCHER: GIÁM SÁT VS THIẾT BỊ PHẦN CỨNG (Chỉ hiển thị cho Cán bộ / Quản trị viên) ── */}
+      {!isViewer && (
+        <div className="flex items-center gap-2 mb-4 border-b border-border/70 pb-3">
+          <button
+            onClick={() => setActiveTab('monitoring')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              activeTab === 'monitoring'
+                ? 'bg-accent text-white border-accent shadow-glow'
+                : 'bg-card text-muted border-border hover:text-tx hover:bg-card2'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Giám Sát & Trực Quan Hóa (Live Telemetry & GIS)</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('devices')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-            activeTab === 'devices'
-              ? 'bg-accent text-white border-accent shadow-glow'
-              : 'bg-card text-muted border-border hover:text-tx hover:bg-card2'
-          }`}
-        >
-          <Cpu className="w-4 h-4" />
-          <span>Thiết Bị & Cấu Hình Phần Cứng (Gateways, Nodes, Sensors)</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab('devices')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              activeTab === 'devices'
+                ? 'bg-accent text-white border-accent shadow-glow'
+                : 'bg-card text-muted border-border hover:text-tx hover:bg-card2'
+            }`}
+          >
+            <Cpu className="w-4 h-4" />
+            <span>Thiết Bị & Cấu Hình Phần Cứng (Gateways, Nodes, Sensors)</span>
+          </button>
+        </div>
+      )}
 
-      {/* ── TAB 1: GIÁM SÁT & TRỰC QUAN HÓA ── */}
-      {activeTab === 'monitoring' && (
+      {/* ── TAB 1: GIÁM SÁT & TRỰC QUAN HÓA (Hiển thị cho viewer/khách và khi activeTab === 'monitoring') ── */}
+      {(isViewer || activeTab === 'monitoring') && (
         <>
           {/* ── GIS MAP BẢN ĐỒ TỌA ĐỘ TRẠM ── */}
           <Panel
@@ -853,8 +867,8 @@ export default function StationDetailPage() {
         </>
       )}
 
-      {/* ── TAB 2: THIẾT BỊ & CẤU HÌNH PHẦN CỨNG ── */}
-      {activeTab === 'devices' && (
+      {/* ── TAB 2: THIẾT BỊ & CẤU HÌNH PHẦN CỨNG (Chỉ hiển thị cho ADMIN & OPERATOR) ── */}
+      {!isViewer && activeTab === 'devices' && (
         <StationDevicesTab
           stationId={st.stationId}
           damId={st.damId}

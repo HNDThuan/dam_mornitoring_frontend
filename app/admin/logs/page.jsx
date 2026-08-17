@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { fetchAuditLogs } from '@/lib/api'
+import { exportLogsToExcel } from '@/lib/exportHelpers'
 import { Mono, Panel, StatTile, Pagination } from '@/components/ui'
 import {
   FileText,
@@ -16,6 +17,7 @@ import {
   Clock,
   Activity,
   Server,
+  FileSpreadsheet,
 } from 'lucide-react'
 
 const CATEGORY_MAP = {
@@ -42,10 +44,29 @@ export default function AuditLogsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [exporting, setExporting] = useState(false)
 
   const handlePageSizeChange = (size) => {
     setPageSize(size)
     setPage(1)
+  }
+
+  const handleExportExcel = async () => {
+    try {
+      setExporting(true)
+      const currentToken = token || (typeof window !== 'undefined' ? localStorage.getItem('access_token') : null)
+      let logsToExport = logs
+      if (total > logs.length) {
+        const res = await fetchAuditLogs(selectedCategory, Math.min(total, 500), currentToken, 1, search || undefined)
+        logsToExport = res.logs || []
+      }
+      exportLogsToExcel(logsToExport, selectedCategory, search)
+    } catch (err) {
+      console.error('[AuditLogsPage] Lỗi xuất excel:', err)
+      exportLogsToExcel(logs, selectedCategory, search)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const loadLogs = useCallback(async () => {
@@ -146,6 +167,16 @@ export default function AuditLogsPage() {
               className="bg-transparent border-none outline-none text-tx text-[11px] w-full placeholder:text-muted"
             />
           </div>
+
+          <button
+            onClick={handleExportExcel}
+            disabled={exporting || loading || logs.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-emerald-500/40 rounded-lg text-emerald-400 text-[11px] font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors cursor-pointer shrink-0 disabled:opacity-50"
+            title="Xuất danh sách nhật ký hệ thống ra file Excel"
+          >
+            <FileSpreadsheet className={`w-3.5 h-3.5 ${exporting ? 'animate-spin' : ''}`} />
+            <span>{exporting ? 'Đang xuất...' : 'Xuất Excel'}</span>
+          </button>
 
           <button
             onClick={loadLogs}

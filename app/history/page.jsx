@@ -10,7 +10,7 @@ import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
 import { useAuth } from '@/context/AuthContext'
 import { fetchLongTermHistory, fetchHistoryKpi } from '@/lib/api'
-import { exportAlarmsToExcel } from '@/lib/exportHelpers'
+import { exportAlarmsToExcel, exportHistoryToExcel } from '@/lib/exportHelpers'
 import { timeAgo, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS } from '@/lib/sensorHelpers'
 
 const TOOLTIP_STYLE = { background: '#13202f', border: '1px solid #22314a', borderRadius: 8, fontSize: 11, color: '#f1f5f9' }
@@ -367,12 +367,23 @@ export default function HistoryPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => exportAlarmsToExcel(scopedAlarms, effectiveDamId || 'Dam')}
+              onClick={() => exportHistoryToExcel(filteredRecords, effectiveDamId || 'He_Thong')}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[10px] font-bold cursor-pointer hover:bg-safe/20 transition-colors"
+              title="Xuất bảng danh sách lịch sử đo đạc đang hiển thị ra Excel"
             >
               <Download className="w-3.5 h-3.5 text-safe shrink-0" />
-              <span>Xuất Báo Cáo Excel</span>
+              <span>Xuất Excel Đo Đạc</span>
             </button>
+            {scopedAlarms.length > 0 && (
+              <button
+                onClick={() => exportAlarmsToExcel(scopedAlarms, effectiveDamId || 'Dam')}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-warning/40 rounded-lg bg-warning/10 text-warning text-[10px] font-bold cursor-pointer hover:bg-warning/20 transition-colors"
+                title="Xuất danh sách các sự cố cảnh báo trong kỳ ra Excel"
+              >
+                <Download className="w-3.5 h-3.5 text-warning shrink-0" />
+                <span>Xuất Excel Cảnh Báo ({scopedAlarms.length})</span>
+              </button>
+            )}
           </div>
         </div>
 

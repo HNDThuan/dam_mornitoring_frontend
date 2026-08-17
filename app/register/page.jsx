@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { registerUser as apiRegister, fetchDams } from '@/lib/api'
+import { registerUser as apiRegister } from '@/lib/api'
 import { useLanguage } from '@/context/LanguageContext'
-import { Field, TextInput, Select, Button, FormAlert } from '@/components/form'
-import { ShieldCheck, User, Mail, Lock, Phone, Building2, AlertCircle, CheckCircle, ArrowLeft, Globe, Eye, EyeOff } from 'lucide-react'
+import { Field, TextInput, Button, FormAlert } from '@/components/form'
+import { ShieldCheck, User, Mail, Lock, Phone, AlertCircle, CheckCircle, ArrowLeft, Globe, Eye, EyeOff, Info } from 'lucide-react'
 
 export default function RegisterPage() {
   const { t, locale, toggleLanguage } = useLanguage()
@@ -15,19 +15,11 @@ export default function RegisterPage() {
     email: '',
     password: '',
     phoneNumber: '',
-    assignedDamId: '',
   })
-  const [dams, setDams] = useState([])
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-
-  useEffect(() => {
-    fetchDams()
-      .then(res => setDams(res.dams || []))
-      .catch(() => setDams([]))
-  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -180,21 +172,6 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-            </Field>
-
-            <Field label={t('auth.register.assignedDamLabel')} htmlFor="assignedDamId">
-              <Select
-                id="assignedDamId"
-                value={form.assignedDamId}
-                onChange={e => setForm({ ...form, assignedDamId: e.target.value })}
-              >
-                <option value="">{t('auth.register.selectDamPlaceholder')}</option>
-                {dams.map(d => (
-                  <option key={d.damId} value={d.damId}>
-                    {d.name} ({d.location})
-                  </option>
-                ))}
-              </Select>
             </Field>
 
             <Button type="submit" loading={loading} className="w-full py-2.5 text-xs mt-2">

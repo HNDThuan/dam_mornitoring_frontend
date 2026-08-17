@@ -76,7 +76,7 @@ const CAMERA_STATUS_CONFIG = {
 }
 
 export default function GatewaysPage() {
-  const { user, isAdmin, loading: authLoading } = useAuth()
+  const { user, isAdmin, isOperator, assignedDamId, loading: authLoading } = useAuth()
   const [gateways, setGateways] = useState([])
   const [dams, setDams] = useState([])
   const [stations, setStations] = useState([])
@@ -87,6 +87,12 @@ export default function GatewaysPage() {
   const [search, setSearch] = useState('')
   const [filterDamId, setFilterDamId] = useState('')
   const [filterStationId, setFilterStationId] = useState('')
+
+  useEffect(() => {
+    if (isOperator && assignedDamId) {
+      setFilterDamId(assignedDamId)
+    }
+  }, [isOperator, assignedDamId])
 
   // Phân trang
   const [pageSize, setPageSize] = useState(10)
@@ -110,15 +116,16 @@ export default function GatewaysPage() {
     setTimeout(() => setToast(null), duration)
   }, [])
 
-  // ── Tải dữ liệu toàn cục ──
+  // ── Tải dữ liệu ──
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
     setError(null)
     try {
+      const activeDam = (isOperator && assignedDamId) ? assignedDamId : filterDamId
       const [gatewaysRes, damsRes, stationsRes] = await Promise.all([
-        fetchGateways(filterStationId || undefined, filterDamId || undefined, true),
+        fetchGateways(filterStationId || undefined, activeDam || undefined, true),
         fetchDams(),
-        fetchStations(filterDamId || undefined),
+        fetchStations(activeDam || undefined),
       ])
 
       setGateways(gatewaysRes.gateways || [])
@@ -129,13 +136,13 @@ export default function GatewaysPage() {
     } finally {
       if (!silent) setLoading(false)
     }
-  }, [filterDamId, filterStationId])
+  }, [filterDamId, filterStationId, isOperator, assignedDamId])
 
   useEffect(() => {
-    if (isAdmin) {
+    if (isAdmin || isOperator) {
       loadData(false)
     }
-  }, [isAdmin, loadData])
+  }, [isAdmin, isOperator, loadData])
 
   // Trạm khả dụng cho ô lọc
   const filteredStations = filterDamId
@@ -214,7 +221,7 @@ export default function GatewaysPage() {
     return `${Math.floor(diff / 86400000)} ngày trước`
   }
 
-  // ── KIỂM TRA QUYỀN TRUY CẬP (CHỈ ADMIN) ──
+  // ── KIỂM TRA QUYỀN TRUY CẬP (ADMIN & OPERATOR) ──
   if (authLoading) {
     return (
       <div className="p-12 min-h-[calc(100vh-48px)] flex items-center justify-center">
@@ -223,7 +230,7 @@ export default function GatewaysPage() {
     )
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isOperator) {
     return (
       <div className="p-8 min-h-[calc(100vh-48px)] flex items-center justify-center">
         <div className="bg-card border border-border max-w-md w-full rounded-2xl p-6 text-center space-y-4 shadow-2xl">
@@ -232,23 +239,14 @@ export default function GatewaysPage() {
           </div>
           <h2 className="text-base font-bold text-tx">Quyền Truy Cập Bị Giới Hạn</h2>
           <p className="text-xs text-muted leading-relaxed">
-            Trang Quản Trị Hạ Tầng Thiết Bị Toàn Cục chỉ dành cho tài khoản <strong>ADMIN TỔNG</strong>.
-          </p>
-          <p className="text-[11px] text-muted">
-            Nếu bạn là Cán bộ vận hành (Operator), vui lòng truy cập vào trang <strong>Chi Tiết Trạm</strong> tương ứng để quản lý thiết bị trực thuộc.
+            Trang Quản Trị Hạ Tầng Gateway & Thiết Bị chỉ dành cho <strong>Quản trị viên</strong> và <strong>Cán bộ vận hành đập</strong>.
           </p>
           <div className="flex justify-center gap-2 pt-2">
             <Link
               href="/dams"
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-card2 border border-border rounded-xl text-xs font-semibold text-tx no-underline hover:bg-white/5"
-            >
-              <span>Về Trang Đập</span>
-            </Link>
-            <Link
-              href="/stations"
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent text-white rounded-xl text-xs font-bold no-underline hover:bg-accent/90 shadow-glow"
             >
-              <span>Về Danh Sách Trạm</span>
+              <span>Về Trang Đập</span>
             </Link>
           </div>
         </div>
@@ -275,32 +273,42 @@ export default function GatewaysPage() {
             <div className="w-7 h-7 rounded-lg bg-accent/15 text-accent flex items-center justify-center">
               <Server className="w-4 h-4" />
             </div>
-            <h1 className="text-xl font-bold text-tx tracking-wide m-0">Quản Lý Hạ Tầng Gateway & Thiết Bị (Admin)</h1>
+            <h1 className="text-xl font-bold text-tx tracking-wide m-0">
+              {isOperator ? `Quản Lý Hạ Tầng Gateway & Thiết Bị (${assignedDamId || 'Đập phụ trách'})` : 'Quản Lý Hạ Tầng Gateway & Thiết Bị (Toàn Hệ Thống)'}
+            </h1>
             <span className="text-[9px] font-mono font-bold bg-accent/10 text-accent border border-accent/30 px-2 py-0.5 rounded-full">
-              READ & DELETE ONLY
+              {isAdmin ? 'ADMIN' : 'OPERATOR'}
             </span>
           </div>
           <p className="text-[10px] text-muted m-0">
-            Giám sát danh mục toàn bộ Gateways (Jetson TX2), Nodes (ESP32) và Camera AI trên toàn hệ thống. Để thêm hoặc cấu hình thiết bị, vui lòng vào trang Chi tiết Trạm tương ứng.
+            {isOperator
+              ? `Quản lý, giám sát và cấu hình các Gateway (Jetson TX2), Nodes (ESP32) và Camera AI thuộc đập ${assignedDamId || ''}.`
+              : 'Giám sát và quản trị toàn bộ danh mục Gateways (Jetson TX2), Nodes (ESP32) và Camera AI trên toàn hệ thống.'}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
-          <select
-            value={filterDamId}
-            onChange={(e) => {
-              setFilterDamId(e.target.value)
-              setFilterStationId('')
-            }}
-            className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] focus-visible:outline-none focus:border-accent shrink-0 cursor-pointer"
-          >
-            <option value="">Tất cả đập</option>
-            {dams.map((d) => (
-              <option key={d.damId} value={d.damId}>
-                {d.name}
-              </option>
-            ))}
-          </select>
+          {isAdmin ? (
+            <select
+              value={filterDamId}
+              onChange={(e) => {
+                setFilterDamId(e.target.value)
+                setFilterStationId('')
+              }}
+              className="h-9 bg-card2 border border-border rounded-lg px-3 text-tx text-[11px] focus-visible:outline-none focus:border-accent shrink-0 cursor-pointer"
+            >
+              <option value="">Tất cả đập</option>
+              {dams.map((d) => (
+                <option key={d.damId} value={d.damId}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="h-9 bg-card2 border border-border rounded-lg px-3 flex items-center text-tx text-[11px] font-bold font-mono text-accent shrink-0">
+              <span>Đập: {assignedDamId || 'Phụ trách'}</span>
+            </div>
+          )}
 
           <select
             value={filterStationId}

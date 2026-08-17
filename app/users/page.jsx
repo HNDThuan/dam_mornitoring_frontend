@@ -59,7 +59,7 @@ export default function UsersPage() {
 
   const handleApproveQuick = async (user) => {
     try {
-      await apiApproveUser(user.id, { role: user.role || 'OPERATOR', assignedDamId: user.assignedDamId || dams[0]?.damId, status: 'ACTIVE' }, token)
+      await apiApproveUser(user.id, { role: user.role || 'OPERATOR', assignedDamId: user.assignedDamId || undefined, status: 'ACTIVE' }, token)
       setActionSuccess(`Đã phê duyệt tài khoản "${user.username}" thành công!`)
       await loadData()
     } catch (err) {

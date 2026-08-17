@@ -23,10 +23,10 @@ export default function NavBar() {
   if (isAdmin || isOperator) {
     NAV.push({ href: '/alerts', label: t('nav.alerts'), icon: AlertTriangle, badge: unresolvedCount })
     NAV.push({ href: '/history', label: t('nav.history'), icon: Calendar, badge: 0 })
+    NAV.push({ href: '/admin/gateways', label: t('nav.gateways') || 'Gateway & Thiết bị', icon: Server, badge: 0 })
   }
 
   if (isAdmin) {
-    NAV.push({ href: '/admin/gateways', label: t('nav.gateways') || 'Gateway & Thiết bị', icon: Server, badge: 0 })
     NAV.push({ href: '/users', label: 'Quản lý User', icon: Users, badge: 0 })
     NAV.push({ href: '/admin/logs', label: 'Nhật ký Hệ thống', icon: FileText, badge: 0 })
   }

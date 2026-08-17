@@ -281,9 +281,19 @@ export default function AlertsPage() {
         <div className="overflow-y-auto">
           <div className="flex justify-between items-center mb-2.5">
             <Label className="mb-0">Cảnh báo gần đây</Label>
-            <Mono className="text-[9px] text-danger bg-danger-soft px-1.5 py-0.5 rounded-sm">
-              {unresolvedCount} CHƯA XỬ LÝ
-            </Mono>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => exportAlarmsToExcel(shown, selectedDam !== 'all' ? selectedDam : 'He_Thong')}
+                className="p-1 px-2 rounded-md bg-safe/10 border border-safe/30 text-safe text-[9px] font-bold flex items-center gap-1 hover:bg-safe/20 transition-colors cursor-pointer"
+                title="Xuất toàn bộ danh sách cảnh báo đang lọc ra Excel"
+              >
+                <FileSpreadsheet className="w-3 h-3 shrink-0" />
+                <span>Xuất Excel</span>
+              </button>
+              <Mono className="text-[9px] text-danger bg-danger-soft px-1.5 py-0.5 rounded-sm">
+                {unresolvedCount} CHƯA XỬ LÝ
+              </Mono>
+            </div>
           </div>
 
           {/* ── BỘ LỌC ĐẬP & TRẠM (DAM & STATION FILTERS) ── */}

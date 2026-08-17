@@ -174,7 +174,7 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
 
   // Load Data
   const loadData = useCallback(async (silent = false) => {
-    if (!stationId) return
+    if (!stationId || isViewer) return
     if (!silent) setLoading(true)
     setError(null)
     try {
@@ -532,6 +532,20 @@ export default function StationDevicesTab({ stationId, damId, stationName, onDat
   }
 
   // ── RENDER ──
+  if (isViewer) {
+    return (
+      <div className="p-8 text-center bg-card border border-border rounded-xl space-y-3 shadow-panel">
+        <div className="w-12 h-12 rounded-full bg-danger/10 text-danger flex items-center justify-center mx-auto border border-danger/30">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-sm font-bold text-tx">Truy cập bị giới hạn</h3>
+        <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
+          Tài khoản Người xem (Viewer) hoặc Khách chưa đăng nhập không có quyền truy cập vào cấu hình phần cứng và danh sách thiết bị.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {/* Toast */}
