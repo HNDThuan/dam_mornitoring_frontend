@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useDamData } from '@/hooks/useDamData'
@@ -16,6 +16,7 @@ import {
   Trash2,
   RefreshCw,
   Search,
+  ChevronLeft,
   ChevronRight,
   AlertTriangle,
   Database,
@@ -54,6 +55,11 @@ export default function DamDetailPage() {
   const { isAdmin, isOperator, isViewer, assignedDamId } = useAuth()
 
   const [search, setSearch] = useState('')
+  const [activeTab, setActiveTab] = useState('map') // 'map' | 'stations'
+  const tabBtnClass = (active) =>
+    `flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider cursor-pointer border-none transition-colors ${
+      active ? 'bg-accent/15 text-accent' : 'bg-transparent text-muted hover:text-tx hover:bg-white/5'
+    }`
 
   // Real-time Socket.IO live updating for station sensors
   const [liveStationMap, setLiveStationMap] = useState({})
@@ -124,11 +130,34 @@ export default function DamDetailPage() {
   const damStatus = getStatus(dam.status)
 
   // Filter stations for this dam
-  const damStations = stations.filter(st => {
-    const isThisDam = st.damId === damId
-    const matchesSearch = !search || st.name.toLowerCase().includes(search.toLowerCase()) || (st.location && st.location.toLowerCase().includes(search.toLowerCase()))
-    return isThisDam && matchesSearch
-  })
+  const damStations = useMemo(() => {
+    return stations.filter(st => {
+      const isThisDam = st.damId === damId
+      const matchesSearch = !search || st.name.toLowerCase().includes(search.toLowerCase()) || (st.location && st.location.toLowerCase().includes(search.toLowerCase()))
+      return isThisDam && matchesSearch
+    })
+  }, [stations, damId, search])
+
+  // Station Pagination state & calculation
+  const [stationPage, setStationPage] = useState(1)
+  const STATIONS_PER_PAGE = 6
+
+  // Reset page when search or damId changes
+  useEffect(() => {
+    setStationPage(1)
+  }, [search, damId])
+
+  const totalStationPages = Math.ceil(damStations.length / STATIONS_PER_PAGE) || 1
+
+  // Clamp current page if needed
+  useEffect(() => {
+    setStationPage(p => Math.min(p, totalStationPages))
+  }, [totalStationPages])
+
+  const paginatedStations = useMemo(() => {
+    const start = (stationPage - 1) * STATIONS_PER_PAGE
+    return damStations.slice(start, start + STATIONS_PER_PAGE)
+  }, [damStations, stationPage])
 
   // Dam Handlers
   const [damEditErrors, setDamEditErrors] = useState({})
@@ -449,232 +478,338 @@ export default function DamDetailPage() {
         </div>
       </div>
 
-      {/* Top Header Actions for Stations */}
-      <div className="flex justify-between items-center bg-card border border-border rounded-xl p-4 shadow-panel">
-        <div className="flex items-center gap-2">
-          <Radio className="w-4 h-4 text-sky-400" />
-          <h2 className="text-sm font-bold text-tx m-0 tracking-wide uppercase">
-            {t('damDetail.title', { name: dam.name })} ({damStations.length})
-          </h2>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Search */}
-          <div className="flex items-center gap-1.5 bg-card2 border border-border rounded-lg px-3 py-1.5 w-56 focus-within:border-accent transition-colors">
-            <Search className="w-3.5 h-3.5 text-muted shrink-0" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={t('damDetail.searchStation')}
-              className="bg-transparent border-none outline-none text-tx text-[11px] w-full placeholder:text-muted"
-            />
+      {/* ── TABBED SECTION: BẢN ĐỒ / TRẠM QUAN TRẮC ── */}
+      <div className="bg-card border border-border rounded-xl shadow-panel overflow-hidden flex flex-col">
+        {/* Tab Header Bar */}
+        <div className="flex flex-wrap items-center justify-between px-4 py-2.5 bg-card2/70 border-b border-border/70 gap-2 shrink-0">
+          <div className="flex items-center gap-1.5" role="tablist">
+            <button
+              role="tab"
+              aria-selected={activeTab === 'map'}
+              onClick={() => setActiveTab('map')}
+              className={tabBtnClass(activeTab === 'map')}
+            >
+              <MapIcon className="w-3.5 h-3.5" />
+              <span>Bản đồ</span>
+            </button>
+            <button
+              role="tab"
+              aria-selected={activeTab === 'stations'}
+              onClick={() => setActiveTab('stations')}
+              className={tabBtnClass(activeTab === 'stations')}
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>Trạm quan trắc</span>
+              <span
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full border font-bold ${
+                  activeTab === 'stations'
+                    ? 'bg-accent/20 border-accent/40 text-accent'
+                    : 'bg-card border-border text-muted'
+                }`}
+              >
+                {damStations.length}
+              </span>
+            </button>
           </div>
 
-          <button
-            onClick={() => refetch()}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-muted text-[11px] font-medium bg-card2 hover:bg-white/5 transition-colors cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>{t('stationsPage.refresh')}</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeTab === 'map' ? (
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-safe/10 border border-safe/20 mr-1">
+                <LiveDot active />
+                <span className="text-[9px] font-mono text-safe font-bold">LIVE</span>
+              </span>
+            ) : (
+              <>
+                {/* Search box inside stations tab */}
+                <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg px-2.5 py-1.5 w-48 sm:w-56 focus-within:border-accent transition-colors">
+                  <Search className="w-3.5 h-3.5 text-muted shrink-0" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder={t('damDetail.searchStation')}
+                    className="bg-transparent border-none outline-none text-tx text-[11px] w-full placeholder:text-muted"
+                  />
+                </div>
 
-          {!isViewer && (
+                {/* ── HEADER / TOP PAGINATION CONTROLS (ĐẦU DANH SÁCH) ── */}
+                {totalStationPages > 1 && (
+                  <div className="flex items-center gap-1 bg-card px-1.5 py-1 rounded-lg border border-border/80 text-[10px]">
+                    <button
+                      disabled={stationPage === 1}
+                      onClick={() => setStationPage((p) => Math.max(p - 1, 1))}
+                      className="p-1 text-muted hover:text-tx disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer bg-transparent border-none flex items-center"
+                      title="Trang trước"
+                    >
+                      <ChevronLeft className="w-3 h-3" />
+                    </button>
+                    <span className="font-mono font-bold text-tx px-1">
+                      {stationPage} / {totalStationPages}
+                    </span>
+                    <button
+                      disabled={stationPage >= totalStationPages}
+                      onClick={() => setStationPage((p) => Math.min(p + 1, totalStationPages))}
+                      className="p-1 text-muted hover:text-tx disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer bg-transparent border-none flex items-center"
+                      title="Trang sau"
+                    >
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
             <button
-              onClick={openCreateStationModal}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent/90 rounded-md text-white text-[11px] font-bold cursor-pointer border-none transition-colors"
+              onClick={() => refetch()}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-border rounded-lg text-tx text-[11px] font-semibold bg-card hover:bg-white/5 transition-colors cursor-pointer"
+              title={t('stationsPage.refresh')}
             >
-              <Plus className="w-4 h-4" />
-              <span>{t('damDetail.addStation')}</span>
+              <RefreshCw className="w-3.5 h-3.5 text-accent" />
+              <span>{t('stationsPage.refresh')}</span>
             </button>
-          )}
-        </div>
-      </div>
 
-      {/* ── INTERACTIVE LEAFLET GIS MAP ── */}
-      <Panel
-        title={
-          <span className="flex items-center gap-1.5">
-            <MapIcon className="w-3 h-3" /> Bản đồ giám sát
-          </span>
-        }
-        right={<span className="flex items-center gap-1.5"><LiveDot active /><span className="text-[10px] font-mono text-safe font-bold">LIVE</span></span>}
-        bodyClassName="p-0"
-        className="[&_.leaflet-container]:rounded-b-xl"
-      >
-        <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.damId} height="320px" />
-      </Panel>
-
-      {/* Stations Grid */}
-      {damStations.length > 0 ? (
-        <div className="grid grid-cols-3 gap-3.5">
-          {damStations.map(st => {
-            const gateways = st.gateways || []
-            const allNodes = gateways.flatMap(g => g.nodes || [])
-            const hasNodes = allNodes.length > 0
-            const onlineNodes = allNodes.filter(n => n.status === 'online')
-
-            const live = liveStationMap[st.stationId] || {}
-            const isLiveStreamActive = Boolean(live.timestamp) && hasNodes
-
-            let isConnected = false
-            let connectionStatusLabel = 'CHƯA GẮN SENSOR NODE'
-            let connectionStatusColor = 'text-muted'
-
-            if (isLiveStreamActive || onlineNodes.length > 0) {
-              isConnected = true
-              connectionStatusLabel = 'SENSOR NODE ONLINE'
-              connectionStatusColor = 'text-safe'
-            } else if (hasNodes) {
-              isConnected = false
-              connectionStatusLabel = 'MẤT KẾT NỐI (OFFLINE)'
-              connectionStatusColor = 'text-danger'
-            }
-
-            const effectiveStatus = hasNodes ? (st.status || 'unknown') : 'unknown'
-            const effectiveStatusReason = hasNodes 
-              ? (st.statusReason || '') 
-              : (st.status === 'unknown' && st.statusReason ? st.statusReason : 'Chưa gắn Sensor Node vào trạm')
-            const stS = getStatus(effectiveStatus)
-
-            const currentWater = hasNodes && (isLiveStreamActive || isConnected || st.waterLevel > 0) ? (live.waterLevel ?? st.waterLevel ?? 0) : null
-            const currentHumidity = hasNodes && (isLiveStreamActive || isConnected || st.humidity > 0) ? (live.humidity ?? st.humidity ?? 0) : null
-            const currentVibration = hasNodes && (isLiveStreamActive || isConnected || st.vibration > 0) ? (live.vibration ?? st.vibration ?? null) : null
-
-            const isWaterBreached = effectiveStatusReason?.toLowerCase().includes('mực nước')
-            const isHumidBreached = effectiveStatusReason?.toLowerCase().includes('độ ẩm')
-            const isVibBreached = effectiveStatusReason?.toLowerCase().includes('độ rung')
-
-            return (
-              <div
-                key={st.stationId}
-                className={`bg-card border border-border border-t-2 ${stS.topBorder} rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-panel hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150`}
+            {!isViewer && (
+              <button
+                onClick={openCreateStationModal}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 bg-accent hover:bg-accent/90 rounded-md text-white text-[11px] font-bold cursor-pointer border-none transition-colors"
               >
-                <div>
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="text-[13px] font-bold text-tx flex items-center gap-2">
-                        <span>{st.name}</span>
-                        {isLiveStreamActive && (
-                          <span className="px-1.5 py-0.5 bg-safe/10 border border-safe/30 text-safe text-[8px] font-mono rounded font-bold animate-pulse">
-                            ● LIVE
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5 font-mono">
-                        <MapPin className="w-3 h-3 text-muted shrink-0" />
-                        <span>
-                          {st.latitude != null && st.longitude != null
-                            ? `${st.latitude}°N, ${st.longitude}°E`
-                            : (st.location || 'Chưa có tọa độ')}
-                        </span>
-                      </div>
-                    </div>
-                    <Badge status={effectiveStatus} sm title={effectiveStatusReason} />
-                  </div>
+                <Plus className="w-3.5 h-3.5" />
+                <span>{t('damDetail.addStation')}</span>
+              </button>
+            )}
+          </div>
+        </div>
 
-                  <div className="text-[10px] text-muted mb-2 flex items-center justify-between">
-                    <div><span>{st.river || 'Tuyến sông'}</span> • <Mono className="text-tx">{st.km || 'K0+000'}</Mono></div>
-                    {live.timestamp && hasNodes && (
-                      <Mono className="text-[8px] text-sky-400 font-bold">
-                        {new Date(live.timestamp).toLocaleTimeString('vi-VN')}
-                      </Mono>
-                    )}
-                  </div>
+        {/* Tab Content */}
+        {activeTab === 'map' ? (
+          <div className="w-full relative [&_.leaflet-container]:rounded-b-xl overflow-hidden min-h-[480px]">
+            <DamMap dams={[dam]} stations={damStations} selectedDamId={dam.damId} height="520px" />
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            <div className="p-4">
+              {damStations.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {paginatedStations.map(st => {
+                    const gateways = st.gateways || []
+                    const allNodes = gateways.flatMap(g => g.nodes || [])
+                    const hasNodes = allNodes.length > 0
+                    const onlineNodes = allNodes.filter(n => n.status === 'online')
 
-                  {/* Trạng thái kết nối thực tế của Sensor Node ở Trạm này */}
-                  <div className="flex items-center justify-between py-1.5 px-2 bg-card2/80 rounded-md border border-border/40 text-[9px] mb-2">
-                    <span className="text-muted text-[8px] uppercase tracking-wider font-semibold">Sensor Node:</span>
-                    <div className="flex items-center gap-2 font-mono">
-                      <span className={`inline-flex items-center gap-1.5 text-[9px] font-bold ${connectionStatusColor}`}>
-                        <LiveDot active={isConnected} size="sm" pulse={isConnected} />
-                        <span>{connectionStatusLabel}</span>
-                      </span>
-                    </div>
-                  </div>
+                    const live = liveStationMap[st.stationId] || {}
+                    const isLiveStreamActive = Boolean(live.timestamp) && hasNodes
 
-                  {/* Dòng hiển thị nguyên nhân trạng thái an toàn */}
-                  {effectiveStatusReason && (
-                    <div className={`text-[9px] px-2 py-1 rounded-md border flex items-start gap-1 mb-2 font-mono ${
-                      effectiveStatus === 'safe'
-                        ? 'bg-safe/5 text-safe/90 border-safe/20'
-                        : effectiveStatus === 'unknown'
-                          ? 'bg-card2/70 text-muted border-border/40'
-                          : 'bg-danger/10 text-danger border-danger/30 font-semibold'
-                    }`}>
-                      <span className="shrink-0">ⓘ</span>
-                      <span className="leading-tight">{effectiveStatusReason}</span>
-                    </div>
-                  )}
+                    let isConnected = false
+                    let connectionStatusLabel = 'CHƯA GẮN SENSOR NODE'
+                    let connectionStatusColor = 'text-muted'
 
-                  {/* Dữ liệu thu được từ Cảm biến Mực nước, Độ ẩm, Độ rung */}
-                  <div className="grid grid-cols-3 gap-1 bg-card2 p-2.5 rounded-lg text-[10px] my-2 border border-border/40">
-                    <div className={`p-1 rounded ${isWaterBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
-                      <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
-                        <Activity className="w-2.5 h-2.5 text-sky-400" />
-                        <span>Mực nước</span>
+                    if (isLiveStreamActive || onlineNodes.length > 0) {
+                      isConnected = true
+                      connectionStatusLabel = 'SENSOR NODE ONLINE'
+                      connectionStatusColor = 'text-safe'
+                    } else if (hasNodes) {
+                      isConnected = false
+                      connectionStatusLabel = 'MẤT KẾT NỐI (OFFLINE)'
+                      connectionStatusColor = 'text-danger'
+                    }
+
+                    const effectiveStatus = hasNodes ? (st.status || 'unknown') : 'unknown'
+                    const effectiveStatusReason = hasNodes 
+                      ? (st.statusReason || '') 
+                      : (st.status === 'unknown' && st.statusReason ? st.statusReason : 'Chưa gắn Sensor Node vào trạm')
+                    const stS = getStatus(effectiveStatus)
+
+                    const currentWater = hasNodes && (isLiveStreamActive || isConnected || st.waterLevel > 0) ? (live.waterLevel ?? st.waterLevel ?? 0) : null
+                    const currentHumidity = hasNodes && (isLiveStreamActive || isConnected || st.humidity > 0) ? (live.humidity ?? st.humidity ?? 0) : null
+                    const currentVibration = hasNodes && (isLiveStreamActive || isConnected || st.vibration > 0) ? (live.vibration ?? st.vibration ?? null) : null
+
+                    const isWaterBreached = effectiveStatusReason?.toLowerCase().includes('mực nước')
+                    const isHumidBreached = effectiveStatusReason?.toLowerCase().includes('độ ẩm')
+                    const isVibBreached = effectiveStatusReason?.toLowerCase().includes('độ rung')
+
+                    return (
+                      <div
+                        key={st.stationId}
+                        className={`bg-card2 border border-border border-t-2 ${stS.topBorder} rounded-xl p-4 flex flex-col justify-between space-y-3 shadow-panel hover:-translate-y-0.5 hover:border-borderHi transition-all duration-150`}
+                      >
+                        <div>
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="text-[13px] font-bold text-tx flex items-center gap-2">
+                                <span>{st.name}</span>
+                                {isLiveStreamActive && (
+                                  <span className="px-1.5 py-0.5 bg-safe/10 border border-safe/30 text-safe text-[8px] font-mono rounded font-bold animate-pulse">
+                                    ● LIVE
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[9px] text-muted flex items-center gap-1 mt-0.5 font-mono">
+                                <MapPin className="w-3 h-3 text-muted shrink-0" />
+                                <span>
+                                  {st.latitude != null && st.longitude != null
+                                    ? `${st.latitude}°N, ${st.longitude}°E`
+                                    : (st.location || 'Chưa có tọa độ')}
+                                </span>
+                              </div>
+                            </div>
+                            <Badge status={effectiveStatus} sm title={effectiveStatusReason} />
+                          </div>
+
+                          <div className="text-[10px] text-muted mb-2 flex items-center justify-between">
+                            <div><span>{st.river || 'Tuyến sông'}</span> • <Mono className="text-tx">{st.km || 'K0+000'}</Mono></div>
+                            {live.timestamp && hasNodes && (
+                              <Mono className="text-[8px] text-sky-400 font-bold">
+                                {new Date(live.timestamp).toLocaleTimeString('vi-VN')}
+                              </Mono>
+                            )}
+                          </div>
+
+                          {/* Trạng thái kết nối thực tế của Sensor Node ở Trạm này */}
+                          <div className="flex items-center justify-between py-1.5 px-2 bg-card rounded-md border border-border/40 text-[9px] mb-2">
+                            <span className="text-muted text-[8px] uppercase tracking-wider font-semibold">Sensor Node:</span>
+                            <div className="flex items-center gap-2 font-mono">
+                              <span className={`inline-flex items-center gap-1.5 text-[9px] font-bold ${connectionStatusColor}`}>
+                                <LiveDot active={isConnected} size="sm" pulse={isConnected} />
+                                <span>{connectionStatusLabel}</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Dòng hiển thị nguyên nhân trạng thái an toàn */}
+                          {effectiveStatusReason && (
+                            <div className={`text-[9px] px-2 py-1 rounded-md border flex items-start gap-1 mb-2 font-mono ${
+                              effectiveStatus === 'safe'
+                                ? 'bg-safe/5 text-safe/90 border-safe/20'
+                                : effectiveStatus === 'unknown'
+                                  ? 'bg-card text-muted border-border/40'
+                                  : 'bg-danger/10 text-danger border-danger/30 font-semibold'
+                            }`}>
+                              <span className="shrink-0">ⓘ</span>
+                              <span className="leading-tight">{effectiveStatusReason}</span>
+                            </div>
+                          )}
+
+                          {/* Dữ liệu thu được từ Cảm biến Mực nước, Độ ẩm, Độ rung */}
+                          <div className="grid grid-cols-3 gap-1 bg-card p-2.5 rounded-lg text-[10px] my-2 border border-border/40">
+                            <div className={`p-1 rounded ${isWaterBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
+                              <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
+                                <Activity className="w-2.5 h-2.5 text-sky-400" />
+                                <span>Mực nước</span>
+                              </div>
+                              <Mono className={`font-bold ${isWaterBreached ? 'text-danger' : currentWater != null ? stS.text : 'text-muted'}`}>
+                                {currentWater != null ? `${currentWater} m` : '--'}
+                              </Mono>
+                            </div>
+                            <div className={`p-1 rounded ${isHumidBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
+                              <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
+                                <Droplet className="w-2.5 h-2.5 text-indigo-400" />
+                                <span>Độ ẩm</span>
+                              </div>
+                              <Mono className={`font-bold ${isHumidBreached ? 'text-danger' : currentHumidity != null ? 'text-tx' : 'text-muted'}`}>
+                                {currentHumidity != null ? `${currentHumidity}%` : '--'}
+                              </Mono>
+                            </div>
+                            <div className={`p-1 rounded ${isVibBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
+                              <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
+                                <Radio className="w-2.5 h-2.5 text-emerald-400" />
+                                <span>Độ rung</span>
+                              </div>
+                              <Mono className={`font-bold ${currentVibration != null ? 'text-tx' : 'text-muted'}`}>
+                                {currentVibration != null && currentVibration > 0 ? `${currentVibration} mm/s` : '--'}
+                              </Mono>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-2.5 border-t border-border/40">
+                          <Link
+                            href={`/stations/${st.stationId}`}
+                            className="inline-flex items-center gap-1.5 text-[10px] font-bold text-accent hover:underline no-underline"
+                          >
+                            <span>{t('damsPage.stationDetail')}</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </Link>
+
+                          {!isViewer && (
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => openEditStationModal(st)}
+                                className="p-1.5 bg-card border border-border rounded-lg text-accent hover:border-accent cursor-pointer transition-colors"
+                                title={t('damsPage.editStation')}
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm({ id: st.stationId, name: st.name })}
+                                className="p-1.5 bg-card border border-border rounded-lg text-danger hover:border-danger cursor-pointer transition-colors"
+                                title="Xóa Trạm"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <Mono className={`font-bold ${isWaterBreached ? 'text-danger' : currentWater != null ? stS.text : 'text-muted'}`}>
-                        {currentWater != null ? `${currentWater} m` : '--'}
-                      </Mono>
-                    </div>
-                    <div className={`p-1 rounded ${isHumidBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
-                      <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
-                        <Droplet className="w-2.5 h-2.5 text-indigo-400" />
-                        <span>Độ ẩm</span>
-                      </div>
-                      <Mono className={`font-bold ${isHumidBreached ? 'text-danger' : currentHumidity != null ? 'text-tx' : 'text-muted'}`}>
-                        {currentHumidity != null ? `${currentHumidity}%` : '--'}
-                      </Mono>
-                    </div>
-                    <div className={`p-1 rounded ${isVibBreached ? 'bg-danger/10 border border-danger/40' : ''}`}>
-                      <div className="text-[7px] text-muted uppercase flex items-center gap-0.5 mb-0.5">
-                        <Radio className="w-2.5 h-2.5 text-emerald-400" />
-                        <span>Độ rung</span>
-                      </div>
-                      <Mono className={`font-bold ${currentVibration != null ? 'text-tx' : 'text-muted'}`}>
-                        {currentVibration != null && currentVibration > 0 ? `${currentVibration} mm/s` : '--'}
-                      </Mono>
-                    </div>
-                  </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-card2/50 border border-border rounded-xl text-muted text-xs shadow-sm">
+                  {search ? 'Không tìm thấy trạm quan trắc nào phù hợp với từ khóa tìm kiếm.' : t('damDetail.noStations')}
+                </div>
+              )}
+            </div>
+
+            {/* ── FOOTER / BOTTOM PAGINATION CONTROLS (CUỐI DANH SÁCH) ── */}
+            {damStations.length > 0 && (
+              <div className="px-4 py-2.5 bg-card2/50 border-t border-border/70 flex flex-wrap items-center justify-between gap-2 shrink-0 text-xs rounded-b-xl">
+                <div className="text-muted font-mono text-[11px]">
+                  Hiển thị <strong className="text-tx">{(stationPage - 1) * STATIONS_PER_PAGE + 1}</strong> -{' '}
+                  <strong className="text-tx">{Math.min(stationPage * STATIONS_PER_PAGE, damStations.length)}</strong>{' '}
+                  / <strong className="text-accent">{damStations.length}</strong> trạm
                 </div>
 
-                <div className="flex justify-between items-center pt-2.5 border-t border-border/40">
-                  <Link
-                    href={`/stations/${st.stationId}`}
-                    className="inline-flex items-center gap-1.5 text-[10px] font-bold text-accent hover:underline no-underline"
-                  >
-                    <span>{t('damsPage.stationDetail')}</span>
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </Link>
+                {totalStationPages > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={stationPage === 1}
+                      onClick={() => setStationPage((p) => Math.max(p - 1, 1))}
+                      className="p-1 px-2.5 rounded-md border border-border text-tx bg-card hover:bg-card2 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                      <span>Trước</span>
+                    </button>
 
-                  {!isViewer && (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => openEditStationModal(st)}
-                        className="p-1.5 bg-card2 border border-border rounded-lg text-accent hover:border-accent cursor-pointer transition-colors"
-                        title={t('damsPage.editStation')}
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeleteConfirm({ id: st.stationId, name: st.name })}
-                        className="p-1.5 bg-card2 border border-border rounded-lg text-danger hover:border-danger cursor-pointer transition-colors"
-                        title="Xóa Trạm"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                    <div className="flex items-center gap-1 px-1">
+                      {Array.from({ length: totalStationPages }, (_, i) => i + 1).map((pageNum) => (
+                        <button
+                          key={pageNum}
+                          onClick={() => setStationPage(pageNum)}
+                          className={`w-6 h-6 rounded-md text-[11px] font-mono font-bold transition-all cursor-pointer border ${
+                            stationPage === pageNum
+                              ? 'bg-accent text-white border-accent shadow-sm'
+                              : 'bg-card border-border text-muted hover:text-tx hover:border-border/80'
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                </div>
+
+                    <button
+                      disabled={stationPage >= totalStationPages}
+                      onClick={() => setStationPage((p) => Math.min(p + 1, totalStationPages))}
+                      className="p-1 px-2.5 rounded-md border border-border text-tx bg-card hover:bg-card2 disabled:opacity-40 disabled:cursor-not-allowed text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <span>Sau</span>
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
               </div>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="text-center py-12 bg-card border border-border rounded-xl text-muted text-xs shadow-panel">
-          {t('damDetail.noStations')}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── TOAST NOTIFICATION ── */}
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -977,19 +1112,19 @@ export default function DamDetailPage() {
                 <span>Xem trước thẻ đập (Live Preview):</span>
                 <span className="text-accent text-[9px] font-mono">Tự động cập nhật</span>
               </div>
-              <div className="bg-card2 border border-border border-l-4 border-l-safe rounded-xl p-3 shadow-panel">
-                <div className="flex justify-between items-start mb-1.5">
-                  <div className="min-w-0 pr-2">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="font-mono text-[9px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+              <div className="bg-card2 border border-border border-l-4 border-l-safe rounded-xl p-4 shadow-panel">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className="font-mono text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20 font-bold shrink-0">
                         {dam.damId}
                       </span>
-                      <h4 className="text-sm font-bold text-tx truncate m-0">
+                      <h4 className="text-base font-bold text-tx m-0 leading-tight">
                         {damForm.name || dam.name}
                       </h4>
                     </div>
-                    <div className="text-[9px] text-muted flex items-center gap-1 font-mono">
-                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                    <div className="text-[10px] text-muted flex items-center gap-1 font-mono">
+                      <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
                       <span className="truncate">
                         {damForm.latitude && damForm.longitude
                           ? `${Number(damForm.latitude).toFixed(4)}°N, ${Number(damForm.longitude).toFixed(4)}°E`

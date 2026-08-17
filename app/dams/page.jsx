@@ -502,21 +502,21 @@ export default function DamsPage() {
                     key={dam.damId}
                     data-dam-card
                     onClick={() => router.push(`/dams/${dam.damId}`)}
-                    className={`bg-card2 border border-border border-l-4 ${s.leftBorder} rounded-xl p-2.5 cursor-pointer hover:border-accent/60 hover:-translate-y-0.5 transition-all duration-150 shadow-sm hover:shadow-md group flex flex-col justify-between`}
+                    className={`bg-card2 border border-border border-l-4 ${s.leftBorder} rounded-xl p-3 cursor-pointer hover:border-accent/60 hover:-translate-y-0.5 transition-all duration-150 shadow-sm hover:shadow-md group flex flex-col justify-between`}
                   >
                     <div>
-                      <div className="flex justify-between items-start mb-1">
-                        <div className="min-w-0 flex-1 mr-1">
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            <span className="font-mono text-[9px] text-accent bg-accent/10 px-1.5 py-0.2 rounded border border-accent/20 font-bold shrink-0">
+                      <div className="flex justify-between items-start mb-1.5">
+                        <div className="min-w-0 flex-1 mr-1.5">
+                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                            <span className="font-mono text-[9px] text-accent bg-accent/10 px-1.5 py-0.5 rounded border border-accent/20 font-bold shrink-0">
                               {dam.damId}
                             </span>
-                            <h2 className="text-xs font-bold text-tx group-hover:text-accent transition-colors m-0 truncate" title={dam.name}>
+                            <h2 className="text-sm font-bold text-tx group-hover:text-accent transition-colors m-0 leading-snug" title={dam.name}>
                               {dam.name}
                             </h2>
                           </div>
-                          <div className="text-[9px] text-muted flex items-center gap-1 font-mono truncate">
-                            <MapPin className="w-2.5 h-2.5 text-muted shrink-0" />
+                          <div className="text-[10px] text-muted flex items-center gap-1 font-mono truncate">
+                            <MapPin className="w-3 h-3 text-muted shrink-0" />
                             <span className="truncate">
                               {dam.latitude != null && dam.longitude != null
                                 ? `${dam.latitude}°N, ${dam.longitude}°E`
@@ -532,7 +532,7 @@ export default function DamsPage() {
                             <div className="flex items-center gap-1 ml-0.5" onClick={(e) => e.stopPropagation()}>
                               <button
                                 onClick={(e) => openEditDamModal(dam, e)}
-                                className="p-1 bg-card border border-border rounded text-accent hover:border-accent transition-colors cursor-pointer"
+                                className="p-1.5 bg-card border border-border rounded text-accent hover:border-accent transition-colors cursor-pointer"
                                 title={t('damsPage.editDam')}
                               >
                                 <Pencil className="w-3 h-3" />
@@ -543,7 +543,7 @@ export default function DamsPage() {
                                   e.stopPropagation()
                                   setDeleteConfirm({ id: dam.damId, name: dam.name })
                                 }}
-                                className="p-1 bg-card border border-border rounded text-danger hover:border-danger transition-colors cursor-pointer"
+                                className="p-1.5 bg-card border border-border rounded text-danger hover:border-danger transition-colors cursor-pointer"
                                 title="Xóa Đập"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -771,19 +771,19 @@ export default function DamsPage() {
                 <span>Xem trước thẻ đập (Live Preview):</span>
                 <span className="text-accent text-[9px] font-mono">Tự động cập nhật</span>
               </div>
-              <div className="bg-card2 border border-border border-l-4 border-l-safe rounded-xl p-3 shadow-panel">
-                <div className="flex justify-between items-start mb-1.5">
-                  <div className="min-w-0 pr-2">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <span className="font-mono text-[9px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
+              <div className="bg-card2 border border-border border-l-4 border-l-safe rounded-xl p-4 shadow-panel">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="min-w-0 flex-1 pr-2">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <span className="font-mono text-[10px] text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20 font-bold shrink-0">
                         {editingDam ? damForm.id : 'MÃ TỰ ĐỘNG'}
                       </span>
-                      <h4 className="text-sm font-bold text-tx truncate m-0">
+                      <h4 className="text-base font-bold text-tx m-0 leading-tight">
                         {damForm.name || 'Tên Đập Thủy Điện'}
                       </h4>
                     </div>
-                    <div className="text-[9px] text-muted flex items-center gap-1 font-mono">
-                      <MapPin className="w-3 h-3 text-muted shrink-0" />
+                    <div className="text-[10px] text-muted flex items-center gap-1 font-mono">
+                      <MapPin className="w-3.5 h-3.5 text-muted shrink-0" />
                       <span className="truncate">
                         {damForm.latitude && damForm.longitude
                           ? `${Number(damForm.latitude).toFixed(4)}°N, ${Number(damForm.longitude).toFixed(4)}°E`

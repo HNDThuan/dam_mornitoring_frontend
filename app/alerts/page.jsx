@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { useAlarmData } from '@/hooks/useAlarmData'
 import { useDamData } from '@/hooks/useDamData'
 import { useAuth } from '@/context/AuthContext'
@@ -10,7 +11,7 @@ import { getStatusBySeverity } from '@/lib/statusConfig'
 import { SEVERITY_MAP, SENSOR_TYPE_LABELS, SENSOR_TYPE_UNITS, timeAgo, formatTime } from '@/lib/sensorHelpers'
 import { Mono, Badge, Divider, Label, Card } from '@/components/ui'
 import { Field, TextInput, Textarea, Button } from '@/components/form'
-import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio, FileSpreadsheet, Mail } from 'lucide-react'
+import { AlertTriangle, Check, CheckCircle2, Printer, Video, Maximize2, Camera, Bell, Shield, Send, X, Calendar, Clock, Fingerprint, MapPin, Database, Radio, FileSpreadsheet, Mail, ExternalLink, ArrowRight } from 'lucide-react'
 
 export default function AlertsPage() {
   const { user, isOperator, isViewer, assignedDamId } = useAuth()
@@ -47,17 +48,21 @@ export default function AlertsPage() {
 
   // Helper tra cứu vị trí Trạm & Đập
   const getLocationInfo = (alarm) => {
-    if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', river: '', km: '', fullLocation: '' }
+    if (!alarm) return { damName: 'Đập Thủy Điện', damLocation: 'Hà Nội', stationName: 'Trạm Quan Trắc', stationLoc: 'K25+500', river: '', km: '', fullLocation: '', stationId: '', damId: '' }
 
     const station = stations.find(s =>
       (alarm.stationId && s.stationId === alarm.stationId) ||
+      (alarm.stationCode && s.stationCode === alarm.stationCode) ||
+      (alarm.stationId && String(s.id) === String(alarm.stationId)) ||
       s.stationId === alarm.sensorId
     ) || stations.find(s => s.damId === alarm.damId) || stations[0]
 
     const dam = dams.find(d => d.damId === alarm.damId) || dams.find(d => d.damId === station?.damId) || dams[0]
+    const damId = alarm.damId || dam?.damId || 'dam_1'
     const damName = alarm.damName || dam?.name || `Đập ${alarm.damId || 'Thủy Điện'}`
     const damLocation = dam?.location || 'Việt Nam'
 
+    const stationId = station?.stationId || alarm.stationId || alarm.stationCode || (stations[0]?.stationId) || ''
     const stationName = alarm.stationName || station?.name || `Trạm ${alarm.stationId || alarm.sensorId || 'Quan Trắc'}`
     const stationLoc = alarm.location || station?.location || 'Thân đập chính'
     const river = station?.river || ''
@@ -67,7 +72,7 @@ export default function AlertsPage() {
     const locDesc = riverKm ? `${stationLoc} — ${riverKm}` : stationLoc
     const fullLocation = `${stationName} (${locDesc}) thuộc ${damName} (${damLocation})`
 
-    return { damName, damLocation, stationName, stationLoc, river, km, fullLocation }
+    return { station, dam, stationId, damId, damName, damLocation, stationName, stationLoc, river, km, fullLocation }
   }
 
   const addEmailContact = () => {
@@ -405,13 +410,26 @@ export default function AlertsPage() {
 
                   {/* Vị trí Trạm & Đập */}
                   <div className="text-[10px] text-muted space-y-0.5 my-1 bg-card2 p-1.5 rounded border border-border/40">
-                    <div className="flex items-center gap-1 text-tx font-medium">
-                      <Radio className="w-3 h-3 text-sky-400 shrink-0" />
-                      <span>{loc.stationName} ({loc.stationLoc})</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <div className="flex items-center gap-1 text-tx font-medium truncate">
+                        <Radio className="w-3 h-3 text-sky-400 shrink-0" />
+                        <span className="truncate">{loc.stationName} ({loc.stationLoc})</span>
+                      </div>
+                      {loc.stationId && (
+                        <Link
+                          href={`/stations/${loc.stationId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-[9px] text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-0.5 hover:underline shrink-0 px-1.5 py-0.5 rounded bg-sky-500/10 border border-sky-500/20 transition-colors"
+                          title="Xem chi tiết tại trạm này"
+                        >
+                          <span>Trạm</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </Link>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1 text-muted">
+                    <div className="flex items-center gap-1 text-muted truncate">
                       <Database className="w-3 h-3 text-indigo-400 shrink-0" />
-                      <span>{loc.damName} ({loc.damLocation})</span>
+                      <span className="truncate">{loc.damName} ({loc.damLocation})</span>
                     </div>
                   </div>
 
@@ -461,7 +479,8 @@ export default function AlertsPage() {
                     <span className="flex items-center gap-1"><Fingerprint className="w-3.5 h-3.5 text-muted shrink-0" /> ID: {sel.id || sel.sensorId}</span>
                   </Mono>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
+
                   {!sel.resolvedAt && (
                     <button onClick={() => resolveAlarm(sel.id)}
                       className="px-3 py-1.5 border border-safe/40 rounded-lg bg-safe/10 text-safe text-[11px] font-bold cursor-pointer hover:bg-safe/20 transition-colors flex items-center gap-1">
@@ -501,33 +520,58 @@ export default function AlertsPage() {
 
                 <div className="grid grid-cols-2 gap-3 pt-1">
                   {/* Đập thủy điện */}
-                  <Card className="p-3 flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent border border-accent/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <Database className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted uppercase font-semibold">Đập Thủy Điện</div>
-                      <div className="text-[13px] font-bold text-tx">{loc.damName}</div>
-                      <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-muted shrink-0" />
-                        <span>Vị trí đập: <strong>{loc.damLocation}</strong></span>
+                  <Card className="p-3 flex items-center justify-between gap-2.5">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-accent/15 text-accent border border-accent/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <Database className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted uppercase font-semibold">Đập Thủy Điện</div>
+                        <div className="text-[13px] font-bold text-tx">{loc.damName}</div>
+                        <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-muted shrink-0" />
+                          <span>Vị trí đập: <strong>{loc.damLocation}</strong></span>
+                        </div>
                       </div>
                     </div>
+                    {loc.damId && (
+                      <Link
+                        href={`/dams/${loc.damId}`}
+                        className="px-2.5 py-1.5 text-[10px] font-semibold text-accent bg-accent/10 hover:bg-accent/20 border border-accent/30 rounded-lg flex items-center gap-1 shrink-0 transition-colors no-underline"
+                        title="Xem chi tiết đập thủy điện"
+                      >
+                        <span>Chi tiết đập</span>
+                        <ArrowRight className="w-3 h-3 shrink-0" />
+                      </Link>
+                    )}
                   </Card>
 
                   {/* Trạm quan trắc */}
-                  <Card className="p-3 flex items-start gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-info/15 text-info border border-info/30 flex items-center justify-center shrink-0 mt-0.5">
-                      <Radio className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-muted uppercase font-semibold">Trạm Quan Trắc</div>
-                      <div className="text-[13px] font-bold text-tx">{loc.stationName}</div>
-                      <div className="text-[11px] text-muted flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-muted shrink-0" />
-                        <span>Vị trí: <strong>{loc.stationLoc}</strong> ({loc.river} — <Mono className="text-tx">{loc.km}</Mono>)</span>
+                  <Card className="p-3 flex items-center justify-between gap-2.5">
+                    <div className="flex items-start gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-info/15 text-info border border-info/30 flex items-center justify-center shrink-0 mt-0.5">
+                        <Radio className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-muted uppercase font-semibold">Trạm Quan Trắc</div>
+                        <div className="text-[13px] font-bold text-tx">{loc.stationName}</div>
+                        <div className="text-[10px] text-muted flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 text-muted shrink-0" />
+                          <span>Vị trí: <strong>{loc.stationLoc}</strong> </span>
+                        </div>
                       </div>
                     </div>
+                    {loc.stationId && (
+                      <Link
+                        href={`/stations/${loc.stationId}`}
+                        className="px-2.5 py-1.5 text-[10px] font-semibold text-sky-400 bg-sky-400/10 hover:bg-sky-400/20 border border-sky-400/30 rounded-lg flex items-center gap-1 shrink-0 transition-colors no-underline shadow-sm"
+                        title="Xem dữ liệu trực tiếp tại trạm quan trắc"
+                      >
+                        <Radio className="w-3 h-3 shrink-0" />
+                        <span>Xem tại trạm</span>
+                        <ArrowRight className="w-3 h-3 shrink-0" />
+                      </Link>
+                    )}
                   </Card>
                 </div>
               </div>
